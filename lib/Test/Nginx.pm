@@ -65,5 +65,5 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 =head1 SEE ALSO
 
-L<Test::Nginx::Socket>, L<Test::Base>.
+L<Test::Nginx::LWP>, L<Test::Nginx::Socket>, L<Test::Base>.
 
