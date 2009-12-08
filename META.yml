@@ -16,10 +16,12 @@ name: Test-Nginx
 no_index:
   directory:
     - inc
+    - t
 requires:
   Filter::Util::Call: 0
+  Test::LongString: 0
   perl: 5.6.1
 resources:
   license: http://opensource.org/licenses/bsd-license.php
   repository: http://github.com/agentzh/test-nginx
-version: undef
+version: 0.01

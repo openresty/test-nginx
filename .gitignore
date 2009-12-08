@@ -28,6 +28,7 @@ reset
 genmobi.sh
 *.mobi
 misc/chunked
+pm_to_blib
 reindex
 Makefile
 blib

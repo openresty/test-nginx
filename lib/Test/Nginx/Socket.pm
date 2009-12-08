@@ -5,6 +5,8 @@ use lib 'inc';
 use Test::Base -Base;
 use Data::Dumper;
 
+our $VERSION = '0.01';
+
 our $NoNginxManager = 0;
 our $RepeatEach = 1;
 our $Timeout = 2;

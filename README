@@ -1,0 +1,12 @@
+NAME
+    Test::Nginx::LWP - Test scaffold for the Nginx C modules
+
+AUTHOR
+    agentzh "<agentzh@gmail.com>"
+
+COPYRIGHT & LICENSE
+    Copyright (C) 2009 by agentzh. Copyright (C) 2009 by Taobao Inc. (
+    http://www.taobao.com )
+
+    This software is licensed under the terms of the BSD License.
+
