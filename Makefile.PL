@@ -6,7 +6,7 @@ name            ('Test-Nginx');
 license         ('bsd');
 perl_version    ('5.006001');
 repository      ('http://github.com/agentzh/test-nginx');
-all_from        ('lib/Test/Nginx/LWP.pm');
+all_from        ('lib/Test/Nginx.pm');
 
 requires        ('Test::LongString');
 

@@ -1,7 +1,7 @@
 ---
-abstract: ~
+abstract: 'Testing modules for Nginx C module development'
 author:
-  - 'agentzh C<< <agentzh@gmail.com> >>'
+  - 'agentzh (章亦春) C<< <agentzh@gmail.com> >>'
 build_requires:
   ExtUtils::MakeMaker: 6.42
 configure_requires:

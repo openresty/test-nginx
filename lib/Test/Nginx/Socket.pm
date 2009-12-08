@@ -631,18 +631,172 @@ write_sock:
 1;
 __END__
 
+=encoding utf-8
+
 =head1 NAME
 
-Test::Nginx::Socket - Test scaffold for the Nginx C modules
+Test::Nginx::Socket - Socket-backed test scaffold for the Nginx C modules
+
+=head1 SYNOPSIS
+
+    use Test::Nginx::Socket;
+
+    plan tests => $Test::Nginx::Socket::Repeat * 2 * blocks();
+
+    run_tests();
+
+    __DATA__
+
+    === TEST 1: sanity
+    --- config
+        location /echo {
+            echo_before_body hello;
+            echo world;
+        }
+    --- request
+        GET /echo
+    --- response_body
+    hello
+    world
+    --- error_code: 200
+
+
+    === TEST 2: set Server
+    --- config
+        location /foo {
+            echo hi;
+            more_set_headers 'Server: Foo';
+        }
+    --- request
+        GET /foo
+    --- response_headers
+    Server: Foo
+    --- response_body
+    hi
+
+
+    === TEST 3: clear Server
+    --- config
+        location /foo {
+            echo hi;
+            more_clear_headers 'Server: ';
+        }
+    --- request
+        GET /foo
+    --- response_headers_like
+    Server: nginx.*
+    --- response_body
+    hi
+
+
+    === TEST 3: chunk size too small
+    --- config
+        chunkin on;
+        location /main {
+            echo_request_body;
+        }
+    --- more_headers
+    Transfer-Encoding: chunked
+    --- request eval
+    "POST /main
+    4\r
+    hello\r
+    0\r
+    \r
+    "
+    --- error_code: 400
+    --- response_body_like: 400 Bad Request
+
+=head1 DESCRIPTION
+
+This module provides a test scaffold based on non-blocking L<IO::Socket> for automated testing in Nginx C module development.
+
+This class inherits from L<Test::Base>, thus bringing all its
+declarative power to the Nginx C module testing practices.
+
+You need to terminate or kill any Nginx processes before running the test suite if you have changed the Nginx server binary. Normally it's as simple as
+
+  killall nginx
+  PATH=/path/to/your/nginx-with-memc-module:$PATH prove -r t
+
+This module will create a temporary server root under t/servroot/ of the current working directory and starts and uses the nginx executable in the PATH environment.
+
+You will often want to look into F<t/servroot/logs/error.log>
+when things go wrong ;)
+
+=head1 Sections supported
+
+The following sections are supported:
+
+=over
+
+=item config
+
+=item request
+
+=item more_headers
+
+=item response_body
+
+=item response_body_like
+
+=item response_headers
+
+=item response_headers_like
+
+=item error_code
+
+=back
+
+=head1 Samples
+
+You'll find live samples in the following Nginx 3rd-party modules:
+
+=over
+
+=item ngx_chunkin
+
+L<http://wiki.nginx.org/NginxHttpChunkinModule>
+
+=item ngx_memc
+
+L<http://wiki.nginx.org/NginxHttpMemcModule>
+
+=back
 
 =head1 AUTHOR
 
-agentzh C<< <agentzh@gmail.com> >>
+agentzh (章亦春) C<< <agentzh@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (C) 2009 by agentzh.
-Copyright (C) 2009 by Taobao Inc. ( http://www.taobao.com )
+Copyright (c) 2009, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
 
-This software is licensed under the terms of the BSD License.
+Copyright (c) 2009, agentzh C<< <agentzh@gmail.com> >.
+
+This module is licensed under the terms of the BSD license.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+=over
+
+=item *
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+=item *
+
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+=item *
+
+Neither the name of the Taobao Inc. nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. 
+
+=back
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+
+=head1 SEE ALSO
+
+L<Test::Nginx::LWP>, L<Test::Base>.
 
