@@ -9,6 +9,12 @@ repository      ('http://github.com/agentzh/test-nginx');
 all_from        ('lib/Test/Nginx.pm');
 
 requires        ('Test::LongString');
+requires        ('IO::Socket');
+requires        ('Time::HiRes');
+requires        ('LWP::UserAgent');
+requires        ('HTTP::Response');
+requires        ('Fcntl');
+requires        ('POSIX');
 
 use_test_base();
 auto_install();

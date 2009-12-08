@@ -520,9 +520,9 @@ Test::Nginx::LWP - LWP-backed test scaffold for the Nginx C modules
 
 =head1 SYNOPSIS
 
-    use Test::Nginx::Echo;
+    use Test::Nginx::LWP;
 
-    plan tests => $Test::Nginx::Echo::Repeat * 2 * blocks();
+    plan tests => $Test::Nginx::LWP::Repeat * 2 * blocks();
 
     run_tests();
 
@@ -714,7 +714,7 @@ agentzh (章亦春) C<< <agentzh@gmail.com> >>
 
 Copyright (c) 2009, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
 
-Copyright (c) 2009, agentzh C<< <agentzh@gmail.com> >.
+Copyright (c) 2009, agentzh C<< <agentzh@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
 

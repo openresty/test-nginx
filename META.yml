@@ -18,8 +18,14 @@ no_index:
     - inc
     - t
 requires:
+  Fcntl: 0
   Filter::Util::Call: 0
+  HTTP::Response: 0
+  IO::Socket: 0
+  LWP::UserAgent: 0
+  POSIX: 0
   Test::LongString: 0
+  Time::HiRes: 0
   perl: 5.6.1
 resources:
   license: http://opensource.org/licenses/bsd-license.php

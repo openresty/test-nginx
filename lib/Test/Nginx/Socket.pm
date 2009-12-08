@@ -772,7 +772,7 @@ agentzh (章亦春) C<< <agentzh@gmail.com> >>
 
 Copyright (c) 2009, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
 
-Copyright (c) 2009, agentzh C<< <agentzh@gmail.com> >.
+Copyright (c) 2009, agentzh C<< <agentzh@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
 
