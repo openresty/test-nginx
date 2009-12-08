@@ -50,5 +50,5 @@ COPYRIGHT & LICENSE
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 SEE ALSO
-    Test::Nginx::Socket, Test::Base.
+    Test::Nginx::LWP, Test::Nginx::Socket, Test::Base.
 
