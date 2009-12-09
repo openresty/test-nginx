@@ -71,7 +71,7 @@ sub show_all_chars ($);
 
 sub parse_headers ($);
 
-sub run_test_helper ($$);
+sub run_test_helper ($);
 
 sub get_canon_version (@) {
     sprintf "%d.%03d%03d", $_[0], $_[1], $_[2];
@@ -222,12 +222,10 @@ sub chunk_it ($$$) {
 sub run_test ($) {
     my $block = shift;
     my $name = $block->name;
-    my $request = $block->request;
-    if (!defined $request
+    if (!defined $block->request
+            && !defined $block->request_eval
             && !defined $block->pipelined_requests) {
-        #$request = $PrevRequest;
-        #$PrevRequest = $request;
-        Test::More::BAIL_OUT("$name - No '--- request' section nor ---pipelined_requests specified");
+        Test::More::BAIL_OUT("$name - No '--- request' section nor ---pipelined_requests nor --- request_eval specified");
         die;
     }
 
@@ -344,16 +342,16 @@ sub run_test ($) {
             SKIP: {
                 skip "$name - $skip_reason", $tests_to_skip;
 
-                run_test_helper($block, $request);
+                run_test_helper($block);
             }
         } elsif ($should_todo) {
             TODO: {
                 local $TODO = "$name - $todo_reason";
 
-                run_test_helper($block, $request);
+                run_test_helper($block);
             }
         } else {
-            run_test_helper($block, $request);
+            run_test_helper($block);
         }
     }
 }
@@ -386,8 +384,18 @@ sub parse_headers ($) {
     return \%headers;
 }
 
-sub run_test_helper ($$) {
-    my ($block, $request) = @_;
+sub run_test_helper ($) {
+    my $block = shift;
+
+    my $request;
+    if (defined $block->request_eval) {
+        $request = eval $block->request_eval;
+        if ($@) {
+            warn $@;
+        }
+    } else {
+        $request = $block->request;
+    }
 
     my $name = $block->name;
 
@@ -527,14 +535,24 @@ $parsed_req->{content}";
         }
     }
 
-    if (defined $block->response_body) {
+    if (defined $block->response_body
+           || defined $block->response_body_eval) {
         my $content = $res->content;
         if (defined $content) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
             $content =~ s/^Connection: TE, close\r\n//gms;
         }
 
-        my $expected = $block->response_body;
+        my $expected;
+        if ($block->response_body_eval) {
+            $expected = eval $block->response_body_eval;
+            if ($@) {
+                warn $@;
+            }
+        } else {
+            $expected = $block->response_body;
+        }
+
         $expected =~ s/\$ServerPort\b/$ServerPort/g;
         $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
         #warn show_all_chars($content);
@@ -588,6 +606,7 @@ sub send_request ($) {
         if (!defined $bytes) {
             if ($! == EAGAIN) {
                 #warn "read again...";
+                #sleep 0.002;
                 goto write_sock;
             }
             return "500 read failed: $!";
@@ -611,6 +630,7 @@ write_sock:
             if (!defined $bytes) {
                 if ($! == EAGAIN) {
                     #warn "write again...";
+                    #sleep 0.002;
                     next;
                 }
                 my $errmsg = "write failed: $!";
@@ -734,9 +754,13 @@ The following sections are supported:
 
 =item request
 
+=item request_eval
+
 =item more_headers
 
 =item response_body
+
+=item response_body_eval
 
 =item response_body_like
 
