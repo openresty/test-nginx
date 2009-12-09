@@ -1,5 +1,8 @@
 Changes for Test::Nginx
 
+0.02 - Wed 09 Dec 2009 09:50:11 AM CST
+- skipped the POD coverage tests for now.
+
 0.01 - Tue 08 Dec 2009 11:07:51 AM CST
 - initial release.
 

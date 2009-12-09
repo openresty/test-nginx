@@ -4,7 +4,7 @@ use lib 'lib';
 use lib 'inc';
 use Test::Base -Base;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $NoNginxManager = 0;
 our $RepeatEach = 1;
