@@ -1,5 +1,14 @@
 Changes for Test::Nginx
 
+0.03 - Tue 15 Dec 2009 11:35:07 AM CST
+- refactored a lot of duplicate code between
+  Test::Nginx::LWP and Test::Nginx::Socket to
+  a separate module named Test::Nginx::Util.
+- now Test::Nginx::Socket also restart the nginx
+  server at every test case run.
+- added support for --- request_eval and
+  --- response_eval to Test::Nginx::Socket.
+
 0.02 - Wed 09 Dec 2009 09:50:11 AM CST
 - skipped the POD coverage tests for now.
 
