@@ -15,6 +15,7 @@ use Time::HiRes qw(sleep time);
 use Test::LongString;
 
 #use Smart::Comments::JSON '###';
+use POSIX qw( SIGQUIT SIGKILL SIGTERM );
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use POSIX qw(EAGAIN);
 use IO::Socket;
@@ -63,7 +64,7 @@ sub plan (@) {
 
 =cut
 
-sub send_request ($);
+sub send_request ($$);
 
 sub trim ($);
 
@@ -236,53 +237,6 @@ sub run_test ($) {
         die;
     }
 
-    if (!$NoNginxManager) {
-        my $nginx_is_running = 1;
-        if (-f $PidFile) {
-            my $pid = get_pid_from_pidfile($name);
-            if (system("ps $pid > /dev/null") == 0) {
-                write_config_file(\$config);
-                if (kill(1, $pid) == 0) { # send HUP signal
-                    Test::More::BAIL_OUT("$name - Failed to send signal to the nginx process with PID $pid using signal HUP");
-                }
-                sleep 0.02;
-            } else {
-                unlink $PidFile or
-                    die "Failed to remove pid file $PidFile\n";
-                undef $nginx_is_running;
-            }
-        } else {
-            undef $nginx_is_running;
-        }
-
-        unless ($nginx_is_running) {
-            warn "*** Restarting the nginx server...\n";
-            setup_server_root();
-            write_config_file(\$config);
-            if ( ! Module::Install::Can->can_run('nginx') ) {
-                Test::More::BAIL_OUT("$name - Cannot find the nginx executable in the PATH environment");
-                die;
-            }
-        #if (system("nginx -p $ServRoot -c $ConfFile -t") != 0) {
-        #Test::More::BAIL_OUT("$name - Invalid config file");
-        #}
-        #my $cmd = "nginx -p $ServRoot -c $ConfFile > /dev/null";
-
-            my $cmd;
-            if ($NginxVersion >= 0.007053) {
-                $cmd = "nginx -p $ServRoot/ -c $ConfFile > /dev/null";
-            } else {
-                $cmd = "nginx -c $ConfFile > /dev/null";
-            }
-
-            if (system($cmd) != 0) {
-                Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
-                die;
-            }
-            sleep 0.1;
-        }
-    }
-
     my $skip_nginx = $block->skip_nginx;
     my ($tests_to_skip, $should_skip, $skip_reason);
     if (defined $skip_nginx) {
@@ -294,6 +248,7 @@ sub run_test ($) {
             $tests_to_skip = $1;
             my ($op, $ver1, $ver2, $ver3) = ($2, $3, $4, $5);
             $skip_reason = $6;
+            #warn "$ver1 $ver2 $ver3";
             my $ver = get_canon_version($ver1, $ver2, $ver3);
             if ((!defined $NginxVersion and $op =~ /^</)
                     or eval "$NginxVersion $op $ver")
@@ -332,8 +287,61 @@ sub run_test ($) {
             die;
         }
     }
+
     if (!defined $todo_reason) {
         $todo_reason = "various reasons";
+    }
+
+    if (!$NoNginxManager && !$should_skip) {
+        my $nginx_is_running = 1;
+        if (-f $PidFile) {
+            my $pid = get_pid_from_pidfile($name);
+            if (system("ps $pid > /dev/null") == 0) {
+                write_config_file(\$config);
+                if (kill(SIGQUIT, $pid) == 0) { # send quit signal
+                    #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
+                }
+                sleep 0.02;
+                if (system("ps $pid > /dev/null") == 0) {
+                    #warn "killing with force...\n";
+                    kill(SIGKILL, $pid);
+                    sleep 0.01;
+                }
+                undef $nginx_is_running;
+            } else {
+                unlink $PidFile or
+                    die "Failed to remove pid file $PidFile\n";
+                undef $nginx_is_running;
+            }
+        } else {
+            undef $nginx_is_running;
+        }
+
+        unless ($nginx_is_running) {
+            #warn "*** Restarting the nginx server...\n";
+            setup_server_root();
+            write_config_file(\$config);
+            if ( ! Module::Install::Can->can_run('nginx') ) {
+                Test::More::BAIL_OUT("$name - Cannot find the nginx executable in the PATH environment");
+                die;
+            }
+        #if (system("nginx -p $ServRoot -c $ConfFile -t") != 0) {
+        #Test::More::BAIL_OUT("$name - Invalid config file");
+        #}
+        #my $cmd = "nginx -p $ServRoot -c $ConfFile > /dev/null";
+            my $cmd;
+            if ($NginxVersion >= 0.007053) {
+                $cmd = "nginx -p $ServRoot/ -c $ConfFile > /dev/null";
+            } else {
+                $cmd = "nginx -c $ConfFile > /dev/null";
+            }
+
+            if (system($cmd) != 0) {
+                Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
+                die;
+            }
+            sleep 0.1;
+        }
     }
 
     my $i = 0;
@@ -431,7 +439,10 @@ sub run_test_helper ($) {
             my $parsed_req = parse_request($name, \$request);
 
             my $len_header = '';
-            if (!$is_chunked && defined $parsed_req->{content} && $parsed_req->{content} ne '') {
+            if (!$is_chunked && defined $parsed_req->{content} 
+                    && $parsed_req->{content} ne ''
+                    && $more_headers !~ /\bContent-Length:/)
+            {
                 $parsed_req->{content} =~ s/^\s+|\s+$//gs;
 
                 $len_header .= "Content-Length: " . length($parsed_req->{content}) . "\r\n";
@@ -448,7 +459,10 @@ $parsed_req->{content}";
         ### $parsed_req
 
         my $len_header = '';
-        if (!$is_chunked && defined $parsed_req->{content} && $parsed_req->{content} ne '') {
+        if (!$is_chunked && defined $parsed_req->{content}
+                && $parsed_req->{content} ne ''
+                && $more_headers !~ /\bContent-Length:/)
+        {
             $parsed_req->{content} =~ s/^\s+|\s+$//gs;
             $len_header .= "Content-Length: " . length($parsed_req->{content}) . "\r\n";
         }
@@ -466,7 +480,12 @@ $parsed_req->{content}";
 
     #warn "request: $req\n";
 
-    my $raw_resp = send_request($req);
+    my $timeout = $block->timeout;
+    if (!defined $timeout) {
+        $timeout = $Timeout;
+    }
+
+    my $raw_resp = send_request($req, $timeout);
 
     #warn "raw resonse: [$raw_resp]\n";
 
@@ -508,9 +527,9 @@ $parsed_req->{content}";
     }
 
     if (defined $block->error_code) {
-        is($res->code, $block->error_code, "$name - status code ok");
+        is($res->code || '', $block->error_code, "$name - status code ok");
     } else {
-        is($res->code, 200, "$name - status code ok");
+        is($res->code || '', 200, "$name - status code ok");
     }
 
     if (defined $block->response_headers) {
@@ -574,8 +593,8 @@ $parsed_req->{content}";
     }
 }
 
-sub send_request ($) {
-    my $write_buf = shift;
+sub send_request ($$) {
+    my ($write_buf, $timeout) = @_;
 
     my $sock = IO::Socket::INET->new(
         PeerAddr => 'localhost',
@@ -595,7 +614,7 @@ sub send_request ($) {
 
     my $now = time;
     while (1) {
-        if (time - $now >= $Timeout) {
+        if (time - $now >= $timeout) {
             warn "timed out\n";
             return $resp;
         }
