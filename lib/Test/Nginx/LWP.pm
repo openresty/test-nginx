@@ -4,163 +4,41 @@ use lib 'lib';
 use lib 'inc';
 use Test::Base -Base;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
-our $NoNginxManager = 0;
-our $RepeatEach = 1;
-
+use LWP::UserAgent;
 use Time::HiRes qw(sleep);
 use Test::LongString;
-
-#use Smart::Comments::JSON '##';
-use POSIX qw( SIGQUIT SIGKILL SIGTERM );
-use LWP::UserAgent; # XXX should use a socket level lib here
-use Module::Install::Can;
-use List::Util qw( shuffle );
-use File::Spec ();
-use Cwd qw( cwd );
+use Test::Nginx::Util qw(
+    setup_server_root
+    write_config_file
+    get_canon_version
+    get_nginx_version
+    trim
+    show_all_chars
+    parse_headers
+    run_tests
+    $ServerPortForClient
+    $PidFile
+    $ServRoot
+    $ConfFile
+    $ServerPort
+    $RunTestHelper
+    $NoNginxManager
+    $RepeatEach
+);
 
 our $UserAgent = LWP::UserAgent->new;
 $UserAgent->agent(__PACKAGE__);
 #$UserAgent->default_headers(HTTP::Headers->new);
 
-our $Workers                = 1;
-our $WorkerConnections      = 1024;
-our $LogLevel               = 'debug';
-#our $MasterProcessEnabled   = 'on';
-#our $DaemonEnabled          = 'on';
-our $ServerPort             = 1984;
-our $ServerPortForClient    = 1984;
-#our $ServerPortForClient    = 1984;
-
-our $NginxVersion;
-our $NginxRawVersion;
-
-#our ($PrevRequest, $PrevConfig);
-
-our $ServRoot   = File::Spec->catfile(cwd(), 't/servroot');
-our $LogDir     = File::Spec->catfile($ServRoot, 'logs');
-our $ErrLogFile = File::Spec->catfile($LogDir, 'error.log');
-our $AccLogFile = File::Spec->catfile($LogDir, 'access.log');
-our $HtmlDir    = File::Spec->catfile($ServRoot, 'html');
-our $ConfDir    = File::Spec->catfile($ServRoot, 'conf');
-our $ConfFile   = File::Spec->catfile($ConfDir, 'nginx.conf');
-our $PidFile    = File::Spec->catfile($LogDir, 'nginx.pid');
+#use Smart::Comments::JSON '##';
 
 our @EXPORT = qw( plan run_tests run_test );
 
-=begin cmt
+sub run_test_helper ($);
 
-sub plan (@) {
-    if (@_ == 2 && $_[0] eq 'tests' && defined $RepeatEach) {
-        #$_[1] *= $RepeatEach;
-    }
-    super;
-}
-
-=end cmt
-
-=cut
-
-sub trim ($);
-
-sub show_all_chars ($);
-
-sub parse_headers ($);
-
-sub run_test_helper ($$);
-
-sub get_canon_version (@) {
-    sprintf "%d.%03d%03d", $_[0], $_[1], $_[2];
-}
-
-sub get_nginx_version () {
-    my $out = `nginx -V 2>&1`;
-    if (!defined $out || $? != 0) {
-        warn "Failed to get the version of the Nginx in PATH.\n";
-    }
-    if ($out =~ m{nginx/(\d+)\.(\d+)\.(\d+)}s) {
-        $NginxRawVersion = "$1.$2.$3";
-        return get_canon_version($1, $2, $3);
-    }
-    warn "Failed to parse the output of \"nginx -V\": $out\n";
-    return undef;
-}
-
-sub run_tests () {
-    $NginxVersion = get_nginx_version();
-
-    if (defined $NginxVersion) {
-        #warn "[INFO] Using nginx version $NginxVersion ($NginxRawVersion)\n";
-    }
-
-    for my $block (shuffle blocks()) {
-        #for (1..3) {
-            run_test($block);
-        #}
-    }
-}
-
-sub setup_server_root () {
-    if (-d $ServRoot) {
-        #sleep 0.5;
-        #die ".pid file $PidFile exists.\n";
-        system("rm -rf t/servroot > /dev/null") == 0 or
-            die "Can't remove t/servroot";
-        #sleep 0.5;
-    }
-    mkdir $ServRoot or
-        die "Failed to do mkdir $ServRoot\n";
-    mkdir $LogDir or
-        die "Failed to do mkdir $LogDir\n";
-    mkdir $HtmlDir or
-        die "Failed to do mkdir $HtmlDir\n";
-    mkdir $ConfDir or
-        die "Failed to do mkdir $ConfDir\n";
-}
-
-sub write_config_file ($) {
-    my $rconfig = shift;
-    open my $out, ">$ConfFile" or
-        die "Can't open $ConfFile for writing: $!\n";
-    print $out <<_EOC_;
-worker_processes  $Workers;
-daemon on;
-master_process on;
-error_log $ErrLogFile $LogLevel;
-pid       $PidFile;
-#working_directory $ServRoot/;
-
-http {
-    access_log $AccLogFile;
-
-    default_type text/plain;
-    keepalive_timeout  65;
-    server {
-        listen          $ServerPort;
-        server_name     localhost;
-
-        client_max_body_size 30M;
-        #client_body_buffer_size 4k;
-
-        # Begin test case config...
-$$rconfig
-        # End test case config.
-
-        location / {
-            root $HtmlDir;
-            index index.html index.htm;
-        }
-    }
-}
-
-events {
-    worker_connections  $WorkerConnections;
-}
-
-_EOC_
-    close $out;
-}
+$RunTestHelper = \&run_test_helper;
 
 sub parse_request ($$) {
     my ($name, $rrequest) = @_;
@@ -188,16 +66,6 @@ sub parse_request ($$) {
     };
 }
 
-sub get_pid_from_pidfile ($) {
-    my ($name) = @_;
-    open my $in, $PidFile or
-        Test::More::BAIL_OUT("$name - Failed to open the pid file $PidFile for reading: $!");
-    my $pid = do { local $/; <$in> };
-    #warn "Pid: $pid\n";
-    close $in;
-    $pid;
-}
-
 sub chunk_it ($$$) {
     my ($chunks, $start_delay, $middle_delay) = @_;
     my $i = 0;
@@ -213,181 +81,10 @@ sub chunk_it ($$$) {
     }
 }
 
-sub run_test ($) {
-    my $block = shift;
-    my $name = $block->name;
+sub run_test_helper ($) {
+    my ($block) = @_;
+
     my $request = $block->request;
-    if (!defined $request) {
-        #$request = $PrevRequest;
-        #$PrevRequest = $request;
-        Test::More::BAIL_OUT("$name - No '--- request' section specified");
-        die;
-    }
-
-    my $config = $block->config;
-    if (!defined $config) {
-        Test::More::BAIL_OUT("$name - No '--- config' section specified");
-        #$config = $PrevConfig;
-        die;
-    }
-
-    my $skip_nginx = $block->skip_nginx;
-    my ($tests_to_skip, $should_skip, $skip_reason);
-    if (defined $skip_nginx) {
-        if ($skip_nginx =~ m{
-                ^ \s* (\d+) \s* : \s*
-                    ([<>]=?) \s* (\d+)\.(\d+)\.(\d+)
-                    (?: \s* : \s* (.*) )?
-                \s*$}x) {
-            $tests_to_skip = $1;
-            my ($op, $ver1, $ver2, $ver3) = ($2, $3, $4, $5);
-            $skip_reason = $6;
-            #warn "$ver1 $ver2 $ver3";
-            my $ver = get_canon_version($ver1, $ver2, $ver3);
-            if ((!defined $NginxVersion and $op =~ /^</)
-                    or eval "$NginxVersion $op $ver")
-            {
-                $should_skip = 1;
-            }
-        } else {
-            Test::More::BAIL_OUT("$name - Invalid --- skip_nginx spec: " .
-                $skip_nginx);
-            die;
-        }
-    }
-    if (!defined $skip_reason) {
-        $skip_reason = "various reasons";
-    }
-
-    my $todo_nginx = $block->todo_nginx;
-    my ($should_todo, $todo_reason);
-    if (defined $todo_nginx) {
-        if ($todo_nginx =~ m{
-                ^ \s*
-                    ([<>]=?) \s* (\d+)\.(\d+)\.(\d+)
-                    (?: \s* : \s* (.*) )?
-                \s*$}x) {
-            my ($op, $ver1, $ver2, $ver3) = ($1, $2, $3, $4);
-            $todo_reason = $5;
-            my $ver = get_canon_version($ver1, $ver2, $ver3);
-            if ((!defined $NginxVersion and $op =~ /^</)
-                    or eval "$NginxVersion $op $ver")
-            {
-                $should_todo = 1;
-            }
-        } else {
-            Test::More::BAIL_OUT("$name - Invalid --- todo_nginx spec: " .
-                $todo_nginx);
-            die;
-        }
-    }
-
-    if (!defined $todo_reason) {
-        $todo_reason = "various reasons";
-    }
-
-    if (!$NoNginxManager && !$should_skip) {
-        my $nginx_is_running = 1;
-        if (-f $PidFile) {
-            my $pid = get_pid_from_pidfile($name);
-            if (system("ps $pid > /dev/null") == 0) {
-                write_config_file(\$config);
-                if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-                    #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
-                }
-                sleep 0.02;
-                if (system("ps $pid > /dev/null") == 0) {
-                    #warn "killing with force...\n";
-                    kill(SIGKILL, $pid);
-                    sleep 0.01;
-                }
-                undef $nginx_is_running;
-            } else {
-                unlink $PidFile or
-                    die "Failed to remove pid file $PidFile\n";
-                undef $nginx_is_running;
-            }
-        } else {
-            undef $nginx_is_running;
-        }
-
-        unless ($nginx_is_running) {
-            #warn "*** Restarting the nginx server...\n";
-            setup_server_root();
-            write_config_file(\$config);
-            if ( ! Module::Install::Can->can_run('nginx') ) {
-                Test::More::BAIL_OUT("$name - Cannot find the nginx executable in the PATH environment");
-                die;
-            }
-        #if (system("nginx -p $ServRoot -c $ConfFile -t") != 0) {
-        #Test::More::BAIL_OUT("$name - Invalid config file");
-        #}
-        #my $cmd = "nginx -p $ServRoot -c $ConfFile > /dev/null";
-            my $cmd;
-            if ($NginxVersion >= 0.007053) {
-                $cmd = "nginx -p $ServRoot/ -c $ConfFile > /dev/null";
-            } else {
-                $cmd = "nginx -c $ConfFile > /dev/null";
-            }
-
-            if (system($cmd) != 0) {
-                Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
-                die;
-            }
-            sleep 0.1;
-        }
-    }
-
-    my $i = 0;
-    while ($i++ < $RepeatEach) {
-        if ($should_skip) {
-            SKIP: {
-                skip "$name - $skip_reason", $tests_to_skip;
-
-                run_test_helper($block, $request);
-            }
-        } elsif ($should_todo) {
-            TODO: {
-                local $TODO = "$name - $todo_reason";
-
-                run_test_helper($block, $request);
-            }
-        } else {
-            run_test_helper($block, $request);
-        }
-    }
-}
-
-sub trim ($) {
-    (my $s = shift) =~ s/^\s+|\s+$//g;
-    $s =~ s/\n/ /gs;
-    $s =~ s/\s{2,}/ /gs;
-    $s;
-}
-
-sub show_all_chars ($) {
-    my $s = shift;
-    $s =~ s/\n/\\n/gs;
-    $s =~ s/\r/\\r/gs;
-    $s =~ s/\t/\\t/gs;
-    $s;
-}
-
-sub parse_headers ($) {
-    my $s = shift;
-    my %headers;
-    open my $in, '<', \$s;
-    while (<$in>) {
-        s/^\s+|\s+$//g;
-        my ($key, $val) = split /\s*:\s*/, $_, 2;
-        $headers{$key} = $val;
-    }
-    close $in;
-    return \%headers;
-}
-
-sub run_test_helper ($$) {
-    my ($block, $request) = @_;
 
     my $name = $block->name;
     #if (defined $TODO) {
@@ -522,7 +219,7 @@ Test::Nginx::LWP - LWP-backed test scaffold for the Nginx C modules
 
     use Test::Nginx::LWP;
 
-    plan tests => $Test::Nginx::LWP::Repeat * 2 * blocks();
+    plan tests => $Test::Nginx::LWP::RepeatEach * 2 * blocks();
 
     run_tests();
 
