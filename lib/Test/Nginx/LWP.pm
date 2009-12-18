@@ -26,6 +26,8 @@ use Test::Nginx::Util qw(
     $RunTestHelper
     $NoNginxManager
     $RepeatEach
+    config_preamble
+    repeat_each
 );
 
 our $UserAgent = LWP::UserAgent->new;
@@ -34,7 +36,8 @@ $UserAgent->agent(__PACKAGE__);
 
 #use Smart::Comments::JSON '##';
 
-our @EXPORT = qw( plan run_tests run_test );
+our @EXPORT = qw( plan run_tests run_test
+    repeat_each config_preamble);
 
 sub run_test_helper ($);
 
@@ -143,6 +146,8 @@ sub run_test_helper ($) {
             $req->header($key => $val);
         }
     }
+
+    #warn "req: ", $req->as_string, "\n";
     #warn "DONE!!!!!!!!!!!!!!!!!!!!";
 
     my $res = $UserAgent->request($req);
