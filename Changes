@@ -1,5 +1,11 @@
 Changes for Test::Nginx
 
+0.04 - Fri 18 Dec 2009 04:09:02 PM CST
+* added new sections --- raw_request and
+  --- raw_request_middle_delay to Test::Nginx::Socket.
+* added new functions config_preamble and repeat which
+  are exported by default.
+
 0.03 - Tue 15 Dec 2009 11:35:07 AM CST
 - refactored a lot of duplicate code between
   Test::Nginx::LWP and Test::Nginx::Socket to
