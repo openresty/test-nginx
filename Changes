@@ -1,5 +1,10 @@
 Changes for Test::Nginx
 
+0.05 - Tue 22 Dec 2009 10:17:44 AM CST
+* added support for gcc profiling via the
+  $Nginx::Util::Profiling variable.
+* fixed the chunked decoder for large chunks.
+
 0.04 - Fri 18 Dec 2009 04:09:02 PM CST
 * added new sections --- raw_request and
   --- raw_request_middle_delay to Test::Nginx::Socket.

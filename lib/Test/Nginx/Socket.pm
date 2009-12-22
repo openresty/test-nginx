@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Data::Dumper;
 use Time::HiRes qw(sleep time);
@@ -533,6 +533,14 @@ L<http://wiki.nginx.org/NginxHttpChunkinModule>
 L<http://wiki.nginx.org/NginxHttpMemcModule>
 
 =back
+
+=head1 SOURCE REPOSITORY
+
+This module has a Git repository on Github, which has access for all.
+
+    http://github.com/agentzh/test-nginx
+
+If you want a commit bit, feel free to drop me a line.
 
 =head1 AUTHOR
 
