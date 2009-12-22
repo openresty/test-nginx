@@ -2,15 +2,17 @@ package Test::Nginx::Socket;
 
 use lib 'lib';
 use lib 'inc';
-use Test::Base -Base;
-use Data::Dumper;
 
-our $VERSION = '0.03';
+use Test::Base -Base;
+
+our $VERSION = '0.04';
+
+use Data::Dumper;
+use Time::HiRes qw(sleep time);
+use Test::LongString;
 
 our $Timeout = 2;
 
-use Time::HiRes qw(sleep time);
-use Test::LongString;
 use Test::Nginx::Util qw(
     setup_server_root
     write_config_file
@@ -193,17 +195,28 @@ $parsed_req->{content}";
 
         my $decoded = '';
         while (1) {
-            if ($raw =~ /\G0\r\n\r\n$/gcs) {
+            if ($raw =~ /\G 0 [\ \t]* \r\n \r\n $/gcsx) {
                 last;
             }
-            if ($raw =~ m{ \G \ * ( [A-Fa-f0-9]+ ) \ * \r\n }gcsx) {
+            if ($raw =~ m{ \G [\ \t]* ( [A-Fa-f0-9]+ ) [\ \t]* \r\n }gcsx) {
                 my $rest = hex($1);
                 #warn "chunk size: $rest\n";
-                if ($raw =~ /\G(.{$rest})\r\n/gcs) {
-                    $decoded .= $1;
-                    #warn "decoded: [$1]\n";
-                } else {
-                    fail("$name - invalid chunked data received.");
+                my $bit_sz = 32765;
+                while ($rest > 0) {
+                    my $bit = $rest < $bit_sz ? $rest : $bit_sz;
+                    #warn "bit: $bit\n";
+                    if ($raw =~ /\G(.{$bit})/gcs) {
+                        $decoded .= $1;
+                        #warn "decoded: [$1]\n";
+                    } else {
+                        fail("$name - invalid chunked data received (not enought octets for the data section)");
+                        return;
+                    }
+
+                    $rest -= $bit;
+                }
+                if ($raw !~ /\G\r\n/gcs) {
+                    fail("$name - invalid chunked data received (expected CRLF).");
                     return;
                 }
             } elsif ($raw =~ /\G.+/gcs) {
