@@ -12,7 +12,6 @@ use File::Spec ();
 use HTTP::Response;
 use Module::Install::Can;
 use Cwd qw( cwd );
-use Module::Install::Can;
 use List::Util qw( shuffle );
 
 our $NoNginxManager = 0;
@@ -62,9 +61,9 @@ our @EXPORT_OK = qw(
 );
 
 our $Workers                = 1;
-our $WorkerConnections      = 1024;
+our $WorkerConnections      = 64;
 our $LogLevel               = 'debug';
-our $MasterProcessEnabled   = 'on';
+our $MasterProcessEnabled   = 'off';
 our $DaemonEnabled          = 'on';
 our $ServerPort             = 1984;
 our $ServerPortForClient    = 1984;
@@ -130,6 +129,16 @@ sub setup_server_root () {
         die "Failed to do mkdir $LogDir\n";
     mkdir $HtmlDir or
         die "Failed to do mkdir $HtmlDir\n";
+
+    my $index_file = "$HtmlDir/index.html";
+
+    open my $out, ">$index_file" or
+        die "Can't open $index_file for writing: $!\n";
+
+    print $out '<html><head><title>It works!</title></head><body>It works!</body></html>';
+
+    close $out;
+
     mkdir $ConfDir or
         die "Failed to do mkdir $ConfDir\n";
 }
