@@ -30,4 +30,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/bsd-license.php
   repository: http://github.com/agentzh/test-nginx
-version: 0.05
+version: 0.06

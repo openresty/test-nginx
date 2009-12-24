@@ -3,7 +3,7 @@ package Test::Nginx::Util;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use base 'Exporter';
 
@@ -30,11 +30,37 @@ if ($Profiling) {
     $ForkManager = new Parallel::ForkManager($MAX_PROCESSES);
 }
 
+our $Workers                = 1;
+our $WorkerConnections      = 64;
+our $LogLevel               = 'debug';
+our $MasterProcessEnabled   = 'off';
+our $DaemonEnabled          = 'on';
+our $ServerPort             = 1984;
+our $ServerPortForClient    = 1984;
+#our $ServerPortForClient    = 1984;
+
+
 sub repeat_each (@) {
     if (@_) {
         $RepeatEach = shift;
     } else {
         return $RepeatEach;
+    }
+}
+
+sub worker_connections (@) {
+    if (@_) {
+        $WorkerConnections = shift;
+    } else {
+        return $WorkerConnections;
+    }
+}
+
+sub master_process_enabled (@) {
+    if (@_) {
+        $MasterProcessEnabled = shift() ? 'on' : 'off';
+    } else {
+        return $MasterProcessEnabled;
     }
 }
 
@@ -56,18 +82,12 @@ our @EXPORT_OK = qw(
     $RunTestHelper
     $NoNginxManager
     $RepeatEach
+    worker_connections
+    master_process_enabled
     config_preamble
     repeat_each
 );
 
-our $Workers                = 1;
-our $WorkerConnections      = 64;
-our $LogLevel               = 'debug';
-our $MasterProcessEnabled   = 'off';
-our $DaemonEnabled          = 'on';
-our $ServerPort             = 1984;
-our $ServerPortForClient    = 1984;
-#our $ServerPortForClient    = 1984;
 
 if ($Profiling) {
     $DaemonEnabled          = 'off';

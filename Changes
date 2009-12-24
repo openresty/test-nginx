@@ -1,5 +1,11 @@
 Changes for Test::Nginx
 
+0.06 - Thu 24 Dec 2009 10:59:29 AM CST
+* we now disable the nginx daemon mode in the config file by default.
+* we now generate a default index.html page under the root /.
+* added support for the new --- http_config section so that you can
+  put upstream foo { ... } in it.
+
 0.05 - Tue 22 Dec 2009 10:17:44 AM CST
 * added support for gcc profiling via the
   $Nginx::Util::Profiling variable.

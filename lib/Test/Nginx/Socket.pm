@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Data::Dumper;
 use Time::HiRes qw(sleep time);
@@ -29,6 +29,8 @@ use Test::Nginx::Util qw(
     $ConfFile
     $RunTestHelper
     $RepeatEach
+    worker_connections
+    master_process_enabled
     config_preamble
     repeat_each
 );
@@ -41,7 +43,8 @@ use IO::Socket;
 #our ($PrevRequest, $PrevConfig);
 
 our @EXPORT = qw( plan run_tests run_test
-    repeat_each config_preamble);
+    repeat_each config_preamble worker_connections
+    master_process_enabled);
 
 sub send_request ($$$);
 
@@ -489,6 +492,8 @@ The following sections are supported:
 =over
 
 =item config
+
+=item http_config
 
 =item request
 
