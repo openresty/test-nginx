@@ -10,6 +10,8 @@ our $VERSION = '0.06';
 use Data::Dumper;
 use Time::HiRes qw(sleep time);
 use Test::LongString;
+use List::MoreUtils qw( any );
+use IO::Select ();
 
 our $Timeout = 2;
 
@@ -49,6 +51,10 @@ our @EXPORT = qw( plan run_tests run_test
 sub send_request ($$$);
 
 sub run_test_helper ($);
+
+sub error_event_handler ($);
+sub read_event_handler ($);
+sub write_event_handler ($);
 
 $RunTestHelper = \&run_test_helper;
 
@@ -318,75 +324,208 @@ sub send_request ($$$) {
     fcntl $sock, F_SETFL, $flags | O_NONBLOCK
         or die "Failed to set flags: $!\n";
 
-    my $resp = '';
-    my $write_offset = 0;
-    my $buf_size = 1024;
+    my $ctx = {
+        resp => '',
+        write_offset => 0,
+        buf_size => 1024,
+        req_bits => \@req_bits,
+        write_buf => shift @req_bits,
+        middle_delay => $middle_delay,
+        sock => $sock,
+    };
 
-    my $write_buf = shift @req_bits;
+    my $readable_hdls = IO::Select->new($sock);
+    my $writable_hdls = IO::Select->new($sock);
+    my $err_hdls = IO::Select->new($sock);
 
-    my $now = time;
     while (1) {
-        if (time - $now >= $timeout) {
-            warn "timed out\n";
-            return $resp;
+        if ($readable_hdls->count == 0 && $writable_hdls->count == 0 && $err_hdls->count == 0) {
+            last;
         }
-        #warn "main loop...";
-        my $read_buf;
-        my $bytes = sysread($sock, $read_buf, $buf_size);
 
-        if (!defined $bytes) {
-            if ($! == EAGAIN) {
-                #warn "read again...";
-                #sleep 0.002;
-                goto write_sock;
+        my ($new_readable, $new_writable, $new_err) =
+            IO::Select->select($readable_hdls, $writable_hdls,
+                $err_hdls, $timeout);
+
+        if (@$new_err == 0 && @$new_readable == 0
+                && @$new_writable == 0)
+        {
+            # timed out
+            timeout_event_handler($ctx);
+            last;
+        }
+
+        for my $hdl (@$new_err) {
+            next if !defined $hdl;
+
+            warn "exception occurs on the socket: $!\n";
+            error_event_handler($ctx);
+
+            if ($err_hdls->exists($hdl)) {
+                $err_hdls->remove($hdl);
             }
-            return "500 read failed: $!";
+
+            if ($readable_hdls->exists($hdl)) {
+                $readable_hdls->remove($hdl);
+            }
+
+            if ($writable_hdls->exists($hdl)) {
+                $writable_hdls->remove($hdl);
+            }
+
+            for my $h (@$readable_hdls) {
+                next if !defined $h;
+                if ($h eq $hdl) {
+                    undef $h;
+                    last;
+                }
+            }
+
+            for my $h (@$writable_hdls) {
+                next if !defined $h;
+                if ($h eq $hdl) {
+                    undef $h;
+                    last;
+                }
+            }
+
+            close $hdl;
         }
-        if ($bytes == 0) {
-            close $sock;
-            #warn "returning response: $resp\n";
-            return $resp;
+
+        for my $hdl (@$new_readable) {
+            next if !defined $hdl;
+
+            my $res = read_event_handler($ctx);
+            if (!$res) {
+                # error occured
+                if ($err_hdls->exists($hdl)) {
+                    $err_hdls->remove($hdl);
+                }
+
+                if ($readable_hdls->exists($hdl)) {
+                    $readable_hdls->remove($hdl);
+                }
+
+                if ($writable_hdls->exists($hdl)) {
+                    $writable_hdls->remove($hdl);
+                }
+
+                for my $h (@$writable_hdls) {
+                    next if !defined $h;
+                    if ($h eq $hdl) {
+                        undef $h;
+                        last;
+                    }
+                }
+
+                close $hdl;
+            }
         }
-        $resp .= $read_buf;
-        #warn "read $bytes ($read_buf) bytes.\n";
 
-write_sock:
+        for my $hdl (@$new_writable) {
+            next if !defined $hdl;
 
-        next if !defined $write_buf;
+            my $res = write_event_handler($ctx);
+            if (!$res) {
+                # error occured
+                if ($err_hdls->exists($hdl)) {
+                    $err_hdls->remove($hdl);
+                }
 
-        my $rest = length($write_buf) - $write_offset;
+                if ($readable_hdls->exists($hdl)) {
+                    $readable_hdls->remove($hdl);
+                }
+
+                if ($writable_hdls->exists($hdl)) {
+                    $writable_hdls->remove($hdl);
+                }
+
+                close $hdl;
+            }
+
+            if ($res == 2) {
+                if ($writable_hdls->exists($hdl)) {
+                    $writable_hdls->remove($hdl);
+                }
+            }
+        }
+    }
+
+    return $ctx->{resp};
+}
+
+sub error_event_handler ($) {
+}
+
+sub write_event_handler ($) {
+    my ($ctx) = @_;
+
+    while (1) {
+        return undef if !defined $ctx->{write_buf};
+
+        my $rest = length($ctx->{write_buf}) - $ctx->{write_offset};
         #warn "offset: $write_offset, rest: $rest, length ", length($write_buf), "\n";
         #die;
 
         if ($rest > 0) {
-            $bytes = syswrite($sock, $write_buf, $rest, $write_offset);
+            my $bytes = syswrite($ctx->{sock}, $ctx->{write_buf}, $rest, $ctx->{write_offset});
 
             if (!defined $bytes) {
                 if ($! == EAGAIN) {
                     #warn "write again...";
                     #sleep 0.002;
-                    next;
+                    return 1;
                 }
                 my $errmsg = "write failed: $!";
                 warn "$errmsg\n";
-                if (!$resp) {
-                    return "$errmsg";
+                if (!$ctx->{resp}) {
+                    $ctx->{resp} = "$errmsg";
                 }
-                return $resp;
+                return undef;
             }
 
             #warn "wrote $bytes bytes.\n";
-            $write_offset += $bytes;
+            $ctx->{write_offset} += $bytes;
         } else {
-            $write_buf = shift @req_bits or next;
-            $write_offset = 0;
-            if (defined $middle_delay) {
+            $ctx->{write_buf} = shift @{$ctx->{req_bits}} or return 2;
+            $ctx->{write_offset} = 0;
+            if (defined $ctx->{middle_delay}) {
                 #warn "sleeping..";
-                sleep $middle_delay;
+                sleep $ctx->{middle_delay};
             }
         }
     }
-    return $resp;
+
+    # impossible to reach here...
+    return undef;
+}
+
+sub read_event_handler ($) {
+    my ($ctx) = @_;
+    while (1) {
+        my $read_buf;
+        my $bytes = sysread($ctx->{sock}, $read_buf, $ctx->{buf_size});
+
+        if (!defined $bytes) {
+            if ($! == EAGAIN) {
+                #warn "read again...";
+                #sleep 0.002;
+                return 1;
+            }
+            $ctx->{resp} = "500 read failed: $!";
+            return undef;
+        }
+
+        if ($bytes == 0) {
+            return undef; # connection closed
+        }
+
+        $ctx->{resp} .= $read_buf;
+        #warn "read $bytes ($read_buf) bytes.\n";
+    }
+
+    # impossible to reach here...
+    return undef;
 }
 
 1;

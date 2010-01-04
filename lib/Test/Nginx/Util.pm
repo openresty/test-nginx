@@ -346,6 +346,11 @@ sub run_test ($) {
         my $nginx_is_running = 1;
         if (-f $PidFile) {
             my $pid = get_pid_from_pidfile($name);
+            if (!defined $pid or $pid eq '') {
+                undef $nginx_is_running;
+                goto start_nginx;
+            }
+
             if (system("ps $pid > /dev/null") == 0) {
                 #warn "found running nginx...";
                 write_config_file($config, $block->http_config);
@@ -367,6 +372,8 @@ sub run_test ($) {
         } else {
             undef $nginx_is_running;
         }
+
+start_nginx:
 
         unless ($nginx_is_running) {
             #system("killall -9 nginx");
