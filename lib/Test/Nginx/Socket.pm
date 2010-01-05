@@ -680,6 +680,10 @@ L<http://wiki.nginx.org/NginxHttpChunkinModule>
 
 L<http://wiki.nginx.org/NginxHttpMemcModule>
 
+=item ngx_drizzle
+
+L<http://github.com/chaoslawful/drizzle-nginx-module>
+
 =back
 
 =head1 SOURCE REPOSITORY
