@@ -347,8 +347,8 @@ sub send_request ($$$) {
             IO::Select->select($readable_hdls, $writable_hdls,
                 $err_hdls, $timeout);
 
-        if (@$new_err == 0 && @$new_readable == 0
-                && @$new_writable == 0)
+        if (!defined $new_err && !defined $new_readable
+                && !defined $new_writable)
         {
             # timed out
             timeout_event_handler($ctx);
@@ -358,7 +358,6 @@ sub send_request ($$$) {
         for my $hdl (@$new_err) {
             next if !defined $hdl;
 
-            warn "exception occurs on the socket: $!\n";
             error_event_handler($ctx);
 
             if ($err_hdls->exists($hdl)) {
@@ -454,7 +453,12 @@ sub send_request ($$$) {
     return $ctx->{resp};
 }
 
+sub timeout_event_handler ($) {
+    warn "socket client: timed out";
+}
+
 sub error_event_handler ($) {
+    warn "exception occurs on the socket: $!\n";
 }
 
 sub write_event_handler ($) {
