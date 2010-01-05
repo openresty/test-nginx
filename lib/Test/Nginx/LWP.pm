@@ -4,7 +4,7 @@ use lib 'lib';
 use lib 'inc';
 use Test::Base -Base;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use LWP::UserAgent;
 use Time::HiRes qw(sleep);

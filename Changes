@@ -1,5 +1,12 @@
 Changes for Test::Nginx
 
+0.07 - Tue 05 Jan 2010 10:06:56 AM CST
+* we now use IO::Select in Test::Nginx::Socket to save CPU resources
+  while polling the non-blocking socket.
+* POD: added ngx_drizzle to the module list that use Test::Nginx::Socket.
+* added utility config functions "worker_connections" and
+  "master_process_enabled".
+
 0.06 - Thu 24 Dec 2009 10:59:29 AM CST
 * we now disable the nginx daemon mode in the config file by default.
 * we now generate a default index.html page under the root /.

@@ -21,8 +21,10 @@ requires:
   Fcntl: 0
   Filter::Util::Call: 0
   HTTP::Response: 0
+  IO::Select: 0
   IO::Socket: 0
   LWP::UserAgent: 0
+  List::MoreUtils: 0
   POSIX: 0
   Test::LongString: 0
   Time::HiRes: 0
@@ -30,4 +32,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/bsd-license.php
   repository: http://github.com/agentzh/test-nginx
-version: 0.06
+version: 0.07

@@ -15,6 +15,8 @@ requires        ('LWP::UserAgent');
 requires        ('HTTP::Response');
 requires        ('Fcntl');
 requires        ('POSIX');
+requires        ('IO::Select');
+requires        ('List::MoreUtils');
 
 use_test_base();
 auto_install();
