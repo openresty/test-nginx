@@ -44,9 +44,12 @@ use IO::Socket;
 
 #our ($PrevRequest, $PrevConfig);
 
+our $NoLongString = undef;
+
 our @EXPORT = qw( plan run_tests run_test
     repeat_each config_preamble worker_connections
-    master_process_enabled);
+    master_process_enabled
+    no_long_string);
 
 sub send_request ($$$);
 
@@ -55,6 +58,10 @@ sub run_test_helper ($);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
+
+sub no_long_string () {
+    $NoLongString = 1;
+}
 
 $RunTestHelper = \&run_test_helper;
 
@@ -290,8 +297,12 @@ $parsed_req->{content}";
         $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
         #warn show_all_chars($content);
 
-        is_string($content, $expected, "$name - response_body - response is expected");
-        #is($content, $expected, "$name - response_body - response is expected");
+        warn "no long string: $NoLongString";
+        if ($NoLongString) {
+            is($content, $expected, "$name - response_body - response is expected");
+        } else {
+            is_string($content, $expected, "$name - response_body - response is expected");
+        }
 
     } elsif (defined $block->response_body_like) {
         my $content = $res->content;
