@@ -215,7 +215,7 @@ $parsed_req->{content}";
 
         my $decoded = '';
         while (1) {
-            if ($raw =~ /\G 0 [\ \t]* \r\n \r\n $/gcsx) {
+            if ($raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx) {
                 last;
             }
             if ($raw =~ m{ \G [\ \t]* ( [A-Fa-f0-9]+ ) [\ \t]* \r\n }gcsx) {
