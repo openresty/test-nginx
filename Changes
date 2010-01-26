@@ -1,5 +1,17 @@
 Changes for Test::Nginx
 
+0.08 - Tue 26 Jan 2010 12:20:03 PM CST
+* fixed a bug in the chunked parser in Test::Nginx::Socket:
+  now we immediately stop reading more data chunks when
+  seeing the last chunk.
+* added func no_long_string to Test::Nginx::Socket and
+  Test::Nginx::LWP so that we can disable
+  Test::LongString in the test scaffold.
+* added utility config functions "workers", "log_level", and
+  "master_on" to Test::Nginx::Socket.
+* added ngx_rds_json and ngx_xss modules to the module
+  list that uses Test::Nginx::Socket.
+
 0.07 - Tue 05 Jan 2010 10:06:56 AM CST
 * we now use IO::Select in Test::Nginx::Socket to save CPU resources
   while polling the non-blocking socket.

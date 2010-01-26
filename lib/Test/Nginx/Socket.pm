@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use Data::Dumper;
 use Time::HiRes qw(sleep time);
@@ -698,6 +698,14 @@ L<http://wiki.nginx.org/NginxHttpMemcModule>
 =item ngx_drizzle
 
 L<http://github.com/chaoslawful/drizzle-nginx-module>
+
+=item ngx_rds_json
+
+L<http://github.com/agentzh/rds-json-nginx-module>
+
+=item ngx_xss
+
+L<http://github.com/agentzh/xss-nginx-module>
 
 =back
 
