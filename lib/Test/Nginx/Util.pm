@@ -13,6 +13,7 @@ use HTTP::Response;
 use Module::Install::Can;
 use Cwd qw( cwd );
 use List::Util qw( shuffle );
+use Time::HiRes qw( sleep );
 
 our $NoNginxManager = 0;
 our $Profiling = 0;
