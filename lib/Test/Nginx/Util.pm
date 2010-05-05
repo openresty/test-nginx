@@ -43,7 +43,7 @@ our $LogLevel               = 'debug';
 our $MasterProcessEnabled   = 'off';
 our $DaemonEnabled          = 'on';
 our $ServerPort             = 1984;
-our $ServerPortForClient    = 1984;
+our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || 1984;
 our $NoRootLocation = 0;
 #our $ServerPortForClient    = 1984;
 
