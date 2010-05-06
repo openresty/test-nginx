@@ -7,6 +7,7 @@ use Test::Base -Base;
 
 our $VERSION = '0.08';
 
+use Encode;
 use Data::Dumper;
 use Time::HiRes qw(sleep time);
 use Test::LongString;
@@ -309,6 +310,10 @@ $parsed_req->{content}";
             }
         } else {
             $expected = $block->response_body;
+        }
+
+        if ($block->charset) {
+            Encode::from_to($expected, 'UTF-8', $block->charset);
         }
 
         $expected =~ s/\$ServerPort\b/$ServerPort/g;
