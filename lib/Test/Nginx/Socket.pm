@@ -61,7 +61,7 @@ our @EXPORT = qw( plan run_tests run_test
     server_addr
 );
 
-sub send_request ($$$);
+sub send_request ($$$$);
 
 sub run_test_helper ($);
 
@@ -214,7 +214,7 @@ $parsed_req->{content}";
     }
 
     my $raw_resp = send_request($req, $block->raw_request_middle_delay,
-        $timeout);
+        $timeout, $block->name);
 
     #warn "raw resonse: [$raw_resp]\n";
 
@@ -341,8 +341,8 @@ $parsed_req->{content}";
     }
 }
 
-sub send_request ($$$) {
-    my ($req, $middle_delay, $timeout) = @_;
+sub send_request ($$$$) {
+    my ($req, $middle_delay, $timeout, $name) = @_;
 
     my @req_bits = ref $req ? @$req : ($req);
 
@@ -366,6 +366,7 @@ sub send_request ($$$) {
         write_buf => shift @req_bits,
         middle_delay => $middle_delay,
         sock => $sock,
+        name => $name,
     };
 
     my $readable_hdls = IO::Select->new($sock);
@@ -488,7 +489,8 @@ sub send_request ($$$) {
 }
 
 sub timeout_event_handler ($) {
-    warn "socket client: timed out";
+    my $ctx = shift;
+    warn "socket client: timed out - $ctx->{name}\n";
 }
 
 sub error_event_handler ($) {
