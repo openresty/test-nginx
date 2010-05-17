@@ -258,7 +258,7 @@ $parsed_req->{content}";
                 fail "$name - invalid chunked body received: $&";
                 return;
             } else {
-                fail "$name - no last chunk found";
+                fail "$name - no last chunk found - $raw";
                 return;
             }
         }
@@ -490,7 +490,7 @@ sub send_request ($$$$) {
 
 sub timeout_event_handler ($) {
     my $ctx = shift;
-    warn "socket client: timed out - $ctx->{name}\n";
+    warn "ERROR: socket client: timed out - $ctx->{name}\n";
 }
 
 sub error_event_handler ($) {
