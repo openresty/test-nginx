@@ -451,7 +451,8 @@ start_nginx:
                     $cmd = "valgrind -q --leak-check=full --gen-suppressions=all $cmd";
                 }
 
-                warn "$name\n$cmd\n";
+                warn "$name\n";
+                #warn "$cmd\n";
             }
 
             if ($Profiling || $UseValgrind) {
