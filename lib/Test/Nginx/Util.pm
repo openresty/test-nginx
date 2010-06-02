@@ -459,11 +459,19 @@ start_nginx:
                 if (!$pid) {
                     # child process
                     exec $cmd;
+
+=begin cmt
+
                     if (system($cmd) != 0) {
                         Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
                     }
 
                     $ForkManager->finish; # terminate the child process
+
+=end cmt
+
+=cut
+
                 }
                 warn "sleeping";
                 sleep 1;
