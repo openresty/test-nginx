@@ -445,19 +445,28 @@ start_nginx:
             }
 
             if ($UseValgrind) {
-                $cmd = "valgrind --leak-check=yes $cmd";
+                if (-f 'valgrind.suppress') {
+                    $cmd = "valgrind --leak-check=full --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
+                } else {
+                    $cmd = "valgrind --leak-check=full --gen-suppressions=all $cmd";
+                }
+
+                warn $cmd;
             }
 
             if ($Profiling || $UseValgrind) {
                 my $pid = $ForkManager->start;
                 if (!$pid) {
                     # child process
+                    exec $cmd;
                     if (system($cmd) != 0) {
                         Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
                     }
 
                     $ForkManager->finish; # terminate the child process
                 }
+                warn "sleeping";
+                sleep 1;
             } else {
                 if (system($cmd) != 0) {
                     Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
@@ -497,22 +506,27 @@ start_nginx:
     if ($Profiling || $UseValgrind) {
         warn "Found quit...";
         if (-f $PidFile) {
+            warn "found pid file...";
             my $pid = get_pid_from_pidfile($name);
             if (system("ps $pid > /dev/null") == 0) {
                 write_config_file($config, $block->http_config);
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-                    #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
+                    warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
-                sleep 0.02;
-                if (system("ps $pid > /dev/null") == 0) {
-                    #warn "killing with force...\n";
+                sleep 0.1;
+                if (-f $PidFile) {
+                    warn "killing with force (valgrind or profile)...\n";
                     kill(SIGKILL, $pid);
                     sleep 0.02;
+                } else {
+                    warn "nginx killed";
                 }
             } else {
                 unlink $PidFile or
                     die "Failed to remove pid file $PidFile\n";
             }
+        } else {
+            warn "pid file not found";
         }
     }
 }
