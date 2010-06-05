@@ -218,8 +218,12 @@ $parsed_req->{content}";
 
     #warn "raw resonse: [$raw_resp]\n";
 
-    my ($raw_headers) = ($raw_resp =~ /(.*)\r\n\r\n/);
-    warn "raw headers: $raw_headers\n";
+    my $raw_headers = '';
+    if ($raw_resp =~ /(.*?)\r\n\r\n/s) {
+        #warn "\$1: $1";
+        $raw_headers = $1;
+    }
+    #warn "raw headers: $raw_headers\n";
 
     my $res = HTTP::Response->parse($raw_resp);
     my $enc = $res->header('Transfer-Encoding');
@@ -280,7 +284,7 @@ $parsed_req->{content}";
         while (my ($key, $val) = each %$headers) {
             if (!defined $val) {
                 #warn "HIT";
-                unlike $raw_headers, qr/\Q$key\E/, "$name - header $key not present in the raw headers";
+                unlike $raw_headers, qr/^\s*\Q$key\E\s*:/ms, "$name - header $key not present in the raw headers";
                 next;
             }
 
