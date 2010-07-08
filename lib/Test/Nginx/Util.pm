@@ -3,7 +3,7 @@ package Test::Nginx::Util;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use base 'Exporter';
 
@@ -50,7 +50,6 @@ our $ServerPort             = 1984;
 our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || 1984;
 our $NoRootLocation = 0;
 #our $ServerPortForClient    = 1984;
-
 
 sub repeat_each (@) {
     if (@_) {
@@ -128,6 +127,8 @@ our @EXPORT_OK = qw(
     log_level
     no_shuffle
     no_root_location
+    html_dir
+    server_root
 );
 
 
@@ -158,6 +159,14 @@ our $HtmlDir    = File::Spec->catfile($ServRoot, 'html');
 our $ConfDir    = File::Spec->catfile($ServRoot, 'conf');
 our $ConfFile   = File::Spec->catfile($ConfDir, 'nginx.conf');
 our $PidFile    = File::Spec->catfile($LogDir, 'nginx.pid');
+
+sub html_dir () {
+    return $HtmlDir;
+}
+
+sub server_root () {
+    return $ServRoot;
+}
 
 sub run_tests () {
     $NginxVersion = get_nginx_version();

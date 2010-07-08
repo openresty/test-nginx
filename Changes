@@ -1,5 +1,19 @@
 Changes for Test::Nginx
 
+0.09 - Wed 07 Jul 2010 02:57:13 PM CST
+* added new section --- user_files which will create user files under html/.
+* applied the patch from Piotr Sikora to add the --- skip_nginx2 directive.
+* use the latest nginx version as the default if the version number can not be parsed from "nginx -V".
+* added support for ! HEADER syntax to --- response_headers such that we can test if a response header exists.
+* fixed some bugs in --- response_headers.
+* now TEST_NGINX_USE_VALGRIND=1 works out of the box. one can ualso use test/valgrind.suppress file to serve as a default suppression file.
+* better diagnostics for socket timeout outputs.
+* added support for the --- charset section.
+* use localhost as the server_name in the test nginx.conf.
+* added support for the server_addr sub as well as the TEST_NGINX_CLIENT_PORT environment.
+* always use Time::HiRes's sleep. this issue was reported by leicheng++.
+* added new config function no_root_location as well as the new section --- init.
+
 0.08 - Tue 26 Jan 2010 12:20:03 PM CST
 * fixed a bug in the chunked parser in Test::Nginx::Socket:
   now we immediately stop reading more data chunks when

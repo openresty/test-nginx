@@ -21,3 +21,7 @@ bin/.*\.dat
 \.tar\.gz$
 preload\.yml
 \.swp$
+diffall
+submitall
+testall
+update
