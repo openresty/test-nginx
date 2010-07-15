@@ -50,6 +50,7 @@ our $ServerPort             = 1984;
 our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || 1984;
 our $NoRootLocation = 0;
 #our $ServerPortForClient    = 1984;
+our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0;
 
 sub repeat_each (@) {
     if (@_) {
@@ -573,7 +574,11 @@ start_nginx:
 
                 }
                 #warn "sleeping";
-                sleep 1;
+                if ($TestNginxSleep) {
+                    sleep $TestNginxSleep;
+                } else {
+                    sleep 1;
+                }
             } else {
                 if (system($cmd) != 0) {
                     Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
@@ -620,7 +625,11 @@ start_nginx:
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
-                sleep 0.1;
+                if ($TestNginxSleep) {
+                    sleep $TestNginxSleep;
+                } else {
+                    sleep 0.1;
+                }
                 if (-f $PidFile) {
                     #warn "killing with force (valgrind or profile)...\n";
                     kill(SIGKILL, $pid);
@@ -646,7 +655,11 @@ END {
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
-                sleep 0.02;
+                if ($TestNginxSleep) {
+                    sleep $TestNginxSleep;
+                } else {
+                    sleep 0.02;
+                }
                 if (system("ps $pid > /dev/null") == 0) {
                     #warn "killing with force...\n";
                     kill(SIGKILL, $pid);
