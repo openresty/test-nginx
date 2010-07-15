@@ -334,7 +334,7 @@ sub get_nginx_version () {
     if (!defined $out || $? != 0) {
         warn "Failed to get the version of the Nginx in PATH.\n";
     }
-    if ($out =~ m{nginx/(\d+)\.(\d+)\.(\d+)}s) {
+    if ($out =~ m{(?:nginx|ngx_openresty)/(\d+)\.(\d+)\.(\d+)}s) {
         $NginxRawVersion = "$1.$2.$3";
         return get_canon_version($1, $2, $3);
     }
