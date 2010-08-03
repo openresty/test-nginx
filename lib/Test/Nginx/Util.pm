@@ -197,6 +197,8 @@ sub setup_server_root () {
             die "Can't remove $HtmlDir";
         system("rm -rf $LogDir > /dev/null") == 0 or
             die "Can't remove $LogDir";
+        system("rm -rf $ServRoot/*_temp > /dev/null") == 0 or
+            die "Can't remove $ServRoot/*_temp";
         system("rmdir $ServRoot > /dev/null") == 0 or
             die "Can't remove $ServRoot (not empty?)";
     }
