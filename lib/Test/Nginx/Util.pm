@@ -260,8 +260,8 @@ sub write_user_files ($) {
     }
 }
 
-sub write_config_file ($$) {
-    my ($config, $http_config) = @_;
+sub write_config_file ($$$) {
+    my ($config, $http_config, $main_config) = @_;
 
     if (!defined $config) {
         $config = '';
@@ -279,6 +279,10 @@ daemon $DaemonEnabled;
 master_process $MasterProcessEnabled;
 error_log $ErrLogFile $LogLevel;
 pid       $PidFile;
+
+main {
+    $main_config
+}
 
 http {
     access_log $AccLogFile;
@@ -495,7 +499,7 @@ sub run_test ($) {
 
             if (system("ps $pid > /dev/null") == 0) {
                 #warn "found running nginx...";
-                write_config_file($config, $block->http_config);
+                write_config_file($config, $block->http_config, $block->main_config);
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
@@ -523,7 +527,7 @@ start_nginx:
             #warn "*** Restarting the nginx server...\n";
             setup_server_root();
             write_user_files($block);
-            write_config_file($config, $block->http_config);
+            write_config_file($config, $block->http_config, $block->main_config);
             if ( ! Module::Install::Can->can_run('nginx') ) {
                 Test::More::BAIL_OUT("$name - Cannot find the nginx executable in the PATH environment");
                 die;
@@ -621,7 +625,7 @@ start_nginx:
             #warn "found pid file...";
             my $pid = get_pid_from_pidfile($name);
             if (system("ps $pid > /dev/null") == 0) {
-                write_config_file($config, $block->http_config);
+                write_config_file($config, $block->http_config, $block->main_config);
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
