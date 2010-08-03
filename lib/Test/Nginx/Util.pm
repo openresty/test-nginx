@@ -278,6 +278,10 @@ sub write_config_file ($$$) {
         $http_config = '';
     }
 
+    if (!defined $main_config) {
+        $main_config = '';
+    }
+
     open my $out, ">$ConfFile" or
         die "Can't open $ConfFile for writing: $!\n";
     print $out <<_EOC_;
@@ -287,9 +291,7 @@ master_process $MasterProcessEnabled;
 error_log $ErrLogFile $LogLevel;
 pid       $PidFile;
 
-main {
-    $main_config
-}
+$main_config
 
 http {
     access_log $AccLogFile;
