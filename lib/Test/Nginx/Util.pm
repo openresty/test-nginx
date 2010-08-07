@@ -44,7 +44,7 @@ if ($Profiling || $UseValgrind) {
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
 our $Workers                = 1;
 our $WorkerConnections      = 64;
-our $LogLevel               = 'debug';
+our $LogLevel               = $ENV{TEST_NGINX_LOG_LEVEL} || 'debug';
 our $MasterProcessEnabled   = 'off';
 our $DaemonEnabled          = 'on';
 our $ServerPort             = $ENV{TEST_NGINX_PORT} || $ENV{TEST_NGINX_SERVER_PORT} || 1984;
