@@ -628,6 +628,15 @@ start_nginx:
         }
     }
 
+    if (my $total_errlog = $ENV{TEST_NGINX_ERROR_LOG}) {
+        my $errlog = "$LogDir/error.log";
+        if (-s $errlog) {
+            system("(echo; echo \"=== $0 $name ===\") >> $total_errlog") == 0 and
+            system("cat $errlog >> $total_errlog") == 0 or
+                die "Failed to append $errlog to $total_errlog. Abort.\n";
+        }
+    }
+
     if ($Profiling || $UseValgrind) {
         #warn "Found quit...";
         if (-f $PidFile) {
