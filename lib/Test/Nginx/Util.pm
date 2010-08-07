@@ -363,7 +363,7 @@ sub get_pid_from_pidfile ($) {
     my $pid = do { local $/; <$in> };
     #warn "Pid: $pid\n";
     close $in;
-    $pid;
+    return $pid;
 }
 
 sub trim ($) {
@@ -661,9 +661,12 @@ start_nginx:
 }
 
 END {
-    if ($UseValgrind) {
+    if ($UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         if (-f $PidFile) {
             my $pid = get_pid_from_pidfile('');
+            if (!$pid) {
+                die "No pid found.";
+            }
             if (system("ps $pid > /dev/null") == 0) {
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
