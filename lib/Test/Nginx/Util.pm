@@ -23,7 +23,7 @@ our $Profiling = 0;
 our $RepeatEach = 1;
 our $MAX_PROCESSES = 10;
 
-our $NoShuffle = 0;
+our $NoShuffle = $ENV{TEST_NGINX_NO_SHUFFLE} || 0;
 
 our $UseValgrind = $ENV{TEST_NGINX_USE_VALGRIND};
 
