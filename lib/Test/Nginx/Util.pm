@@ -45,10 +45,10 @@ our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
 our $Workers                = 1;
 our $WorkerConnections      = 64;
 our $LogLevel               = $ENV{TEST_NGINX_LOG_LEVEL} || 'debug';
-our $MasterProcessEnabled   = 'off';
+our $MasterProcessEnabled   = $ENV{TEST_NGINX_MASTER_PROCESS} || 'off';
 our $DaemonEnabled          = 'on';
-our $ServerPort             = $ENV{TEST_NGINX_PORT} || $ENV{TEST_NGINX_SERVER_PORT} || 1984;
-our $ServerPortForClient    = $ENV{TEST_NGINX_PORT} || $ENV{TEST_NGINX_CLIENT_PORT} || 1984;
+our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
+our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
 our $NoRootLocation         = 0;
 our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0;
 
@@ -152,7 +152,7 @@ our $TODO;
 
 #our ($PrevRequest, $PrevConfig);
 
-our $ServRoot   = $ENV{TEST_NGINX_ROOT} || File::Spec->catfile(cwd(), 't/servroot');
+our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->catfile(cwd(), 't/servroot');
 our $LogDir     = File::Spec->catfile($ServRoot, 'logs');
 our $ErrLogFile = File::Spec->catfile($LogDir, 'error.log');
 our $AccLogFile = File::Spec->catfile($LogDir, 'access.log');
@@ -190,7 +190,7 @@ sub run_tests () {
 sub setup_server_root () {
     if (-d $ServRoot) {
         # Take special care, so we won't accidentally remove
-        # real user data when TEST_NGINX_ROOT is mis-used.
+        # real user data when TEST_NGINX_SERVROOT is mis-used.
         system("rm -rf $ConfDir > /dev/null") == 0 or
             die "Can't remove $ConfDir";
         system("rm -rf $HtmlDir > /dev/null") == 0 or
