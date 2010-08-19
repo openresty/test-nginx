@@ -11,6 +11,52 @@ DESCRIPTION
 
     All of them are based on Test::Base.
 
+Nginx C modules that use Test::Nginx to drive their test suites
+    ngx_echo
+        <http://github.com/agentzh/echo-nginx-module>
+
+    ngx_chunkin
+        <http://wiki.nginx.org/NginxHttpChunkinModule>
+
+    ngx_memc
+        <http://wiki.nginx.org/NginxHttpMemcModule>
+
+    ngx_drizzle
+        <http://github.com/chaoslawful/drizzle-nginx-module>
+
+    ngx_rds_json
+        <http://github.com/agentzh/rds-json-nginx-module>
+
+    ngx_xss
+        <http://github.com/agentzh/xss-nginx-module>
+
+    ngx_srcache
+        <http://github.com/agentzh/srcache-nginx-module>
+
+    ngx_lua
+        <http://github.com/chaoslawful/lua-nginx-module>
+
+    ngx_set_misc
+        <http://github.com/agentzh/set-misc-nginx-module>
+
+    ngx_array_var
+        <http://github.com/agentzh/array-var-nginx-module>
+
+    ngx_form_input
+        <http://github.com/calio/form-input-nginx-module>
+
+    ngx_iconv
+        <http://github.com/calio/iconv-nginx-module>
+
+    ngx_set_cconv
+        <http://github.com/liseen/set-cconv-nginx-module>
+
+    ngx_postgres
+        <http://github.com/FRiCKLE/ngx_postgres>
+
+    ngx_coolkit
+        <http://github.com/FRiCKLE/ngx_coolkit>
+
 SOURCE REPOSITORY
     This module has a Git repository on Github, which has access for all.
 
