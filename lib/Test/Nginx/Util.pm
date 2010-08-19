@@ -3,7 +3,7 @@ package Test::Nginx::Util;
 use strict;
 use warnings;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use base 'Exporter';
 
@@ -13,6 +13,7 @@ use HTTP::Response;
 use Cwd qw( cwd );
 use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
+use ExtUtils::MakeMaker ();
 
 our $LatestNginxVersion = 0.008039;
 
@@ -701,7 +702,7 @@ END {
 
 # check if we can run some command
 sub can_run {
-	my ($self, $cmd) = @_;
+	my ($cmd) = @_;
 
 	my $_cmd = $cmd;
 	return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));

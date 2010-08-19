@@ -1,5 +1,23 @@
 Changes for Test::Nginx
 
+0.10 - 2010-08-19
+* we use our own can_run function rather than Module::Install::Can's.
+* Add TEST_NGINX_MASTER_PROCESS, rename TEST_NGINX_ROOT to less confusing TEST_NGINX_SERVROOT and reorder priority of TEST_NGINX_{CLIENT_,SERVER_,}PORT environment options. (Piotr Sikora)
+* added support for TEST_NGINX_NO_SHUFFLE env as requested by Piotr Sikora :)
+* added support for TEST_NGINX_LOG_LEVEL env but it can be overriden on the script level by calling the log_level function.
+* added support for TEST_NGINX_ERROR_LOG: if this env is specified to some file path, then all the error log by all the test cases will be accumulated to that file.
+* Now the test script driven by Test::Nginx will tell nginx to quit by default. The TEST_NGINX_NO_CLEAN=1 env setting will give back the old behavior :) Thanks Piotr Sikora for requesting this.
+* added support for --- main_config.
+* Make Test::Nginx more friendly to the environment (Piotr Sikora)
+    Added environment variables:
+    TEST_NGINX_BINARY - full path to the nginx binary,
+    TEST_NGINX_ROOT - path where server root should be created,
+    TEST_NGINX_PORT - port number that should be used by client and server
+                      (takes precedence over _CLIENT_PORT and _SERVER_PORT),
+    TEST_NGINX_SERVER_PORT - port number that should be used by the server.
+* add environment variable TEST_NGINX_SLEEP
+* added support for ngx_openresty in nginx version parser.
+
 0.09 - Wed 07 Jul 2010 02:57:13 PM CST
 * added new section --- user_files which will create user files under html/.
 * applied the patch from Piotr Sikora to add the --- skip_nginx2 directive.

@@ -25,3 +25,4 @@ diffall
 submitall
 testall
 update
+^\.rsync$
