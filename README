@@ -15,6 +15,9 @@ Nginx C modules that use Test::Nginx to drive their test suites
     ngx_echo
         <http://github.com/agentzh/echo-nginx-module>
 
+    ngx_headers_more
+        <http://github.com/agentzh/headers-more-nginx-module>
+
     ngx_chunkin
         <http://wiki.nginx.org/NginxHttpChunkinModule>
 
