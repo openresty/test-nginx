@@ -18,6 +18,7 @@ no_index:
     - inc
     - t
 requires:
+  ExtUtils::MakeMaker: 0
   Fcntl: 0
   Filter::Util::Call: 0
   HTTP::Response: 0

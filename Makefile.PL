@@ -17,6 +17,7 @@ requires        ('Fcntl');
 requires        ('POSIX');
 requires        ('IO::Select');
 requires        ('List::MoreUtils');
+requires        ('ExtUtils::MakeMaker');
 
 use_test_base();
 auto_install();

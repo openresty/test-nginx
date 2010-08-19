@@ -751,6 +751,42 @@ L<http://github.com/agentzh/rds-json-nginx-module>
 
 L<http://github.com/agentzh/xss-nginx-module>
 
+=item ngx_srcache
+
+L<http://github.com/agentzh/srcache-nginx-module>
+
+=item ngx_lua
+
+L<http://github.com/chaoslawful/lua-nginx-module>
+
+=item ngx_set_misc
+
+L<http://github.com/agentzh/set-misc-nginx-module>
+
+=item ngx_array_var
+
+L<http://github.com/agentzh/array-var-nginx-module>
+
+=item ngx_form_input
+
+L<http://github.com/calio/form-input-nginx-module>
+
+=item ngx_iconv
+
+L<http://github.com/calio/iconv-nginx-module>
+
+=item ngx_set_cconv
+
+L<http://github.com/liseen/set-cconv-nginx-module>
+
+=item ngx_postgres
+
+L<http://github.com/FRiCKLE/ngx_postgres>
+
+=item ngx_coolkit
+
+L<http://github.com/FRiCKLE/ngx_coolkit>
+
 =back
 
 =head1 SOURCE REPOSITORY
