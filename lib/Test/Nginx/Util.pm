@@ -10,7 +10,6 @@ use base 'Exporter';
 use POSIX qw( SIGQUIT SIGKILL SIGTERM );
 use File::Spec ();
 use HTTP::Response;
-use Module::Install::Can;
 use Cwd qw( cwd );
 use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
@@ -537,7 +536,7 @@ start_nginx:
             setup_server_root();
             write_user_files($block);
             write_config_file($config, $block->http_config, $block->main_config);
-            if ( ! Module::Install::Can->can_run($NginxBinary) ) {
+            if ( ! can_run($NginxBinary) ) {
                 Test::More::BAIL_OUT("$name - Cannot find the nginx executable in the PATH environment");
                 die;
             }
@@ -698,6 +697,22 @@ END {
             }
         }
     }
+}
+
+# check if we can run some command
+sub can_run {
+	my ($self, $cmd) = @_;
+
+	my $_cmd = $cmd;
+	return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));
+
+	for my $dir ((split /$Config::Config{path_sep}/, $ENV{PATH}), '.') {
+		next if $dir eq '';
+		my $abs = File::Spec->catfile($dir, $_[1]);
+		return $abs if (-x $abs or $abs = MM->maybe_command($abs));
+	}
+
+	return;
 }
 
 1;
