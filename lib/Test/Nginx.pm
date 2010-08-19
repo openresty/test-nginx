@@ -39,6 +39,10 @@ All of them are based on L<Test::Base>.
 
 L<http://github.com/agentzh/echo-nginx-module>
 
+=item ngx_headers_more
+
+L<http://github.com/agentzh/headers-more-nginx-module>
+
 =item ngx_chunkin
 
 L<http://wiki.nginx.org/NginxHttpChunkinModule>
