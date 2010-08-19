@@ -731,6 +731,10 @@ You'll find live samples in the following Nginx 3rd-party modules:
 
 =over
 
+=item ngx_echo
+
+L<http://github.com/agentzh/echo-nginx-module>
+
 =item ngx_chunkin
 
 L<http://wiki.nginx.org/NginxHttpChunkinModule>
