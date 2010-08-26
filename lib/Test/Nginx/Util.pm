@@ -52,6 +52,14 @@ our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ENV{TEST_NGINX_PO
 our $NoRootLocation         = 0;
 our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0;
 
+sub server_port (@) {
+    if (@_) {
+        $ServerPort = shift;
+    } else {
+        $ServerPort;
+    }
+}
+
 sub repeat_each (@) {
     if (@_) {
         $RepeatEach = shift;
@@ -130,6 +138,7 @@ our @EXPORT_OK = qw(
     no_root_location
     html_dir
     server_root
+    server_port
 );
 
 
@@ -408,6 +417,10 @@ sub parse_headers ($) {
 
 sub expand_env_in_config ($) {
     my $config = shift;
+
+    if (!defined $config) {
+        return;
+    }
 
     $config =~ s/\$(TEST_NGINX_[_A-Z]+)/
         if (!defined $ENV{$1}) {
