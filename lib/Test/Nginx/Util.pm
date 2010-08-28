@@ -51,6 +51,7 @@ our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PO
 our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
 our $NoRootLocation         = 0;
 our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0;
+our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 
 sub server_port (@) {
     if (@_) {
@@ -468,6 +469,7 @@ sub run_test ($) {
 
     my $skip_nginx = $block->skip_nginx;
     my $skip_nginx2 = $block->skip_nginx2;
+    my $skip_slave = $block->skip_slave;
     my ($tests_to_skip, $should_skip, $skip_reason);
     if (defined $skip_nginx) {
         if ($skip_nginx =~ m{
@@ -517,6 +519,28 @@ sub run_test ($) {
         } else {
             bail_out("$name - Invalid --- skip_nginx2 spec: " .
                 $skip_nginx2);
+            die;
+        }
+    } elsif (defined $skip_slave and defined $BuildSlaveName) {
+        if ($skip_slave =~ m{
+              ^ \s* (\d+) \s* : \s*
+                (\w+) \s* (?: (\w+) \s* )?  (?: (\w+) \s* )?
+                (?: \s* : \s* (.*) )? \s*$}x)
+        {
+            $tests_to_skip = $1;
+            my ($slave1, $slave2, $slave3) = ($2, $3, $4);
+            $skip_reason = $5;
+            if ((defined $slave1 and $slave1 eq "all")
+                or (defined $slave1 and $slave1 eq $BuildSlaveName)
+                or (defined $slave2 and $slave2 eq $BuildSlaveName)
+                or (defined $slave3 and $slave3 eq $BuildSlaveName)
+                )
+            {
+                $should_skip = 1;
+            }
+        } else {
+            bail_out("$name - Invalid --- skip_slave spec: " .
+                $skip_slave);
             die;
         }
     }
