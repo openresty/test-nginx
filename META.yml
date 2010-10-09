@@ -7,7 +7,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.99'
+generated_by: 'Module::Install version 1.00'
 license: bsd
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -33,4 +33,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/bsd-license.php
   repository: http://github.com/agentzh/test-nginx
-version: 0.10
+version: 0.11

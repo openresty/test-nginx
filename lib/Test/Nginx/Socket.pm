@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use Encode;
 use Data::Dumper;

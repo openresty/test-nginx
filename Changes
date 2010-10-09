@@ -1,8 +1,16 @@
 Changes for Test::Nginx
 
+0.11 - 2010-10-09
+* add TEST_NGINX_BUILDSLAVE and --- skip_slave.
+* implemented the TEST_NGINX_IGNORE_MISSING_DIRECTIVES which can
+  force test cases to skip when the directive is not
+  found in the current nginx.
+* added support for env TEST_NGINX_TIMEOUT.
+* implemented TEST_NGINX_XXX env expansion in --- config and --- http_config sections.
+
 0.10 - 2010-08-19
 * we use our own can_run function rather than Module::Install::Can's.
-* Add TEST_NGINX_MASTER_PROCESS, rename TEST_NGINX_ROOT to less confusing TEST_NGINX_SERVROOT and reorder priority of TEST_NGINX_{CLIENT_,SERVER_,}PORT environment options. (Piotr Sikora)
+* added TEST_NGINX_MASTER_PROCESS, rename TEST_NGINX_ROOT to less confusing TEST_NGINX_SERVROOT and reorder priority of TEST_NGINX_{CLIENT_,SERVER_,}PORT environment options. (Piotr Sikora)
 * added support for TEST_NGINX_NO_SHUFFLE env as requested by Piotr Sikora :)
 * added support for TEST_NGINX_LOG_LEVEL env but it can be overriden on the script level by calling the log_level function.
 * added support for TEST_NGINX_ERROR_LOG: if this env is specified to some file path, then all the error log by all the test cases will be accumulated to that file.
