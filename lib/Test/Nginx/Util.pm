@@ -162,7 +162,7 @@ our $TODO;
 
 #our ($PrevRequest, $PrevConfig);
 
-our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->catfile(cwd(), 't/servroot');
+our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->catfile(cwd() || '.', 't/servroot');
 our $LogDir     = File::Spec->catfile($ServRoot, 'logs');
 our $ErrLogFile = File::Spec->catfile($LogDir, 'error.log');
 our $AccLogFile = File::Spec->catfile($LogDir, 'access.log');
@@ -616,6 +616,7 @@ start_nginx:
             setup_server_root();
             write_user_files($block);
             write_config_file($config, $block->http_config, $block->main_config);
+            #warn "nginx binary: $NginxBinary";
             if ( ! can_run($NginxBinary) ) {
                 bail_out("$name - Cannot find the nginx executable in the PATH environment");
                 die;
@@ -790,12 +791,13 @@ END {
 sub can_run {
 	my ($cmd) = @_;
 
+        #warn "can run: @_\n";
 	my $_cmd = $cmd;
 	return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));
 
 	for my $dir ((split /$Config::Config{path_sep}/, $ENV{PATH}), '.') {
 		next if $dir eq '';
-		my $abs = File::Spec->catfile($dir, $_[1]);
+		my $abs = File::Spec->catfile($dir, $_[0]);
 		return $abs if (-x $abs or $abs = MM->maybe_command($abs));
 	}
 
