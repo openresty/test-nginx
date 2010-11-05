@@ -303,6 +303,16 @@ $parsed_req->{content}";
         }
     }
 
+    if (defined $block->raw_response_headers_like) {
+        if ($dry_run) {
+            Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+
+        } else {
+            my $expected = $block->raw_response_headers_like;
+            like $raw_headers, qr/$expected/s, "$name - raw resp headers like";
+        }
+    }
+
     if (defined $block->response_headers) {
         my $headers = parse_headers($block->response_headers);
         while (my ($key, $val) = each %$headers) {
