@@ -45,6 +45,7 @@ use Test::Nginx::Util qw(
     server_root
     html_dir
     server_port
+    no_nginx_manager
 );
 
 #use Smart::Comments::JSON '###';
@@ -62,7 +63,7 @@ our @EXPORT = qw( plan run_tests run_test
     no_long_string workers master_on
     log_level no_shuffle no_root_location
     server_addr server_root html_dir server_port
-    timeout
+    timeout no_nginx_manager
 );
 
 sub send_request ($$$$);

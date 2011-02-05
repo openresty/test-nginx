@@ -31,6 +31,14 @@ L<Test::Nginx::Socket>
 
 All of them are based on L<Test::Base>.
 
+Usually, L<Test::Nginx::Socket> is preferred because it's much lower
+level and not that fault tolerant like L<Test::Nginx::LWP>.
+
+Also, a lot of connection hang issues (like wrong C<< r->main->count >> value in nginx
+0.8.x) can only be captured by L<Test::Nginx::Socket> because Perl's L<LWP::UserAgent> client
+will close the connection itself which will conceal such issues from
+the testers.
+
 =head1 Nginx C modules that use Test::Nginx to drive their test suites
 
 =over
