@@ -871,9 +871,9 @@ agentzh (章亦春) C<< <agentzh@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
+Copyright (c) 2009-2011, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
 
-Copyright (c) 2009, agentzh C<< <agentzh@gmail.com> >>.
+Copyright (c) 2009-2011, agentzh C<< <agentzh@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
 
