@@ -3,7 +3,7 @@ package Test::Nginx;
 use strict;
 use warnings;
 
-our $VERSION = '0.11';
+our $VERSION = '0.13';
 
 __END__
 
@@ -39,11 +39,15 @@ Also, a lot of connection hang issues (like wrong C<< r->main->count >> value in
 will close the connection itself which will conceal such issues from
 the testers.
 
-=head2 etcproxy integration
-
-Test::Nginx automatically starts an nginx instance (from the PATH env)
+Test::Nginx automatically starts an nginx instance (from the C<PATH> env)
 rooted at t/servroot/ and the default config template makes this nginx
-instance listen on the port 1984 by default.
+instance listen on the port C<1984> by default. One can specify a different
+port number by setting his port number to the C<TEST_NGINX_PORT> environment,
+as in
+
+    export TEST_NGINX_PORT=1989
+
+=head2 etcproxy integration
 
 The default settings in etcproxy (https://github.com/chaoslawful/etcproxy)
 makes this small TCP proxy split the TCP packets into bytes and introduce 1 ms latency among them.
@@ -109,9 +113,9 @@ Then we tell our t/foo.t test script to connect to 11984 rather than 11211:
   --- response_body_like: STORED
 
 The Test::Nginx library will automatically expand the special macro
-"$TEST_NGINX_MEMCACHED_PORT" to the environment with the same name.
-You can define your own $TEST_NGINX_BLAH_BLAH_PORT macros as long as
-its prefix is TEST_NGINX_ and all in upper case letters.
+C<$TEST_NGINX_MEMCACHED_PORT> to the environment with the same name.
+You can define your own C<$TEST_NGINX_BLAH_BLAH_PORT> macros as long as
+its prefix is C<TEST_NGINX_> and all in upper case letters.
 
 And now we can run your test script against the etcproxy port 11984:
 
@@ -121,7 +125,7 @@ Then the TCP chains look like this:
 
    Test::Nginx <=> nginx (1984) <=> etcproxy (11984) <=> memcached (11211)
 
-If TEST_NGINX_MEMCACHED_PORT is not set, then it will take the default
+If C<TEST_NGINX_MEMCACHED_PORT> is not set, then it will take the default
 value 11211, which is what we want when there's no etcproxy
 configured:
 
@@ -131,8 +135,8 @@ This approach also works for proxied mysql and postgres traffic.
 Please see the live test suite of ngx_drizzle and ngx_postgres for
 more details.
 
-Usually we set both TEST_NGINX_CLIENT_PORT and
-TEST_NGINX_MEMCACHED_PORT (and etc) at the same time, effectively
+Usually we set both C<TEST_NGINX_CLIENT_PORT> and
+C<TEST_NGINX_MEMCACHED_PORT> (and etc) at the same time, effectively
 yielding the following chain:
 
    Test::Nginx <=> etcproxy (1234) <=> nginx (1984) <=> etcproxy (11984) <=> memcached (11211)
@@ -151,7 +155,7 @@ default it does not bother running it with the tests because valgrind
 will significantly slow down the test sutie.
 
 First ensure that your valgrind executable visible in your PATH env.
-And then run your test suite with the TEST_NGINX_USE_VALGRIND env set
+And then run your test suite with the C<TEST_NGINX_USE_VALGRIND> env set
 to true:
 
    TEST_NGINX_USE_VALGRIND=1 prove -r t

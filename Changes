@@ -1,5 +1,16 @@
 Changes for Test::Nginx
 
+0.13 - 2011-03-08
+* documented the TEST_NGINX_PORT environment.
+
+0.12 - 2011-03-08
+* documented the etcproxy and valgrind integration support.
+* implemented the no_nginx_manager utility function
+* documented the difference between Test::Nginx::Socket and Test::Nginx::LWP.
+* allow numbers in TEST_NGINX_BLAH_BLAH_BLAH env names.
+* added support for --- raw_response_headers_like.
+* fixed a bug in the can_run sub.
+
 0.11 - 2010-10-09
 * add TEST_NGINX_BUILDSLAVE and --- skip_slave.
 * implemented the TEST_NGINX_IGNORE_MISSING_DIRECTIVES which can
