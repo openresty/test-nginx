@@ -17,7 +17,7 @@ use ExtUtils::MakeMaker ();
 
 our $LatestNginxVersion = 0.008039;
 
-our $NoNginxManager = 0;
+our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
 our $Profiling = 0;
 
 our $RepeatEach = 1;
@@ -165,7 +165,8 @@ our $NginxVersion;
 our $NginxRawVersion;
 our $TODO;
 
-#our ($PrevRequest, $PrevConfig);
+#our ($PrevRequest)
+our $PrevConfig='';
 
 our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->catfile(cwd() || '.', 't/servroot');
 our $LogDir     = File::Spec->catfile($ServRoot, 'logs');
@@ -467,9 +468,13 @@ sub run_test ($) {
     my $dry_run = 0;
 
     if (!defined $config) {
-        bail_out("$name - No '--- config' section specified");
-        #$config = $PrevConfig;
-        die;
+        if (!$NoNginxManager) {
+            bail_out("$name - No '--- config' section specified");
+            #$config = $PrevConfig;
+            die;
+        }
+    } elsif ($NoNginxManager) {
+        Test::Base::diag("NO_NGINX_MANAGER activated: config for $name ignored");
     }
 
     my $skip_nginx = $block->skip_nginx;
