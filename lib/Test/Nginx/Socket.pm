@@ -18,34 +18,34 @@ our $ServerAddr = 'localhost';
 our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 2;
 
 use Test::Nginx::Util qw(
-    setup_server_root
-    write_config_file
-    get_canon_version
-    get_nginx_version
-    trim
-    show_all_chars
-    parse_headers
-    run_tests
-    $ServerPortForClient
-    $ServerPort
-    $PidFile
-    $ServRoot
-    $ConfFile
-    $RunTestHelper
-    $RepeatEach
-    worker_connections
-    master_process_enabled
-    config_preamble
-    repeat_each
-    workers
-    master_on
-    log_level
-    no_shuffle
-    no_root_location
-    server_root
-    html_dir
-    server_port
-    no_nginx_manager
+  setup_server_root
+  write_config_file
+  get_canon_version
+  get_nginx_version
+  trim
+  show_all_chars
+  parse_headers
+  run_tests
+  $ServerPortForClient
+  $ServerPort
+  $PidFile
+  $ServRoot
+  $ConfFile
+  $RunTestHelper
+  $RepeatEach
+  worker_connections
+  master_process_enabled
+  config_preamble
+  repeat_each
+  workers
+  master_on
+  log_level
+  no_shuffle
+  no_root_location
+  server_root
+  html_dir
+  server_port
+  no_nginx_manager
 );
 
 #use Smart::Comments::JSON '###';
@@ -58,12 +58,12 @@ use IO::Socket;
 our $NoLongString = undef;
 
 our @EXPORT = qw( plan run_tests run_test
-    repeat_each config_preamble worker_connections
-    master_process_enabled
-    no_long_string workers master_on
-    log_level no_shuffle no_root_location
-    server_addr server_root html_dir server_port
-    timeout no_nginx_manager
+  repeat_each config_preamble worker_connections
+  master_process_enabled
+  no_long_string workers master_on
+  log_level no_shuffle no_root_location
+  server_addr server_root html_dir server_port
+  timeout no_nginx_manager
 );
 
 sub send_request ($$$$);
@@ -80,9 +80,11 @@ sub no_long_string () {
 
 sub server_addr (@) {
     if (@_) {
+
         #warn "setting server addr to $_[0]\n";
         $ServerAddr = shift;
-    } else {
+    }
+    else {
         return $ServerAddr;
     }
 }
@@ -90,7 +92,8 @@ sub server_addr (@) {
 sub timeout (@) {
     if (@_) {
         $Timeout = shift;
-    } else {
+    }
+    else {
         $Timeout;
     }
 }
@@ -98,24 +101,26 @@ sub timeout (@) {
 $RunTestHelper = \&run_test_helper;
 
 sub parse_request ($$) {
-    my ($name, $rrequest) = @_;
+    my ( $name, $rrequest ) = @_;
     open my $in, '<', $rrequest;
     my $first = <$in>;
-    if (!$first) {
+    if ( !$first ) {
         Test::More::BAIL_OUT("$name - Request line should be non-empty");
         die;
     }
     $first =~ s/^\s+|\s+$//gs;
-    my ($meth, $rel_url) = split /\s+/, $first, 2;
-    if (!defined $rel_url) {
+    my ( $meth, $rel_url ) = split /\s+/, $first, 2;
+    if ( !defined $rel_url ) {
         $rel_url = "/";
     }
+
     #my $url = "http://localhost:$ServerPortForClient" . $rel_url;
 
     my $content = do { local $/; <$in> };
-    if (!defined $content) {
+    if ( !defined $content ) {
         $content = "";
     }
+
     #warn Dumper($content);
 
     close $in;
@@ -126,103 +131,125 @@ sub parse_request ($$) {
         content => $content,
     };
 }
+sub build_request($$$$$) {
+    my ($name, $more_headers, $is_chunked, $conn_header, $r_original_request) = @_;
+    my $parsed_req = parse_request( $name, $r_original_request);
 
-sub run_test_helper ($$) {
-    my ($block, $dry_run) = @_;
+    my $len_header = '';
+    if (   !$is_chunked
+        && defined $parsed_req->{content}
+        && $parsed_req->{content} ne ''
+        && $more_headers !~ /\bContent-Length:/ )
+        {
+            $parsed_req->{content} =~ s/^\s+|\s+$//gs;
 
+            $len_header .= "Content-Length: "
+                      . length( $parsed_req->{content} ) . "\r\n";
+        }
+
+        return "$parsed_req->{method} $parsed_req->{url} HTTP/1.1\r
+Host: localhost\r
+Connection: $conn_header\r
+$more_headers$len_header\r
+$parsed_req->{content}";
+}
+#  Returns an array of array. Each element of the first array is a request.
+# Each request is an array of the "packets" to be sent, with an (optionnal)
+# delay between packets to send.
+#  Raw requests might be malformed intentionnaly (find what is wrong ;) ) :
+# [["POST /test HTTP/1.1\r\nHost: localhost\r\nConnection:keep-alive\r\n",
+#   "Content-Length:", -1, "2\r\n\r\n", 15, "ABZGET /test HTTP/1.0"]]
+# When sending, this will pause by the default delay between "Content-Length"
+# and 2. And by 15 seconds before the body.
+sub get_req_from_block ($) {
+    my ($block) = @_;
     my $name = $block->name;
 
-    my $req;
+    my @req_list = ();
 
-    if (defined $block->raw_request) {
-        $req = $block->raw_request;
-    } else {
+    if ( defined $block->raw_request ) {
+        # Should be deprecated.
+        if ( ref $block->raw_request && ref $block->raw_request eq 'ARRAY' ) {
+            #  User already provided an array. So, he/she specified where the
+            # data should be split. This allows for backward compatibility but
+            # should use request with arrays as it provides the same functionnality.
+            for my $elt (@{$block->raw_request}) {
+                push @req_list, ($elt, $block->raw_request_middle_delay);
+            }
+        } else {
+            @req_list = ( $block->raw_request );
+        }
+    }
+    else {
         my $request;
-        if (defined $block->request_eval) {
+        if ( defined $block->request_eval ) {
+            # Should be deprecated.
             $request = eval $block->request_eval;
             if ($@) {
                 warn $@;
             }
-        } else {
+        }
+        else {
             $request = $block->request;
         }
 
-        my $is_chunked = 0;
+        my $is_chunked   = 0;
         my $more_headers = '';
-        if ($block->more_headers) {
+        if ( $block->more_headers ) {
             my @headers = split /\n+/, $block->more_headers;
             for my $header (@headers) {
                 next if $header =~ /^\s*\#/;
-                my ($key, $val) = split /:\s*/, $header, 2;
-                if (lc($key) eq 'transfer-encoding' and $val eq 'chunked') {
+                my ( $key, $val ) = split /:\s*/, $header, 2;
+                if ( lc($key) eq 'transfer-encoding' and $val eq 'chunked' ) {
                     $is_chunked = 1;
                 }
+
                 #warn "[$key, $val]\n";
                 $more_headers .= "$key: $val\r\n";
             }
         }
 
-        if ($block->pipelined_requests) {
+        if ( $block->pipelined_requests ) {
             my $reqs = $block->pipelined_requests;
-            if (!ref $reqs || ref $reqs ne 'ARRAY') {
-                Test::More::BAIL_OUT("$name - invalid entries in --- pipelined_requests");
+            if ( !ref $reqs || ref $reqs ne 'ARRAY' ) {
+                Test::More::BAIL_OUT(
+                    "$name - invalid entries in --- pipelined_requests");
             }
             my $i = 0;
             for my $request (@$reqs) {
                 my $conn_type;
-                if ($i++ == @$reqs - 1) {
+                if ( $i++ == @$reqs - 1 ) {
                     $conn_type = 'close';
-                } else {
+                }
+                else {
                     $conn_type = 'keep-alive';
                 }
-                my $parsed_req = parse_request($name, \$request);
-
-                my $len_header = '';
-                if (!$is_chunked && defined $parsed_req->{content} 
-                        && $parsed_req->{content} ne ''
-                        && $more_headers !~ /\bContent-Length:/)
-                {
-                    $parsed_req->{content} =~ s/^\s+|\s+$//gs;
-
-                    $len_header .= "Content-Length: " . length($parsed_req->{content}) . "\r\n";
-                }
-
-                $req .= "$parsed_req->{method} $parsed_req->{url} HTTP/1.1\r
-Host: localhost\r
-Connection: $conn_type\r
-$more_headers$len_header\r
-$parsed_req->{content}";
+                push @req_list, build_request($name, $more_headers, $is_chunked, $conn_type, \$request);
             }
-        } else {
-            my $parsed_req = parse_request($name, \$request);
-            ### $parsed_req
-
-            my $len_header = '';
-            if (!$is_chunked && defined $parsed_req->{content}
-                    && $parsed_req->{content} ne ''
-                    && $more_headers !~ /\bContent-Length:/)
-            {
-                $parsed_req->{content} =~ s/^\s+|\s+$//gs;
-                $len_header .= "Content-Length: " . length($parsed_req->{content}) . "\r\n";
-            }
-
-            $req = "$parsed_req->{method} $parsed_req->{url} HTTP/1.1\r
-Host: localhost\r
-Connection: Close\r
-$more_headers$len_header\r
-$parsed_req->{content}";
+        }
+        else {
+            push @req_list, build_request($name, $more_headers, $is_chunked, 'Close', \$request);
         }
 
     }
+    return @req_list;
+}
 
-    if (!$req) {
+sub run_test_helper ($$) {
+    my ( $block, $dry_run ) = @_;
+
+    my $name = $block->name;
+
+    my @req = get_req_from_block($block);
+
+    if ( $#req < 0 ) {
         Test::More::BAIL_OUT("$name - request empty");
     }
 
     #warn "request: $req\n";
 
     my $timeout = $block->timeout;
-    if (!defined $timeout) {
+    if ( !defined $timeout ) {
         $timeout = $Timeout;
     }
 
@@ -230,179 +257,158 @@ $parsed_req->{content}";
 
     if ($dry_run) {
         $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
-    } else {
-        $raw_resp = send_request($req, $block->raw_request_middle_delay,
-            $timeout, $block->name);
+    }
+    else {
+        $raw_resp = send_request( \@req, $block->raw_request_middle_delay,
+            $timeout, $block->name );
     }
 
     #warn "raw resonse: [$raw_resp]\n";
 
-    my $raw_headers = '';
-    if ($raw_resp =~ /(.*?)\r\n\r\n/s) {
-        #warn "\$1: $1";
-        $raw_headers = $1;
-    }
-    #warn "raw headers: $raw_headers\n";
-
-    my $res = HTTP::Response->parse($raw_resp);
-    my $enc = $res->header('Transfer-Encoding');
-
-    if (defined $enc && $enc eq 'chunked') {
-        #warn "Found chunked!";
-        my $raw = $res->content;
-        if (!defined $raw) {
-            $raw = '';
-        }
-
-        my $decoded = '';
-        while (1) {
-            if ($raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx) {
-                last;
-            }
-            if ($raw =~ m{ \G [\ \t]* ( [A-Fa-f0-9]+ ) [\ \t]* \r\n }gcsx) {
-                my $rest = hex($1);
-                #warn "chunk size: $rest\n";
-                my $bit_sz = 32765;
-                while ($rest > 0) {
-                    my $bit = $rest < $bit_sz ? $rest : $bit_sz;
-                    #warn "bit: $bit\n";
-                    if ($raw =~ /\G(.{$bit})/gcs) {
-                        $decoded .= $1;
-                        #warn "decoded: [$1]\n";
-                    } else {
-                        fail("$name - invalid chunked data received (not enought octets for the data section)");
-                        return;
-                    }
-
-                    $rest -= $bit;
-                }
-                if ($raw !~ /\G\r\n/gcs) {
-                    fail("$name - invalid chunked data received (expected CRLF).");
-                    return;
-                }
-            } elsif ($raw =~ /\G.+/gcs) {
-                fail "$name - invalid chunked body received: $&";
-                return;
-            } else {
-                fail "$name - no last chunk found - $raw";
-                return;
-            }
-        }
-        #warn "decoded: $decoded\n";
-        $res->content($decoded);
-    }
-
+    my ($res, $raw_headers)=parse_response($name, $raw_resp);
     if ($dry_run) {
-        SKIP: {
-            Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+      SKIP: {
+            Test::More::skip(
+                "$name - tests skipped due to the lack of directive $dry_run",
+                1 );
         }
-    } else {
-        if (defined $block->error_code) {
-            is($res->code || '', $block->error_code, "$name - status code ok");
-        } else {
-            is($res->code || '', 200, "$name - status code ok");
+    }
+    else {
+        if ( defined $block->error_code ) {
+            is( $res->code || '', $block->error_code,
+                "$name - status code ok" );
+        }
+        else {
+            is( $res->code || '', 200, "$name - status code ok" );
         }
     }
 
-    if (defined $block->raw_response_headers_like) {
+    if ( defined $block->raw_response_headers_like ) {
         if ($dry_run) {
-            Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+            Test::More::skip(
+                "$name - tests skipped due to the lack of directive $dry_run",
+                1 );
 
-        } else {
+        }
+        else {
             my $expected = $block->raw_response_headers_like;
             like $raw_headers, qr/$expected/s, "$name - raw resp headers like";
         }
     }
 
-    if (defined $block->response_headers) {
-        my $headers = parse_headers($block->response_headers);
-        while (my ($key, $val) = each %$headers) {
-            if (!defined $val) {
+    if ( defined $block->response_headers ) {
+        my $headers = parse_headers( $block->response_headers );
+        while ( my ( $key, $val ) = each %$headers ) {
+            if ( !defined $val ) {
+
                 #warn "HIT";
                 if ($dry_run) {
-                    SKIP: {
-                        Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+                  SKIP: {
+                        Test::More::skip(
+"$name - tests skipped due to the lack of directive $dry_run",
+                            1
+                        );
                     }
-                } else {
-                    unlike $raw_headers, qr/^\s*\Q$key\E\s*:/ms, "$name - header $key not present in the raw headers";
+                }
+                else {
+                    unlike $raw_headers, qr/^\s*\Q$key\E\s*:/ms,
+                      "$name - header $key not present in the raw headers";
                 }
                 next;
             }
 
             my $actual_val = $res->header($key);
-            if (!defined $actual_val) {
+            if ( !defined $actual_val ) {
                 $actual_val = '';
             }
 
             if ($dry_run) {
-                SKIP: {
-                    Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+              SKIP: {
+                    Test::More::skip(
+"$name - tests skipped due to the lack of directive $dry_run",
+                        1
+                    );
                 }
-            } else {
-                is $actual_val, $val,
-                    "$name - header $key ok";
+            }
+            else {
+                is $actual_val, $val, "$name - header $key ok";
             }
         }
-    } elsif (defined $block->response_headers_like) {
-        my $headers = parse_headers($block->response_headers_like);
-        while (my ($key, $val) = each %$headers) {
+    }
+    elsif ( defined $block->response_headers_like ) {
+        my $headers = parse_headers( $block->response_headers_like );
+        while ( my ( $key, $val ) = each %$headers ) {
             my $expected_val = $res->header($key);
-            if (!defined $expected_val) {
+            if ( !defined $expected_val ) {
                 $expected_val = '';
             }
             if ($dry_run) {
-                SKIP: {
-                    Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+              SKIP: {
+                    Test::More::skip(
+"$name - tests skipped due to the lack of directive $dry_run",
+                        1
+                    );
                 }
-            } else {
-                like $expected_val, qr/^$val$/,
-                    "$name - header $key like ok";
+            }
+            else {
+                like $expected_val, qr/^$val$/, "$name - header $key like ok";
             }
         }
     }
 
-    if (defined $block->response_body
-           || defined $block->response_body_eval) {
+    if (   defined $block->response_body
+        || defined $block->response_body_eval )
+    {
         my $content = $res->content;
-        if (defined $content) {
+        if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
             $content =~ s/^Connection: TE, close\r\n//gms;
         }
 
         my $expected;
-        if ($block->response_body_eval) {
+        if ( $block->response_body_eval ) {
             $expected = eval $block->response_body_eval;
             if ($@) {
                 warn $@;
             }
-        } else {
+        }
+        else {
             $expected = $block->response_body;
         }
 
-        if ($block->charset) {
-            Encode::from_to($expected, 'UTF-8', $block->charset);
+        if ( $block->charset ) {
+            Encode::from_to( $expected, 'UTF-8', $block->charset );
         }
 
         $expected =~ s/\$ServerPort\b/$ServerPort/g;
         $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+
         #warn show_all_chars($content);
 
         #warn "no long string: $NoLongString";
         if ($dry_run) {
-            SKIP: {
-                Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+          SKIP: {
+                Test::More::skip(
+"$name - tests skipped due to the lack of directive $dry_run",
+                    1
+                );
             }
-        } else {
+        }
+        else {
             if ($NoLongString) {
-                is($content, $expected, "$name - response_body - response is expected");
-            } else {
-                is_string($content, $expected, "$name - response_body - response is expected");
+                is( $content, $expected,
+                    "$name - response_body - response is expected" );
+            }
+            else {
+                is_string( $content, $expected,
+                    "$name - response_body - response is expected" );
             }
         }
 
-    } elsif (defined $block->response_body_like) {
+    }
+    elsif ( defined $block->response_body_like ) {
         my $content = $res->content;
-        if (defined $content) {
+        if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
         }
         $content =~ s/^Connection: TE, close\r\n//gms;
@@ -412,17 +418,96 @@ $parsed_req->{content}";
         my $summary = trim($content);
 
         if ($dry_run) {
-            SKIP: {
-                Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+          SKIP: {
+                Test::More::skip(
+"$name - tests skipped due to the lack of directive $dry_run",
+                    1
+                );
             }
-        } else {
-            like($content, qr/$expected_pat/s, "$name - response_body_like - response is expected ($summary)");
+        }
+        else {
+            like( $content, qr/$expected_pat/s,
+                "$name - response_body_like - response is expected ($summary)"
+            );
         }
     }
 }
 
+sub parse_response($$) {
+    my ($name, $raw_resp) = @_;
+
+    my $raw_headers = '';
+    if ( $raw_resp =~ /(.*?)\r\n\r\n/s ) {
+
+        #warn "\$1: $1";
+        $raw_headers = $1;
+    }
+
+    #warn "raw headers: $raw_headers\n";
+
+    my $res = HTTP::Response->parse($raw_resp);
+    my $enc = $res->header('Transfer-Encoding');
+
+    if ( defined $enc && $enc eq 'chunked' ) {
+
+        #warn "Found chunked!";
+        my $raw = $res->content;
+        if ( !defined $raw ) {
+            $raw = '';
+        }
+
+        my $decoded = '';
+        while (1) {
+            if ( $raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx ) {
+                last;
+            }
+            if ( $raw =~ m{ \G [\ \t]* ( [A-Fa-f0-9]+ ) [\ \t]* \r\n }gcsx ) {
+                my $rest = hex($1);
+
+                #warn "chunk size: $rest\n";
+                my $bit_sz = 32765;
+                while ( $rest > 0 ) {
+                    my $bit = $rest < $bit_sz ? $rest : $bit_sz;
+
+                    #warn "bit: $bit\n";
+                    if ( $raw =~ /\G(.{$bit})/gcs ) {
+                        $decoded .= $1;
+
+                        #warn "decoded: [$1]\n";
+                    }
+                    else {
+                        fail(
+"$name - invalid chunked data received (not enought octets for the data section)"
+                        );
+                        return;
+                    }
+
+                    $rest -= $bit;
+                }
+                if ( $raw !~ /\G\r\n/gcs ) {
+                    fail(
+                        "$name - invalid chunked data received (expected CRLF)."
+                    );
+                    return;
+                }
+            }
+            elsif ( $raw =~ /\G.+/gcs ) {
+                fail "$name - invalid chunked body received: $&";
+                return;
+            }
+            else {
+                fail "$name - no last chunk found - $raw";
+                return;
+            }
+        }
+
+        #warn "decoded: $decoded\n";
+        $res->content($decoded);
+    }
+    return ($res, $raw_headers);
+}
 sub send_request ($$$$) {
-    my ($req, $middle_delay, $timeout, $name) = @_;
+    my ( $req, $middle_delay, $timeout, $name ) = @_;
 
     my @req_bits = ref $req ? @$req : ($req);
 
@@ -430,42 +515,46 @@ sub send_request ($$$$) {
         PeerAddr => $ServerAddr,
         PeerPort => $ServerPortForClient,
         Proto    => 'tcp'
-    ) or
-        die "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+    ) or die "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
 
     my $flags = fcntl $sock, F_GETFL, 0
-        or die "Failed to get flags: $!\n";
+      or die "Failed to get flags: $!\n";
 
     fcntl $sock, F_SETFL, $flags | O_NONBLOCK
-        or die "Failed to set flags: $!\n";
+      or die "Failed to set flags: $!\n";
 
     my $ctx = {
-        resp => '',
+        resp         => '',
         write_offset => 0,
-        buf_size => 1024,
-        req_bits => \@req_bits,
-        write_buf => shift @req_bits,
+        buf_size     => 1024,
+        req_bits     => \@req_bits,
+        write_buf    => shift @req_bits,
         middle_delay => $middle_delay,
-        sock => $sock,
-        name => $name,
+        sock         => $sock,
+        name         => $name,
     };
 
     my $readable_hdls = IO::Select->new($sock);
     my $writable_hdls = IO::Select->new($sock);
-    my $err_hdls = IO::Select->new($sock);
+    my $err_hdls      = IO::Select->new($sock);
 
     while (1) {
-        if ($readable_hdls->count == 0 && $writable_hdls->count == 0 && $err_hdls->count == 0) {
+        if (   $readable_hdls->count == 0
+            && $writable_hdls->count == 0
+            && $err_hdls->count == 0 )
+        {
             last;
         }
 
-        my ($new_readable, $new_writable, $new_err) =
-            IO::Select->select($readable_hdls, $writable_hdls,
-                $err_hdls, $timeout);
+        my ( $new_readable, $new_writable, $new_err ) =
+          IO::Select->select( $readable_hdls, $writable_hdls, $err_hdls,
+            $timeout );
 
-        if (!defined $new_err && !defined $new_readable
-                && !defined $new_writable)
+        if (   !defined $new_err
+            && !defined $new_readable
+            && !defined $new_writable )
         {
+
             # timed out
             timeout_event_handler($ctx);
             last;
@@ -476,21 +565,21 @@ sub send_request ($$$$) {
 
             error_event_handler($ctx);
 
-            if ($err_hdls->exists($hdl)) {
+            if ( $err_hdls->exists($hdl) ) {
                 $err_hdls->remove($hdl);
             }
 
-            if ($readable_hdls->exists($hdl)) {
+            if ( $readable_hdls->exists($hdl) ) {
                 $readable_hdls->remove($hdl);
             }
 
-            if ($writable_hdls->exists($hdl)) {
+            if ( $writable_hdls->exists($hdl) ) {
                 $writable_hdls->remove($hdl);
             }
 
             for my $h (@$readable_hdls) {
                 next if !defined $h;
-                if ($h eq $hdl) {
+                if ( $h eq $hdl ) {
                     undef $h;
                     last;
                 }
@@ -498,7 +587,7 @@ sub send_request ($$$$) {
 
             for my $h (@$writable_hdls) {
                 next if !defined $h;
-                if ($h eq $hdl) {
+                if ( $h eq $hdl ) {
                     undef $h;
                     last;
                 }
@@ -511,23 +600,24 @@ sub send_request ($$$$) {
             next if !defined $hdl;
 
             my $res = read_event_handler($ctx);
-            if (!$res) {
+            if ( !$res ) {
+
                 # error occured
-                if ($err_hdls->exists($hdl)) {
+                if ( $err_hdls->exists($hdl) ) {
                     $err_hdls->remove($hdl);
                 }
 
-                if ($readable_hdls->exists($hdl)) {
+                if ( $readable_hdls->exists($hdl) ) {
                     $readable_hdls->remove($hdl);
                 }
 
-                if ($writable_hdls->exists($hdl)) {
+                if ( $writable_hdls->exists($hdl) ) {
                     $writable_hdls->remove($hdl);
                 }
 
                 for my $h (@$writable_hdls) {
                     next if !defined $h;
-                    if ($h eq $hdl) {
+                    if ( $h eq $hdl ) {
                         undef $h;
                         last;
                     }
@@ -541,25 +631,26 @@ sub send_request ($$$$) {
             next if !defined $hdl;
 
             my $res = write_event_handler($ctx);
-            if (!$res) {
+            if ( !$res ) {
+
                 # error occured
-                if ($err_hdls->exists($hdl)) {
+                if ( $err_hdls->exists($hdl) ) {
                     $err_hdls->remove($hdl);
                 }
 
-                if ($readable_hdls->exists($hdl)) {
+                if ( $readable_hdls->exists($hdl) ) {
                     $readable_hdls->remove($hdl);
                 }
 
-                if ($writable_hdls->exists($hdl)) {
+                if ( $writable_hdls->exists($hdl) ) {
                     $writable_hdls->remove($hdl);
                 }
 
                 close $hdl;
             }
 
-            if ($res == 2) {
-                if ($writable_hdls->exists($hdl)) {
+            if ( $res == 2 ) {
+                if ( $writable_hdls->exists($hdl) ) {
                     $writable_hdls->remove($hdl);
                 }
             }
@@ -584,22 +675,27 @@ sub write_event_handler ($) {
     while (1) {
         return undef if !defined $ctx->{write_buf};
 
-        my $rest = length($ctx->{write_buf}) - $ctx->{write_offset};
-        #warn "offset: $write_offset, rest: $rest, length ", length($write_buf), "\n";
-        #die;
+        my $rest = length( $ctx->{write_buf} ) - $ctx->{write_offset};
 
-        if ($rest > 0) {
-            my $bytes = syswrite($ctx->{sock}, $ctx->{write_buf}, $rest, $ctx->{write_offset});
+  #warn "offset: $write_offset, rest: $rest, length ", length($write_buf), "\n";
+  #die;
 
-            if (!defined $bytes) {
-                if ($! == EAGAIN) {
+        if ( $rest > 0 ) {
+            my $bytes = syswrite(
+                $ctx->{sock}, $ctx->{write_buf},
+                $rest,        $ctx->{write_offset}
+            );
+
+            if ( !defined $bytes ) {
+                if ( $! == EAGAIN ) {
+
                     #warn "write again...";
                     #sleep 0.002;
                     return 1;
                 }
                 my $errmsg = "write failed: $!";
                 warn "$errmsg\n";
-                if (!$ctx->{resp}) {
+                if ( !$ctx->{resp} ) {
                     $ctx->{resp} = "$errmsg";
                 }
                 return undef;
@@ -607,10 +703,12 @@ sub write_event_handler ($) {
 
             #warn "wrote $bytes bytes.\n";
             $ctx->{write_offset} += $bytes;
-        } else {
-            $ctx->{write_buf} = shift @{$ctx->{req_bits}} or return 2;
+        }
+        else {
+            $ctx->{write_buf} = shift @{ $ctx->{req_bits} } or return 2;
             $ctx->{write_offset} = 0;
-            if (defined $ctx->{middle_delay}) {
+            if ( defined $ctx->{middle_delay} ) {
+
                 #warn "sleeping..";
                 sleep $ctx->{middle_delay};
             }
@@ -625,10 +723,11 @@ sub read_event_handler ($) {
     my ($ctx) = @_;
     while (1) {
         my $read_buf;
-        my $bytes = sysread($ctx->{sock}, $read_buf, $ctx->{buf_size});
+        my $bytes = sysread( $ctx->{sock}, $read_buf, $ctx->{buf_size} );
 
-        if (!defined $bytes) {
-            if ($! == EAGAIN) {
+        if ( !defined $bytes ) {
+            if ( $! == EAGAIN ) {
+
                 #warn "read again...";
                 #sleep 0.002;
                 return 1;
@@ -637,11 +736,12 @@ sub read_event_handler ($) {
             return undef;
         }
 
-        if ($bytes == 0) {
-            return undef; # connection closed
+        if ( $bytes == 0 ) {
+            return undef;    # connection closed
         }
 
         $ctx->{resp} .= $read_buf;
+
         #warn "read $bytes ($read_buf) bytes.\n";
     }
 
