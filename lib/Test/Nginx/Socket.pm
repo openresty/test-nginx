@@ -11,6 +11,7 @@ use Encode;
 use Data::Dumper;
 use Time::HiRes qw(sleep time);
 use Test::LongString;
+use Test::More;
 use List::MoreUtils qw( any );
 use IO::Select ();
 
@@ -131,28 +132,31 @@ sub parse_request ($$) {
         content => $content,
     };
 }
+
 sub build_request($$$$$) {
-    my ($name, $more_headers, $is_chunked, $conn_header, $r_original_request) = @_;
-    my $parsed_req = parse_request( $name, $r_original_request);
+    my ( $name, $more_headers, $is_chunked, $conn_header, $r_original_request )
+      = @_;
+    my $parsed_req = parse_request( $name, $r_original_request );
 
     my $len_header = '';
     if (   !$is_chunked
         && defined $parsed_req->{content}
         && $parsed_req->{content} ne ''
         && $more_headers !~ /\bContent-Length:/ )
-        {
-            $parsed_req->{content} =~ s/^\s+|\s+$//gs;
+    {
+        $parsed_req->{content} =~ s/^\s+|\s+$//gs;
 
-            $len_header .= "Content-Length: "
-                      . length( $parsed_req->{content} ) . "\r\n";
-        }
+        $len_header .=
+          "Content-Length: " . length( $parsed_req->{content} ) . "\r\n";
+    }
 
-        return "$parsed_req->{method} $parsed_req->{url} HTTP/1.1\r
+    return "$parsed_req->{method} $parsed_req->{url} HTTP/1.1\r
 Host: localhost\r
 Connection: $conn_header\r
 $more_headers$len_header\r
 $parsed_req->{content}";
 }
+
 #  Returns an array of array. Each element of the first array is a request.
 # Each request is an array of the "packets" to be sent, with an (optionnal)
 # delay between packets to send.
@@ -168,21 +172,25 @@ sub get_req_from_block ($) {
     my @req_list = ();
 
     if ( defined $block->raw_request ) {
+
         # Should be deprecated.
         if ( ref $block->raw_request && ref $block->raw_request eq 'ARRAY' ) {
-            #  User already provided an array. So, he/she specified where the
-            # data should be split. This allows for backward compatibility but
-            # should use request with arrays as it provides the same functionnality.
-            for my $elt (@{$block->raw_request}) {
-                push @req_list, ($elt, $block->raw_request_middle_delay);
+
+        #  User already provided an array. So, he/she specified where the
+        # data should be split. This allows for backward compatibility but
+        # should use request with arrays as it provides the same functionnality.
+            for my $elt ( @{ $block->raw_request } ) {
+                push @req_list, ( $elt, $block->raw_request_middle_delay );
             }
-        } else {
+        }
+        else {
             @req_list = ( $block->raw_request );
         }
     }
     else {
         my $request;
         if ( defined $block->request_eval ) {
+
             # Should be deprecated.
             $request = eval $block->request_eval;
             if ($@) {
@@ -224,11 +232,15 @@ sub get_req_from_block ($) {
                 else {
                     $conn_type = 'keep-alive';
                 }
-                push @req_list, build_request($name, $more_headers, $is_chunked, $conn_type, \$request);
+                push @req_list,
+                  build_request( $name, $more_headers, $is_chunked, $conn_type,
+                    \$request );
             }
         }
         else {
-            push @req_list, build_request($name, $more_headers, $is_chunked, 'Close', \$request);
+            push @req_list,
+              build_request( $name, $more_headers, $is_chunked, 'Close',
+                \$request );
         }
 
     }
@@ -265,32 +277,19 @@ sub run_test_helper ($$) {
 
     #warn "raw resonse: [$raw_resp]\n";
 
-    my ($res, $raw_headers)=parse_response($name, $raw_resp);
-    if ($dry_run) {
-      SKIP: {
-            Test::More::skip(
-                "$name - tests skipped due to the lack of directive $dry_run",
-                1 );
-        }
-    }
-    else {
+    my ( $res, $raw_headers ) = parse_response( $name, $raw_resp );
+    SKIP: {
+        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
         if ( defined $block->error_code ) {
-            is( $res->code || '', $block->error_code,
-                "$name - status code ok" );
-        }
-        else {
+            is( $res->code || '', $block->error_code, "$name - status code ok" );
+        } else {
             is( $res->code || '', 200, "$name - status code ok" );
         }
     }
 
     if ( defined $block->raw_response_headers_like ) {
-        if ($dry_run) {
-            Test::More::skip(
-                "$name - tests skipped due to the lack of directive $dry_run",
-                1 );
-
-        }
-        else {
+        SKIP: {
+            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             my $expected = $block->raw_response_headers_like;
             like $raw_headers, qr/$expected/s, "$name - raw resp headers like";
         }
@@ -302,15 +301,8 @@ sub run_test_helper ($$) {
             if ( !defined $val ) {
 
                 #warn "HIT";
-                if ($dry_run) {
-                  SKIP: {
-                        Test::More::skip(
-"$name - tests skipped due to the lack of directive $dry_run",
-                            1
-                        );
-                    }
-                }
-                else {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                     unlike $raw_headers, qr/^\s*\Q$key\E\s*:/ms,
                       "$name - header $key not present in the raw headers";
                 }
@@ -322,15 +314,8 @@ sub run_test_helper ($$) {
                 $actual_val = '';
             }
 
-            if ($dry_run) {
-              SKIP: {
-                    Test::More::skip(
-"$name - tests skipped due to the lack of directive $dry_run",
-                        1
-                    );
-                }
-            }
-            else {
+            SKIP: {
+                skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                 is $actual_val, $val, "$name - header $key ok";
             }
         }
@@ -342,15 +327,8 @@ sub run_test_helper ($$) {
             if ( !defined $expected_val ) {
                 $expected_val = '';
             }
-            if ($dry_run) {
-              SKIP: {
-                    Test::More::skip(
-"$name - tests skipped due to the lack of directive $dry_run",
-                        1
-                    );
-                }
-            }
-            else {
+            SKIP: {
+                skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                 like $expected_val, qr/^$val$/, "$name - header $key like ok";
             }
         }
@@ -386,15 +364,8 @@ sub run_test_helper ($$) {
         #warn show_all_chars($content);
 
         #warn "no long string: $NoLongString";
-        if ($dry_run) {
-          SKIP: {
-                Test::More::skip(
-"$name - tests skipped due to the lack of directive $dry_run",
-                    1
-                );
-            }
-        }
-        else {
+        SKIP: {
+            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             if ($NoLongString) {
                 is( $content, $expected,
                     "$name - response_body - response is expected" );
@@ -417,15 +388,8 @@ sub run_test_helper ($$) {
         $expected_pat =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
         my $summary = trim($content);
 
-        if ($dry_run) {
-          SKIP: {
-                Test::More::skip(
-"$name - tests skipped due to the lack of directive $dry_run",
-                    1
-                );
-            }
-        }
-        else {
+        SKIP: {
+            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             like( $content, qr/$expected_pat/s,
                 "$name - response_body_like - response is expected ($summary)"
             );
@@ -434,7 +398,7 @@ sub run_test_helper ($$) {
 }
 
 sub parse_response($$) {
-    my ($name, $raw_resp) = @_;
+    my ( $name, $raw_resp ) = @_;
 
     my $raw_headers = '';
     if ( $raw_resp =~ /(.*?)\r\n\r\n/s ) {
@@ -504,8 +468,9 @@ sub parse_response($$) {
         #warn "decoded: $decoded\n";
         $res->content($decoded);
     }
-    return ($res, $raw_headers);
+    return ( $res, $raw_headers );
 }
+
 sub send_request ($$$$) {
     my ( $req, $middle_delay, $timeout, $name ) = @_;
 
