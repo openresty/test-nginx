@@ -278,6 +278,14 @@ sub run_test_helper ($$) {
     #warn "raw resonse: [$raw_resp]\n";
 
     my ( $res, $raw_headers ) = parse_response( $name, $raw_resp );
+    check_error_code($block, $res, $dry_run);
+    check_raw_response_headers($block, $raw_headers, $dry_run);
+    check_response_headers($block, $res, $raw_headers, $dry_run);
+    check_response_body($block, $res, $dry_run);
+}
+sub check_error_code($$$) {
+    my ($block, $res, $dry_run) = @_;
+    my $name = $block->name;
     SKIP: {
         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
         if ( defined $block->error_code ) {
@@ -286,7 +294,10 @@ sub run_test_helper ($$) {
             is( $res->code || '', 200, "$name - status code ok" );
         }
     }
-
+}
+sub check_raw_response_headers($$$) {
+    my ($block, $raw_headers, $dry_run) = @_;
+    my $name = $block->name;
     if ( defined $block->raw_response_headers_like ) {
         SKIP: {
             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
@@ -294,7 +305,10 @@ sub run_test_helper ($$) {
             like $raw_headers, qr/$expected/s, "$name - raw resp headers like";
         }
     }
-
+}
+sub check_response_headers($$$) {
+    my ($block, $res, $raw_headers, $dry_run) = @_;
+    my $name = $block->name;
     if ( defined $block->response_headers ) {
         my $headers = parse_headers( $block->response_headers );
         while ( my ( $key, $val ) = each %$headers ) {
@@ -333,7 +347,10 @@ sub run_test_helper ($$) {
             }
         }
     }
-
+}
+sub check_response_body() {
+    my ($block, $res, $dry_run) = @_;
+    my $name = $block->name;
     if (   defined $block->response_body
         || defined $block->response_body_eval )
     {
@@ -396,7 +413,6 @@ sub run_test_helper ($$) {
         }
     }
 }
-
 sub parse_response($$) {
     my ( $name, $raw_resp ) = @_;
 
