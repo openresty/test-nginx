@@ -33,3 +33,5 @@ reindex
 Makefile
 blib
 Makefile.old
+.project
+.includepath
