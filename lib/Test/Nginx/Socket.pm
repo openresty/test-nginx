@@ -161,7 +161,7 @@ $parsed_req->{content}";
 # Each request is an array of the "packets" to be sent, with an (optionnal)
 # delay between packets to send.
 #  Raw requests might be malformed intentionnaly (find what is wrong ;) ) :
-# [["POST /test HTTP/1.1\r\nHost: localhost\r\nConnection:keep-alive\r\n",
+# [["POST /test HTTP/1.1\r\nHost: localhost\r\nConnection:keep-alive\r\n", -1,
 #   "Content-Length:", -1, "2\r\n\r\n", 15, "ABZGET /test HTTP/1.0"]]
 # When sending, this will pause by the default delay between "Content-Length"
 # and 2. And by 15 seconds before the body.
@@ -176,12 +176,18 @@ sub get_req_from_block ($) {
         # Should be deprecated.
         if ( ref $block->raw_request && ref $block->raw_request eq 'ARRAY' ) {
 
-        #  User already provided an array. So, he/she specified where the
-        # data should be split. This allows for backward compatibility but
-        # should use request with arrays as it provides the same functionnality.
+            #  User already provided an array. So, he/she specified where the
+            # data should be split. This allows for backward compatibility but
+            # should use request with arrays as it provides the same functionnality.
+            my @rr_list = ();
+            my $i = 0;
             for my $elt ( @{ $block->raw_request } ) {
-                push @req_list, ( $elt, $block->raw_request_middle_delay );
+                push @rr_list, $elt;
+                if ($i++ != @{ $block->raw_request } - 1) {
+                    push @rr_list, -1;
+                }
             }
+            @req_list = [\@rr_list];
         }
         else {
             @req_list = ( $block->raw_request );
@@ -224,6 +230,7 @@ sub get_req_from_block ($) {
                     "$name - invalid entries in --- pipelined_requests");
             }
             my $i = 0;
+            my $prq = "";
             for my $request (@$reqs) {
                 my $conn_type;
                 if ( $i++ == @$reqs - 1 ) {
@@ -232,15 +239,16 @@ sub get_req_from_block ($) {
                 else {
                     $conn_type = 'keep-alive';
                 }
-                push @req_list,
-                  build_request( $name, $more_headers, $is_chunked, $conn_type,
-                    \$request );
+                $prq .= build_request($name, $more_headers,
+                                      $is_chunked, $conn_type,
+                                      \$request );
             }
+            @req_list = [[$prq]];
         }
         else {
             push @req_list,
-              build_request( $name, $more_headers, $is_chunked, 'Close',
-                \$request );
+              [[build_request( $name, $more_headers, $is_chunked, 'Close',
+                \$request )]];
         }
 
     }
@@ -271,7 +279,7 @@ sub run_test_helper ($$) {
         $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
     }
     else {
-        $raw_resp = send_request( \@req, $block->raw_request_middle_delay,
+        $raw_resp = send_request( $req[0][0], $block->raw_request_middle_delay,
             $timeout, $block->name );
     }
 
