@@ -157,12 +157,15 @@ $more_headers$len_header\r
 $parsed_req->{content}";
 }
 
-#  Returns an array of array. Each element of the first array is a request.
+#  Returns an array of array of hashes. Each element of the first array is a
+# request.
 # Each request is an array of the "packets" to be sent, with an (optionnal)
 # delay between packets to send.
 #  Raw requests might be malformed intentionnaly (find what is wrong ;) ) :
-# [["POST /test HTTP/1.1\r\nHost: localhost\r\nConnection:keep-alive\r\n", -1,
-#   "Content-Length:", -1, "2\r\n\r\n", 15, "ABZGET /test HTTP/1.0"]]
+# [[{value =>"POST /test HTTP/1.1\r\nHost: localhost\r\nConnection:keep-alive\r\n"},
+#   {value =>"Content-Length:", delay_before => -1},
+#   {value=>"2\r\n\r\n", delay_before =>-1},
+#   {value=>"ABZGET /test HTTP/1.0", delay_before => 15}]]
 # When sending, this will pause by the default delay between "Content-Length"
 # and 2. And by 15 seconds before the body.
 sub get_req_from_block ($) {
@@ -182,15 +185,17 @@ sub get_req_from_block ($) {
             my @rr_list = ();
             my $i = 0;
             for my $elt ( @{ $block->raw_request } ) {
-                push @rr_list, $elt;
-                if ($i++ != @{ $block->raw_request } - 1) {
-                    push @rr_list, -1;
+                if ($i == 0) {
+                    push @rr_list, {value => $elt};
+                } else {
+                    push @rr_list, {value => $elt, delay_before => -1};
                 }
+                $i++;
             }
             @req_list = [\@rr_list];
         }
         else {
-            @req_list = ( $block->raw_request );
+            @req_list = [[{value => $block->raw_request}]];
         }
     }
     else {
@@ -243,12 +248,12 @@ sub get_req_from_block ($) {
                                       $is_chunked, $conn_type,
                                       \$request );
             }
-            @req_list = [[$prq]];
+            @req_list = [[{value =>$prq}]];
         }
         else {
             push @req_list,
-              [[build_request( $name, $more_headers, $is_chunked, 'Close',
-                \$request )]];
+              [[{value => build_request( $name, $more_headers, $is_chunked, 'Close',
+                \$request )}]];
         }
 
     }
@@ -517,7 +522,7 @@ sub send_request ($$$$) {
         write_offset => 0,
         buf_size     => 1024,
         req_bits     => \@req_bits,
-        write_buf    => shift @req_bits,
+        write_buf    => (shift @req_bits)->{"value"},
         middle_delay => $middle_delay,
         sock         => $sock,
         name         => $name,
@@ -694,12 +699,18 @@ sub write_event_handler ($) {
             $ctx->{write_offset} += $bytes;
         }
         else {
-            $ctx->{write_buf} = shift @{ $ctx->{req_bits} } or return 2;
+            my $next_send = shift @{ $ctx->{req_bits} } or return 2;
+            $ctx->{write_buf} = $next_send->{'value'};
             $ctx->{write_offset} = 0;
-            if ( defined $ctx->{middle_delay} ) {
-
+            my $wait_time = -1;
+            if ( $next_send->{'delay_before'} == -1 && defined $ctx->{middle_delay} ) {
+                $wait_time = $ctx->{middle_delay};
+            } else {
+                $wait_time = $next_send->{'delay_before'};
+            }
+            if ($wait_time == -1) {
                 #warn "sleeping..";
-                sleep $ctx->{middle_delay};
+                sleep $wait_time;
             }
         }
     }

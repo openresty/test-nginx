@@ -1,27 +1,31 @@
 # Unit tests for Test::Nginx::Socket::get_req_from_block
-use Test::Nginx::Socket tests => 4;
+use Test::Nginx::Socket tests => 5;
 
 my @block_list = blocks();
-is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[0]),
-          [["GET / HTTP/1.1\r\nHost: localhost\r\nConnection: Close\r\n\r\n"]],
-          $block_list[0]->name);
-is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[1]),
-          [["POST /rrd/taratata HTTP/1.1\r\nHost: localhost\r\nConnection: Close"
-            ."\r\nContent-Length: 15\r\n\r\nvalue=N%3A12345"]],
-          $block_list[1]->name);
-is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[2]),
-          [["HEAD /foo HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n".
-            "GET /bar HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"]],
-          $block_list[2]->name);
-is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[3]),
-          [["POST /foo HTTP/1.1\r
+my $i = 0;  # Use $i to make copy/paste of tests easier.
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{value => "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: Close\r\n\r\n"}]],
+          $block_list[$i++]->name);
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{value => "POST /rrd/taratata HTTP/1.1\r\nHost: localhost\r\nConnection: Close"
+            ."\r\nContent-Length: 15\r\n\r\nvalue=N%3A12345"}]],
+          $block_list[$i++]->name);
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{ value => "HEAD /foo HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n".
+            "GET /bar HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"}]],
+          $block_list[$i++]->name);
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{ value => "POST /foo HTTP/1.1\r
 Host: localhost\r
 Connection: Close\r
 Content-Type: application/x-www-form-urlencoded\r
-Content-Length:3\r\n\r\nA", -1,
-"B", -1,
-"C"]],
-          $block_list[3]->name);
+Content-Length:3\r\n\r\nA"}, {value =>"B", delay_before =>-1},
+{value =>"C", delay_before => -1}]],
+          $block_list[$i++]->name);
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{value =>"POST /foo HTTP/7.33 whatever\r\n".
+                     "noheader\r\n\r\nrub my face in the dirt"}]],
+          $block_list[$i++]->name);
 __DATA__
 
 === request: basic string
@@ -44,3 +48,9 @@ Content-Type: application/x-www-form-urlencoded\r
 Content-Length:3\r\n\r\nA",
 "B",
 "C"]
+=== raw_request: string
+--- raw_request eval
+"POST /foo HTTP/7.33 whatever\r
+noheader\r
+\r
+rub my face in the dirt"
