@@ -109,17 +109,44 @@ sub parse_request ($$) {
         Test::More::BAIL_OUT("$name - Request line should be non-empty");
         die;
     }
-    $first =~ s/^\s+|\s+$//gs;
-    my ( $meth, $rel_url ) = split /\s+/, $first, 2;
+    #$first =~ s/^\s+|\s+$//gs;
+    my ($before_meth, $meth, $after_meth);
+    my ($rel_url, $rel_url_size, $after_rel_url);
+    my ($http_ver, $http_ver_size, $after_http_ver);
+    if ($first =~ /^(\s*)(\S+)( *)((\S+)( *))?((\S+)( *))?/) {
+        $before_meth = length($1);
+        $meth = $2;
+        $after_meth = length($3);
+        $rel_url = $5;
+        $rel_url_size = length($5);
+        $after_rel_url = length($6);
+        $http_ver = $8;
+        $http_ver_size = length($8);
+        $after_http_ver = length($9);
+    } else {
+        Test::More::BAIL_OUT("$name - Request line is not valid. Should be 'meth [url [version]]'");
+        die;
+    }
     if ( !defined $rel_url ) {
-        $rel_url = "/";
+        $rel_url = '/';
+        $rel_url_size = 0;
+        $after_rel_url = 0;
+    }
+    if ( !defined $http_ver ) {
+        $http_ver = 'HTTP/1.1';
+        $http_ver_size = 0;
+        $after_http_ver = 0;
     }
 
     #my $url = "http://localhost:$ServerPortForClient" . $rel_url;
 
     my $content = do { local $/; <$in> };
+    my $content_size;
     if ( !defined $content ) {
         $content = "";
+        $content_size = 0;
+    } else {
+        $content_size = length($content);
     }
 
     #warn Dumper($content);
@@ -130,6 +157,15 @@ sub parse_request ($$) {
         method  => $meth,
         url     => $rel_url,
         content => $content,
+        http_ver => $http_ver,
+        skipped_before_method => $before_meth,
+        method_size => length($meth),
+        skipped_after_method => $after_meth,
+        url_size => $rel_url_size,
+        skipped_after_url => $after_rel_url,
+        http_ver_size => $http_ver_size,
+        skipped_after_http_ver => $after_http_ver,
+        content_size => $content_size,
     };
 }
 
@@ -150,7 +186,37 @@ sub build_request($$$$$) {
           "Content-Length: " . length( $parsed_req->{content} ) . "\r\n";
     }
 
-    return "$parsed_req->{method} $parsed_req->{url} HTTP/1.1\r
+    return "$parsed_req->{method} $parsed_req->{url} $parsed_req->{http_ver}\r
+Host: localhost\r
+Connection: $conn_header\r
+$more_headers$len_header\r
+$parsed_req->{content}";
+}
+
+sub build_request_from_packets($$$$$) {
+    my ( $name, $more_headers, $is_chunked, $conn_header, $request_packets ) = @_;
+    # Request expressed as a serie of packets
+    my $parsable_request = '';
+    my @packet_length;
+    for my $one_packet (@$request_packets) {
+        $parsable_request .= $one_packet;
+        push @packet_length, length($one_packet);
+    }
+    my $parsed_req = parse_request( $name, \$parsable_request );
+
+    my $len_header = '';
+    if (   !$is_chunked
+        && defined $parsed_req->{content}
+        && $parsed_req->{content} ne ''
+        && $more_headers !~ /\bContent-Length:/ )
+    {
+        $parsed_req->{content} =~ s/^\s+|\s+$//gs;
+
+        $len_header .=
+          "Content-Length: " . length( $parsed_req->{content} ) . "\r\n";
+    }
+
+    return "$parsed_req->{method} $parsed_req->{url} $parsed_req->{http_ver}\r
 Host: localhost\r
 Connection: $conn_header\r
 $more_headers$len_header\r
@@ -251,9 +317,38 @@ sub get_req_from_block ($) {
             @req_list = [[{value =>$prq}]];
         }
         else {
-            push @req_list,
-              [[{value => build_request( $name, $more_headers, $is_chunked, 'Close',
-                \$request )}]];
+            # request section.
+            if (!ref $request) {
+                # One request and it is a good old string. It's easy...
+                @req_list = [[{value => build_request($name, $more_headers,
+                                                      $is_chunked, 'Close',
+                                                      \$request )}]];
+            } elsif (ref $request eq 'ARRAY') {
+                # A bunch of requests...
+                for my $one_req (@$request) {
+                    if (!ref $one_req) {
+                        # This request is a good old string.
+                        push @req_list, [[{value => build_request($name, $more_headers,
+                                                      $is_chunked, 'Close',
+                                                      \$one_req )}]]
+                    } elsif (ref $one_req eq 'ARRAY') {
+                        # Request expressed as a serie of packets
+                        my $reassembled_request = '';
+                        for my $one_packet (@$one_req) {
+                            if (!ref $one_packet) {
+                                # No delay
+                                $reassembled_request .= $one_packet;
+                            }
+                            push @req_list, [[value => build_request($name, $more_headers,
+                                                       $is_chunked, 'Close',
+                                                       \$reassembled_request)]];
+                        }
+                    }
+                }
+            } else {
+                Test::More::BAIL_OUT(
+                    "$name - invalid ---request : MUST be string or array of requests");
+            }
         }
 
     }
