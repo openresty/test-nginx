@@ -1,5 +1,5 @@
 # Unit tests for Test::Nginx::Socket::get_req_from_block
-use Test::Nginx::Socket tests => 5;
+use Test::Nginx::Socket tests => 7;
 
 my @block_list = blocks();
 my $i = 0;  # Use $i to make copy/paste of tests easier.
@@ -19,12 +19,23 @@ is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
 Host: localhost\r
 Connection: Close\r
 Content-Type: application/x-www-form-urlencoded\r
-Content-Length:3\r\n\r\nA"}, {value =>"B", delay_before =>-1},
-{value =>"C", delay_before => -1}]],
+Content-Length:3\r\n\r\nA"}, {value =>"B"},
+{value =>"C"}]],
           $block_list[$i++]->name);
 is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
           [[{value =>"POST /foo HTTP/7.33 whatever\r\n".
                      "noheader\r\n\r\nrub my face in the dirt"}]],
+          $block_list[$i++]->name);
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{value =>"POST /foo HTTP/1.1\r\nHost: localhost\r\nConnection: Close\r\nContent-Length: 15\r\n\r\nv"},
+            {value =>"alue=N%3A12345"}],
+           [{value =>"GET /foo HTTP/1.1\r\nHost: localhost\r\nConnection: Close\r\n\r\n"}]],
+          $block_list[$i++]->name);
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{value =>"POST /foo HTTP/1.1\r\nHost: localhost\r\nConnection: Close\r\nContent-Length: 15\r\n\r\n"},
+            {value =>"value=N%3A12345", delay_before => 3}],
+           [{value =>"GET "},
+            {value =>"/foo HTTP/1.1\r\nHost: localhost\r\nConnection: Close\r\n\r\n"}]],
           $block_list[$i++]->name);
 __DATA__
 
@@ -54,3 +65,10 @@ Content-Length:3\r\n\r\nA",
 noheader\r
 \r
 rub my face in the dirt"
+=== request: an array of requests without delays.
+--- request eval
+[["POST /foo\r\nv", "alue=N%3A12345"], "GET /foo"]
+=== request: an array of requests with delays.
+--- request eval
+[["POST /foo\r\n", {value => "value=N%3A12345", delay_before =>3}],
+ [{value => "GET "}, {value => "/foo"}]]

@@ -113,7 +113,8 @@ sub parse_request ($$) {
     my ($before_meth, $meth, $after_meth);
     my ($rel_url, $rel_url_size, $after_rel_url);
     my ($http_ver, $http_ver_size, $after_http_ver);
-    if ($first =~ /^(\s*)(\S+)( *)((\S+)( *))?((\S+)( *))?/) {
+    my $end_line_size;
+    if ($first =~ /^(\s*)(\S+)( *)((\S+)( *))?((\S+)( *))?(\s*)/) {
         $before_meth = length($1);
         $meth = $2;
         $after_meth = length($3);
@@ -123,6 +124,7 @@ sub parse_request ($$) {
         $http_ver = $8;
         $http_ver_size = length($8);
         $after_http_ver = length($9);
+        $end_line_size = length($10);
     } else {
         Test::More::BAIL_OUT("$name - Request line is not valid. Should be 'meth [url [version]]'");
         die;
@@ -164,35 +166,76 @@ sub parse_request ($$) {
         url_size => $rel_url_size,
         skipped_after_url => $after_rel_url,
         http_ver_size => $http_ver_size,
-        skipped_after_http_ver => $after_http_ver,
+        skipped_after_http_ver => $after_http_ver + $end_line_size,
         content_size => $content_size,
     };
 }
 
-sub build_request($$$$$) {
-    my ( $name, $more_headers, $is_chunked, $conn_header, $r_original_request )
-      = @_;
-    my $parsed_req = parse_request( $name, $r_original_request );
-
-    my $len_header = '';
-    if (   !$is_chunked
-        && defined $parsed_req->{content}
-        && $parsed_req->{content} ne ''
-        && $more_headers !~ /\bContent-Length:/ )
-    {
-        $parsed_req->{content} =~ s/^\s+|\s+$//gs;
-
-        $len_header .=
-          "Content-Length: " . length( $parsed_req->{content} ) . "\r\n";
-    }
-
-    return "$parsed_req->{method} $parsed_req->{url} $parsed_req->{http_ver}\r
-Host: localhost\r
-Connection: $conn_header\r
-$more_headers$len_header\r
-$parsed_req->{content}";
+sub get_moves($) {
+    my ($parsed_req) = @_;
+    return ({d => $parsed_req->{skipped_before_method}},
+                          {s_s => $parsed_req->{method_size},
+                           s_v => $parsed_req->{method}},
+                          {d => $parsed_req->{skipped_after_method}},
+                          {s_s => $parsed_req->{url_size},
+                           s_v => $parsed_req->{url}},
+                          {d => $parsed_req->{skipped_after_url}},
+                          {s_s => $parsed_req->{http_ver_size},
+                           s_v => $parsed_req->{http_ver}},
+                          {d => $parsed_req->{skipped_after_http_ver}},
+                          {s_s => 0,
+                           s_v => $parsed_req->{headers}},
+                          {s_s => $parsed_req->{content_size},
+                           s_v => $parsed_req->{content}}
+                         );
 }
 
+sub apply_moves($$) {
+    my ($r_packet, $r_move) = @_;
+    my $current_packet = shift @$r_packet;
+    my $current_move = shift @$r_move;
+    my $in_packet_cursor = 0;
+    my @result = ();
+    while (defined $current_packet) {
+        if (!defined $current_move) {
+            push @result, $current_packet;
+            $current_packet = shift @$r_packet;
+            $in_packet_cursor = 0;
+        } elsif (defined $current_move->{d}) {
+            # Remove stuff from packet
+            if ($current_move->{d} > length($current_packet) - $in_packet_cursor) {
+                # Eat up what is left of packet.
+                $current_move->{d} -= length($current_packet) - $in_packet_cursor;
+                if ($in_packet_cursor > 0) {
+                    # Something in packet from previous iteration.
+                    push @result, $current_packet;
+                }
+                $current_packet = shift @$r_packet;
+                $in_packet_cursor = 0;
+            } else {
+                # Remove from current point in current packet
+                substr($current_packet, $in_packet_cursor, $current_move->{d}) = '';
+                $current_move = shift @$r_move;
+            }
+        } else {
+            # Substitute stuff
+            if ($current_move->{s_s} > length($current_packet) - $in_packet_cursor) {
+                #   {s_s=>3, s_v=>GET} on ['GE', 'T /foo']
+                $current_move->{s_s} -= length($current_packet) - $in_packet_cursor;
+                substr($current_packet, $in_packet_cursor) = substr($current_move->{s_v}, 0, length($current_packet) - $in_packet_cursor);
+                push @result, $current_packet;
+                $current_move->{s_v} = substr($current_move->{s_v}, length($current_packet) - $in_packet_cursor);
+                $current_packet = shift @$r_packet;
+                $in_packet_cursor = 0;
+            } else {
+                substr($current_packet, $in_packet_cursor, $current_move->{s_s}) = $current_move->{s_v};
+                $in_packet_cursor += length($current_move->{s_v});
+                $current_move = shift @$r_move;
+            }
+        }
+    }
+    return \@result;
+}
 sub build_request_from_packets($$$$$) {
     my ( $name, $more_headers, $is_chunked, $conn_header, $request_packets ) = @_;
     # Request expressed as a serie of packets
@@ -216,11 +259,13 @@ sub build_request_from_packets($$$$$) {
           "Content-Length: " . length( $parsed_req->{content} ) . "\r\n";
     }
 
-    return "$parsed_req->{method} $parsed_req->{url} $parsed_req->{http_ver}\r
-Host: localhost\r
-Connection: $conn_header\r
-$more_headers$len_header\r
-$parsed_req->{content}";
+    $parsed_req->{method} .= ' ';
+    $parsed_req->{url} .= ' ';
+    $parsed_req->{http_ver} .= "\r\n";
+    $parsed_req->{headers} = "Host: localhost\r\nConnection: $conn_header\r\n$more_headers$len_header\r\n";
+
+    my @elements_moves = get_moves($parsed_req);
+    return apply_moves($request_packets, \@elements_moves);
 }
 
 #  Returns an array of array of hashes. Each element of the first array is a
@@ -229,11 +274,12 @@ $parsed_req->{content}";
 # delay between packets to send.
 #  Raw requests might be malformed intentionnaly (find what is wrong ;) ) :
 # [[{value =>"POST /test HTTP/1.1\r\nHost: localhost\r\nConnection:keep-alive\r\n"},
-#   {value =>"Content-Length:", delay_before => -1},
-#   {value=>"2\r\n\r\n", delay_before =>-1},
-#   {value=>"ABZGET /test HTTP/1.0", delay_before => 15}]]
-# When sending, this will pause by the default delay between "Content-Length"
-# and 2. And by 15 seconds before the body.
+#   {value =>"Content-Length:"},
+#   {value=>"2\r\n\r\n"},
+#   {value=>"ABZGET /test HTTP/1.0", delay_before => 15000}]]
+# When sending, this will pause by the default delay between "POST..."
+# and "Content-Length:" but also between "Content-Length:"
+# and "2". It will also pause by 15 seconds before the body.
 sub get_req_from_block ($) {
     my ($block) = @_;
     my $name = $block->name;
@@ -254,14 +300,14 @@ sub get_req_from_block ($) {
                 if ($i == 0) {
                     push @rr_list, {value => $elt};
                 } else {
-                    push @rr_list, {value => $elt, delay_before => -1};
+                    push @rr_list, {value => $elt};
                 }
                 $i++;
             }
-            @req_list = [\@rr_list];
+            push @req_list, \@rr_list;
         }
         else {
-            @req_list = [[{value => $block->raw_request}]];
+            push @req_list, [{value => $block->raw_request}];
         }
     }
     else {
@@ -310,39 +356,56 @@ sub get_req_from_block ($) {
                 else {
                     $conn_type = 'keep-alive';
                 }
-                $prq .= build_request($name, $more_headers,
+                my $r_br = build_request_from_packets($name, $more_headers,
                                       $is_chunked, $conn_type,
-                                      \$request );
+                                      [$request] );
+                $prq .= $$r_br[0];
             }
-            @req_list = [[{value =>$prq}]];
+            push @req_list, [{value =>$prq}];
         }
         else {
             # request section.
             if (!ref $request) {
-                # One request and it is a good old string. It's easy...
-                @req_list = [[{value => build_request($name, $more_headers,
+                # One request and it is a good old string.
+                my $r_br = build_request_from_packets($name, $more_headers,
                                                       $is_chunked, 'Close',
-                                                      \$request )}]];
+                                                      [$request] );
+                push @req_list, [{value => $$r_br[0]}];
             } elsif (ref $request eq 'ARRAY') {
                 # A bunch of requests...
                 for my $one_req (@$request) {
                     if (!ref $one_req) {
                         # This request is a good old string.
-                        push @req_list, [[{value => build_request($name, $more_headers,
+                        my $r_br = build_request_from_packets($name, $more_headers,
                                                       $is_chunked, 'Close',
-                                                      \$one_req )}]]
+                                                      [$one_req] );
+                        push @req_list, [{value => $$r_br[0]}];
                     } elsif (ref $one_req eq 'ARRAY') {
                         # Request expressed as a serie of packets
-                        my $reassembled_request = '';
+                        my @packet_array = ();
                         for my $one_packet (@$one_req) {
                             if (!ref $one_packet) {
-                                # No delay
-                                $reassembled_request .= $one_packet;
+                                push @packet_array, $one_packet;
+                            } else {
+                                # Packet is a hash with a value...
+                                push @packet_array, $one_packet->{value};
                             }
-                            push @req_list, [[value => build_request($name, $more_headers,
-                                                       $is_chunked, 'Close',
-                                                       \$reassembled_request)]];
                         }
+                        my $transformed_packet_array = build_request_from_packets($name, $more_headers,
+                                                   $is_chunked, 'Close',
+                                                   \@packet_array);
+                        my @transformed_req = ();
+                        my $idx = 0;
+                        for my $one_transformed_packet (@$transformed_packet_array) {
+                            if (!ref $$one_req[$idx]) {
+                                push @transformed_req, {value => $one_transformed_packet};
+                            } else {
+                                $$one_req[$idx]->{value} = $one_transformed_packet;
+                                push @transformed_req, $$one_req[$idx];
+                            }
+                            $idx++;
+                        }
+                        push @req_list, \@transformed_req;
                     }
                 }
             } else {
@@ -352,7 +415,7 @@ sub get_req_from_block ($) {
         }
 
     }
-    return @req_list;
+    return \@req_list;
 }
 
 sub run_test_helper ($$) {
@@ -797,13 +860,15 @@ sub write_event_handler ($) {
             my $next_send = shift @{ $ctx->{req_bits} } or return 2;
             $ctx->{write_buf} = $next_send->{'value'};
             $ctx->{write_offset} = 0;
-            my $wait_time = -1;
-            if ( $next_send->{'delay_before'} == -1 && defined $ctx->{middle_delay} ) {
-                $wait_time = $ctx->{middle_delay};
+            my $wait_time;
+            if (!defined $next_send->{'delay_before'}) {
+                if (defined $ctx->{middle_delay}) {
+                    $wait_time = $ctx->{middle_delay};
+                }
             } else {
                 $wait_time = $next_send->{'delay_before'};
             }
-            if ($wait_time == -1) {
+            if ($wait_time) {
                 #warn "sleeping..";
                 sleep $wait_time;
             }
