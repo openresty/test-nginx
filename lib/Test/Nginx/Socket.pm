@@ -437,7 +437,7 @@ sub run_test_helper ($$) {
         $timeout = $Timeout;
     }
 
-    my $req_idx;
+    my $req_idx = 0;
     for my $one_req (@$r_req_list) {
         my $raw_resp;
     
@@ -445,7 +445,7 @@ sub run_test_helper ($$) {
             $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
         }
         else {
-            $raw_resp = send_request( $$r_req_list[0], $block->raw_request_middle_delay,
+            $raw_resp = send_request( $one_req, $block->raw_request_middle_delay,
                 $timeout, $block->name );
         }
     
@@ -456,6 +456,7 @@ sub run_test_helper ($$) {
         check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
         check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
         check_response_body($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
+        $req_idx++;
     }
 }
 sub get_indexed_value($$$$) {
