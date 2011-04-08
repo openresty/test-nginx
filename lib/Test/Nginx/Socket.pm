@@ -315,6 +315,7 @@ sub get_req_from_block ($) {
         if ( defined $block->request_eval ) {
 
             # Should be deprecated.
+            diag "$name - request_eval DEPRECATED. Use request eval instead.";
             $request = eval $block->request_eval;
             if ($@) {
                 warn $@;
@@ -423,9 +424,9 @@ sub run_test_helper ($$) {
 
     my $name = $block->name;
 
-    my @req = get_req_from_block($block);
+    my $r_req_list = get_req_from_block($block);
 
-    if ( $#req < 0 ) {
+    if ( $#$r_req_list < 0 ) {
         Test::More::BAIL_OUT("$name - request empty");
     }
 
@@ -436,52 +437,75 @@ sub run_test_helper ($$) {
         $timeout = $Timeout;
     }
 
-    my $raw_resp;
-
-    if ($dry_run) {
-        $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
+    my $req_idx;
+    for my $one_req (@$r_req_list) {
+        my $raw_resp;
+    
+        if ($dry_run) {
+            $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
+        }
+        else {
+            $raw_resp = send_request( $$r_req_list[0], $block->raw_request_middle_delay,
+                $timeout, $block->name );
+        }
+    
+        #warn "raw resonse: [$raw_resp]\n";
+    
+        my ( $res, $raw_headers ) = parse_response( $name, $raw_resp );
+        check_error_code($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
+        check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
+        check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
+        check_response_body($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
     }
-    else {
-        $raw_resp = send_request( $req[0][0], $block->raw_request_middle_delay,
-            $timeout, $block->name );
-    }
-
-    #warn "raw resonse: [$raw_resp]\n";
-
-    my ( $res, $raw_headers ) = parse_response( $name, $raw_resp );
-    check_error_code($block, $res, $dry_run);
-    check_raw_response_headers($block, $raw_headers, $dry_run);
-    check_response_headers($block, $res, $raw_headers, $dry_run);
-    check_response_body($block, $res, $dry_run);
 }
-sub check_error_code($$$) {
-    my ($block, $res, $dry_run) = @_;
+sub get_indexed_value($$$$) {
+    my ($name, $value, $req_idx, $need_array) = @_;
+    if ($need_array) {
+        if (ref $value && ref $value eq 'ARRAY') {
+            return $$value[$req_idx];
+        } else {
+            Test::More::BAIL_OUT("$name - You asked for many requests, the expected results should be arrays as well.");
+        }
+    } else {
+        return $value;
+    }
+}
+sub check_error_code($$$$$) {
+    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     SKIP: {
         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
         if ( defined $block->error_code ) {
-            is( $res->code || '', $block->error_code, "$name - status code ok" );
+            is( $res->code || '',
+                get_indexed_value($name, $block->error_code, $req_idx, $need_array),
+                "$name - status code ok" );
         } else {
             is( $res->code || '', 200, "$name - status code ok" );
         }
     }
 }
-sub check_raw_response_headers($$$) {
-    my ($block, $raw_headers, $dry_run) = @_;
+sub check_raw_response_headers($$$$$) {
+    my ($block, $raw_headers, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     if ( defined $block->raw_response_headers_like ) {
         SKIP: {
             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-            my $expected = $block->raw_response_headers_like;
+            my $expected = get_indexed_value($name,
+                                             $block->raw_response_headers_like,
+                                             $req_idx,
+                                             $need_array);
             like $raw_headers, qr/$expected/s, "$name - raw resp headers like";
         }
     }
 }
-sub check_response_headers($$$) {
-    my ($block, $res, $raw_headers, $dry_run) = @_;
+sub check_response_headers($$$$$) {
+    my ($block, $res, $raw_headers, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     if ( defined $block->response_headers ) {
-        my $headers = parse_headers( $block->response_headers );
+        my $headers = parse_headers( get_indexed_value($name,
+                                                       $block->response_headers,
+                                                       $req_idx,
+                                                       $need_array));
         while ( my ( $key, $val ) = each %$headers ) {
             if ( !defined $val ) {
 
@@ -506,7 +530,10 @@ sub check_response_headers($$$) {
         }
     }
     elsif ( defined $block->response_headers_like ) {
-        my $headers = parse_headers( $block->response_headers_like );
+        my $headers = parse_headers( get_indexed_value($name,
+                                                       $block->response_headers_like,
+                                                       $req_idx,
+                                                       $need_array) );
         while ( my ( $key, $val ) = each %$headers ) {
             my $expected_val = $res->header($key);
             if ( !defined $expected_val ) {
@@ -520,7 +547,7 @@ sub check_response_headers($$$) {
     }
 }
 sub check_response_body() {
-    my ($block, $res, $dry_run) = @_;
+    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     if (   defined $block->response_body
         || defined $block->response_body_eval )
@@ -533,13 +560,20 @@ sub check_response_body() {
 
         my $expected;
         if ( $block->response_body_eval ) {
-            $expected = eval $block->response_body_eval;
+            diag "$name - response_body_eval is DEPRECATED. Use response_body eval instead.";
+            $expected = eval get_indexed_value($name,
+                                               $block->response_body_eval,
+                                               $req_idx,
+                                               $need_array);
             if ($@) {
                 warn $@;
             }
         }
         else {
-            $expected = $block->response_body;
+            $expected = get_indexed_value($name,
+                                          $block->response_body,
+                                          $req_idx,
+                                          $need_array);
         }
 
         if ( $block->charset ) {
@@ -571,7 +605,10 @@ sub check_response_body() {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
         }
         $content =~ s/^Connection: TE, close\r\n//gms;
-        my $expected_pat = $block->response_body_like;
+        my $expected_pat = get_indexed_value($name,
+                                             $block->response_body_like,
+                                             $req_idx,
+                                             $need_array);
         $expected_pat =~ s/\$ServerPort\b/$ServerPort/g;
         $expected_pat =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
         my $summary = trim($content);
@@ -584,6 +621,7 @@ sub check_response_body() {
         }
     }
 }
+
 sub parse_response($$) {
     my ( $name, $raw_resp ) = @_;
 
