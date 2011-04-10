@@ -101,6 +101,16 @@ sub timeout (@) {
 
 $RunTestHelper = \&run_test_helper;
 
+#  This will parse a "request"" string. The expected format is:
+# - One line for the HTTP verb (POST, GET, etc.) plus optional relative URL
+#   (default is /) plus optional HTTP version (default is HTTP/1.1).
+# - More lines considered as the body of the request.
+# Most people don't care about headers and this is enough.
+#
+#  This function will return a reference to a hash with the parsed elements
+# plus information on the parsing itself like "how many white spaces were
+# skipped before the VERB" (skipped_before_method), "was the version provided"
+# (http_ver_size = 0).
 sub parse_request ($$) {
     my ( $name, $rrequest ) = @_;
     open my $in, '<', $rrequest;
@@ -171,6 +181,11 @@ sub parse_request ($$) {
     };
 }
 
+# From a parsed request, builds the "moves" to apply to the original request
+# to transform it (e.g. add missing version). Elements of the returned array
+# are of 2 types:
+# - d : number of characters to remove.
+# - s_* : number of characters (s_s) to replace by value (s_v).
 sub get_moves($) {
     my ($parsed_req) = @_;
     return ({d => $parsed_req->{skipped_before_method}},
@@ -190,6 +205,9 @@ sub get_moves($) {
                          );
 }
 
+#  Apply moves (see above) to an array of packets that correspond to a request.
+# The use of this function is explained in the build_request_from_packets
+# function.
 sub apply_moves($$) {
     my ($r_packet, $r_move) = @_;
     my $current_packet = shift @$r_packet;
@@ -236,17 +254,26 @@ sub apply_moves($$) {
     }
     return \@result;
 }
+#  Given a request as an array of packets, will parse it, append the appropriate
+# headers and return another array of packets.
+#  The function implemented here can be high-level summarized as:
+#   1 - Concatenate all packets to obtain a string representation of request.
+#   2 - Parse the string representation
+#   3 - Get the "moves" from the parsing
+#   4 - Apply the "moves" to the packets.
 sub build_request_from_packets($$$$$) {
     my ( $name, $more_headers, $is_chunked, $conn_header, $request_packets ) = @_;
-    # Request expressed as a serie of packets
+    # Concatenate packets as a string
     my $parsable_request = '';
     my @packet_length;
     for my $one_packet (@$request_packets) {
         $parsable_request .= $one_packet;
         push @packet_length, length($one_packet);
     }
+    #  Parse the string representation.
     my $parsed_req = parse_request( $name, \$parsable_request );
 
+    # Append headers
     my $len_header = '';
     if (   !$is_chunked
         && defined $parsed_req->{content}
@@ -258,28 +285,23 @@ sub build_request_from_packets($$$$$) {
         $len_header .=
           "Content-Length: " . length( $parsed_req->{content} ) . "\r\n";
     }
-
     $parsed_req->{method} .= ' ';
     $parsed_req->{url} .= ' ';
     $parsed_req->{http_ver} .= "\r\n";
     $parsed_req->{headers} = "Host: localhost\r\nConnection: $conn_header\r\n$more_headers$len_header\r\n";
 
+    #  Get the moves from parsing
     my @elements_moves = get_moves($parsed_req);
+    # Apply them to the packets.
     return apply_moves($request_packets, \@elements_moves);
 }
 
-#  Returns an array of array of hashes. Each element of the first array is a
-# request.
-# Each request is an array of the "packets" to be sent, with an (optionnal)
-# delay between packets to send.
-#  Raw requests might be malformed intentionnaly (find what is wrong ;) ) :
-# [[{value =>"POST /test HTTP/1.1\r\nHost: localhost\r\nConnection:keep-alive\r\n"},
-#   {value =>"Content-Length:"},
-#   {value=>"2\r\n\r\n"},
-#   {value=>"ABZGET /test HTTP/1.0", delay_before => 15000}]]
-# When sending, this will pause by the default delay between "POST..."
-# and "Content-Length:" but also between "Content-Length:"
-# and "2". It will also pause by 15 seconds before the body.
+#  Returns an array of array of hashes from the block. Each element of
+# the first-level array is a request.
+#  Each request is an array of the "packets" to be sent. Each packet is a
+# string to send, with an (optionnal) delay before sending it.
+#  This function parses (and therefore defines the syntax) of "request*"
+# sections. See documentation for supported syntax.
 sub get_req_from_block ($) {
     my ($block) = @_;
     my $name = $block->name;
@@ -295,14 +317,8 @@ sub get_req_from_block ($) {
             # data should be split. This allows for backward compatibility but
             # should use request with arrays as it provides the same functionnality.
             my @rr_list = ();
-            my $i = 0;
             for my $elt ( @{ $block->raw_request } ) {
-                if ($i == 0) {
-                    push @rr_list, {value => $elt};
-                } else {
-                    push @rr_list, {value => $elt};
-                }
-                $i++;
+                push @rr_list, {value => $elt};
             }
             push @req_list, \@rr_list;
         }
@@ -314,7 +330,6 @@ sub get_req_from_block ($) {
         my $request;
         if ( defined $block->request_eval ) {
 
-            # Should be deprecated.
             diag "$name - request_eval DEPRECATED. Use request eval instead.";
             $request = eval $block->request_eval;
             if ($@) {
@@ -386,10 +401,13 @@ sub get_req_from_block ($) {
                         my @packet_array = ();
                         for my $one_packet (@$one_req) {
                             if (!ref $one_packet) {
+                                # Packet is a string.
                                 push @packet_array, $one_packet;
-                            } else {
+                            } elsif (ref $one_packet eq 'HASH'){
                                 # Packet is a hash with a value...
                                 push @packet_array, $one_packet->{value};
+                            } else {
+                                Test::More::BAIL_OUT "$name - Invalid syntax. $one_packet should be a string or hash with value.";
                             }
                         }
                         my $transformed_packet_array = build_request_from_packets($name, $more_headers,
@@ -401,12 +419,15 @@ sub get_req_from_block ($) {
                             if (!ref $$one_req[$idx]) {
                                 push @transformed_req, {value => $one_transformed_packet};
                             } else {
+                                # Is a HASH (checked above as $one_packet)
                                 $$one_req[$idx]->{value} = $one_transformed_packet;
                                 push @transformed_req, $$one_req[$idx];
                             }
                             $idx++;
                         }
                         push @req_list, \@transformed_req;
+                    } else {
+                        Test::More::BAIL_OUT "$name - Invalid syntax. $one_req should be a string or an array of packets.";
                     }
                 }
             } else {
@@ -459,6 +480,9 @@ sub run_test_helper ($$) {
         $req_idx++;
     }
 }
+
+#  Helper function to retrieve a "check" (e.g. error_code) section. This also
+# checks that tests with arrays of requests are arrays themselves.
 sub get_indexed_value($$$$) {
     my ($name, $value, $req_idx, $need_array) = @_;
     if ($need_array) {
@@ -1048,45 +1072,290 @@ when things go wrong ;)
 
 The following sections are supported:
 
-=over
+=head2 config
 
-=item config
+Content of this section will be included in the "server" part of the generated
+config file. This is the place where you want to put the "location" directive
+enabling the module you want to test. Example:
+        location /echo {
+            echo_before_body hello;
+            echo world;
+        }
 
-=item http_config
+Sometimes you simply don't want to bother copying ten times the same
+configuration for the ten tests you want to run against your module. One way
+to do this is to write a config section only for the first test in your C<.t>
+file. All subsequent tests will re-use the same config. Please note that this
+depends on the order of test, so you should run C<prove> with variable
+C<TEST_NGINX_NO_SHUFFLE=1> (see below for more on this variable).
 
-=item request
+Please note that config section goes through environment variable expansion
+provided the variables to expand start with TEST_NGINX.
+So, the following is a perfectly legal (provided C<TEST_NGINX_HTML_DIR> is
+set correctly):
+    location /main {
+        echo_subrequest POST /sub -f $TEST_NGINX_HTML_DIR/blah.txt;
+    }
 
-=item request_eval
+=head2 http_config
 
-=item more_headers
+Content of this section will be included in the "http" part of the generated
+config file. This is the place where you want to put the "upstream" directive
+you might want to test. Example:
+    upstream database {
+        postgres_server     127.0.0.1:$TEST_NGINX_POSTGRESQL_PORT
+                            dbname=ngx_test user=ngx_test
+                            password=wrong_pass;
+    }
 
-=item response_body
+As you guessed from the example above, this section goes through environment
+variable expansion (variables have to start with TEST_NGINX).
 
-=item response_body_eval
+=head2 main_config
 
-=item response_body_like
+Content of this section will be included in the "main" part of the generated
+config file. This is very rarely used, except if you are testing nginx core
+itself.
 
-=item response_headers
+This section goes through environment
+variable expansion (variables have to start with TEST_NGINX).
 
-=item response_headers_like
+=head2 request
 
-=item error_code
+This is probably the most important section. It defines the request(s) you
+are going to send to the nginx server. It offers a pretty powerful grammar
+which we are going to walk through one example at a time.
 
-=item raw_request
+In its most basic form, this section looks like that:
+    --- request
+    GET
 
-=item user_files
+This will just do a GET request on the root (i.e. /) of the server using
+HTTP/1.1.
 
-=item skip_nginx
+Of course, you might want to test something else than the root of your
+web server and even use a different version of HTTP. This is possible:
+    --- request
+    GET /foo HTTP/1.0
 
-=item skip_nginx2
+Please note that specifying HTTP/1.0 will not prevent Test::Nginx from
+sending the C<Host> header. Actually Test::Nginx always sends 2 headers:
+C<Host> (with value localhost) and C<Connection> (with value Close for
+simple requests and keep-alive for all but the last pipelined_request).
+
+You can also add a content to your request:
+    --- request
+    POST /foo
+    Hello world
+
+Test::Nginx will automatically calculate the content length and add the
+corresponding header for you.
+
+This being said, as soon as you want to POST real data, you will be interested
+in using the more_headers section and using the power of Test::Base filters
+to urlencode the content you are sending. Which gives us a
+slightly more realistic example:
+    --- more_headers
+    Content-type: application/x-www-form-urlencoded
+    --- request eval
+    use URI::Escape;
+    "POST /rrd/foo
+    value=".uri_escape("N:12345")
+
+Sometimes a test is more than one request. Typically you want to POST some
+data and make sure the data has been taken into account with a GET. You can
+do it using arrays:
+    --- request eval
+    ["POST /users
+    name=foo", "GET /users/foo"]
+
+This way, REST-like interfaces are pretty easy to test.
+
+When you develop nifty nginx modules you will eventually want to test things
+with buffers and "weird" network conditions. This is where you split
+your request into network packets:
+    --- request eval
+    [["POST /users\nna", "me=foo"]]
+
+Here, Test::Nginx will first send the request line, the headers it
+automatically added for you and the first two letters of the body ("na" in
+our example) in ONE network packet. Then, it will send the next packet (here
+it's "me=foo"). When we talk about packets here, this is nto exactly correct
+as there is no way to guarantee the behavior of the TCP/IP stack. What
+Test::Nginx can guarantee is that this will result in two calls to 
+C<syswrite>.
+
+A good way to make I<almost> sure the two calls result in two packets is to
+introduce a delay (let's say 2 seconds)before sending the second packet:
+    --- request eval
+    [["POST /users\nna", {value => "me=foo", delay_before => 2}]]
+
+Of course, everything can be combined till your brain starts boiling ;) :
+    --- request eval
+    use URI::Escape;
+    my $val="value=".uri_escape("N:12346");
+    [["POST /rrd/foo
+    ".substr($val, 0, 6),
+    {value => substr($val, 6, 5), delay_before=>5},
+    substr($val, 11)],  "GET /rrd/foo"]
+
+=head2 request_eval
+
+Use of this section is deprecated and tests using it should replace it with
+a C<request> section with an C<eval> filter. More explicitly:
+    --- request_eval
+    "POST /echo_body
+    hello\x00\x01\x02
+    world\x03\x04\xff"
+
+should be replaced by:
+    --- request eval
+    "POST /echo_body
+    hello\x00\x01\x02
+    world\x03\x04\xff"
+
+=head2 more_headers
+
+Adds the content of this section as headers to the request being sent. Example:
+    --- more_headers
+    X-Foo: blah
+
+This will add C<X-Foo: blah> to the request (on top of the automatically
+generated headers like C<Host>, C<Connection> and potentially
+C<Content-Length>).
+
+=head2 response_body
+
+The expected value for the body of the submitted request.
+    --- response_body
+    hello
+
+If the test is made of multiple requests, then the response_body B<MUST>
+be an array and each request B<MUST> return the corresponding expected
+body:
+    --- request eval
+    ["GET /hello", "GET /world"]
+    --- response_body eval
+    ["hello", "world"]
+
+=head2 response_body_eval
+
+Use of this section is deprecated and tests using it should replace it
+with a C<request> section with an C<eval> filter. Therefore:
+    --- response_body_eval
+    "hello\x00\x01\x02
+    world\x03\x04\xff"
+
+should be replaced by:
+    --- response_body eval
+    "hello\x00\x01\x02
+    world\x03\x04\xff"
+
+=head2 response_body_like
+
+The body returned by the request MUST match the pattern provided by this
+section. Example:
+    --- response_body_like
+    ^elapsed 0\.00[0-5] sec\.$
+
+If the test is made of multiple requests, then response_body_like B<MUST>
+be an array and each request B<MUST> match the corresponding pattern.
+
+=head2 response_headers
+
+The headers specified in this section are in the response sent by nginx.
+    --- response_headers
+    Content-Type: application/x-resty-dbd-stream
+
+Of course, you can specify many headers in this section:
+    --- response_headers
+    X-Resty-DBD-Module:
+    Content-Type: application/x-resty-dbd-stream
+
+The test will be successful only if all headers are found in the response with
+the appropriate values.
+
+If the test is made of multiple requests, then response_headers B<MUST>
+be an array and each element of the array is checked against the
+response to the corresponding request.
+
+=head2 response_headers_like
+
+The value of the headers returned by nginx match the patterns.
+    --- response_headers_like
+    X-Resty-DBD-Module: ngx_drizzle \d+\.\d+\.\d+
+    Content-Type: application/x-resty-dbd-stream
+
+This will check that the response's C<Content-Type> is
+application/x-resty-dbd-stream and that the C<X-Resty-DBD-Module> matches
+C<ngx_drizzle \d+\.\d+\.\d+>.
+
+The test will be successful only if all headers are found in the response and
+if the values match the patterns.
+
+If the test is made of multiple requests, then response_headers_like B<MUST>
+be an array and each element of the array is checked against the
+response to the corresponding request.
+
+=head2 raw_response_headers_like
+
+Checks the headers part of the response against this pattern. This is
+particularly useful when you want to write tests of redirect functions
+that are not bound to the value of the port your nginx server (under
+test) is listening to:
+    --- raw_response_headers_like: Location: http://localhost(?::\d+)?/foo\r\n
+
+As usual, if the test is made of multiple requests, then
+raw_response_headers_like B<MUST> be an array.
+
+=head2 error_code
+
+The expected value of the HTTP response code. If not set, this is assumed
+to be 200. But you can expect other things such as a redirect:
+    --- error_code: 302
+
+If the test is made of multiple requests, then
+error_code B<MUST> be an array with the expected value for the response status
+of each request in the test.
+
+=head2 raw_request
+
+The exact request to send to nginx. This is useful when you want to test
+soem behaviors that are not available with "request" such as an erroneous
+C<Content-Length> header or splitting packets right in the middle of headers:
+    --- raw_request eval
+    ["POST /rrd/taratata HTTP/1.1\r
+    Host: localhost\r
+    Connection: Close\r
+    Content-Type: application/",
+    "x-www-form-urlencoded\r
+    Content-Length:15\r\n\r\nvalue=N%3A12345"]
+
+This can also be useful to tests "invalid" request lines:
+    --- raw_request
+    GET /foo HTTP/2.0 THE_FUTURE_IS_NOW
+
+=head2 user_files
+
+With this section you can create a file that will be copied in the
+html directory of the nginx server under test. For example:
+    --- user_files
+    >>> blah.txt
+    Hello, world
+
+will create a file named C<blah.txt> in the html directory of the nginx
+server tested. The file will contain the text "Hello, world".
+
+=head2 skip_nginx
+
+=head2 skip_nginx2
 
 Both string scalar and string arrays are supported as values.
 
-=item raw_request_middle_delay
+=head2 raw_request_middle_delay
 
-Delay in sec between sending successive packets in the "raw_request" array value.
-
-=back
+Delay in sec between sending successive packets in the "raw_request" array
+value. Also used when a request is split in packets.
 
 =head1 Samples
 
