@@ -9,6 +9,7 @@ repository      ('http://github.com/agentzh/test-nginx');
 all_from        ('lib/Test/Nginx.pm');
 
 requires        ('Test::Base');
+requires        ('Text::Diff');
 requires        ('Test::LongString');
 requires        ('IO::Socket');
 requires        ('Time::HiRes');
