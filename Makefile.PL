@@ -8,6 +8,7 @@ perl_version    ('5.006001');
 repository      ('http://github.com/agentzh/test-nginx');
 all_from        ('lib/Test/Nginx.pm');
 
+requires        ('Test::Base');
 requires        ('Test::LongString');
 requires        ('IO::Socket');
 requires        ('Time::HiRes');
