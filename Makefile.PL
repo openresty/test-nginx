@@ -21,6 +21,8 @@ requires        ('IO::Select');
 requires        ('List::MoreUtils');
 requires        ('ExtUtils::MakeMaker');
 
+requires        ('Parallel::ForkManager');
+
 use_test_base();
 auto_install();
 
