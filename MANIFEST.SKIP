@@ -26,3 +26,6 @@ submitall
 testall
 update
 ^\.rsync$
+genmobi\.sh$
+\.mobi$
+.*\.tar$

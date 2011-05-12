@@ -1,5 +1,31 @@
 Changes for Test::Nginx
 
+0.14 - 2011-05-12
+* now we require Parallel::ForkManager, Text::Diff, and Test::Base.
+* the --- request section now supports multiple requests and even "packeting"
+  (see documentation for details). And it should be backward compatible.
+  Of course, the "expected" sections have been upgraded to expect
+ (and even require) arrays in this situation.
+* updated quite a bit the documentation.
+* deprecated request_eval and response_body_eval. If you use them, the
+  test will pass but you will be issued a "diag" statement telling you
+  to move to "request eval" and "response_body eval" respectively.
+* added new implementation for pipelined requests and raw requests.
+  Rewrote SKIP statement to be less verbose and more in line with what
+  is recommended on Test::Nginx.
+* added support for environment variable TEST_NGINX_FORCE_RESTART_ON_TEST.
+  Defaults to 1. Must be explicitly set to 0 to avoid restarting the nginx
+  server when the config does not change between two tests.
+  This also brings support for allowing config not to be set.
+  This way, using TEST_NGINX_FORCE_RESTART_ON_TEST=1 with TEST_NGINX_NO_SHUFFLE=1
+  and having a config section only on the first test, you can have all tests
+  use the same config.
+* added support for environment variable TEST_NGINX_NO_NGINX_MANAGER (defaults
+    to 0) which will disable the nginx management code (stop/config/start).
+    Very useful when you want to run tests on an already running NGINX (set
+    TEST_NGINX_NO_NGINX_MANAGER to 1 and TEST_NGINX_CLIENT_PORT to the
+    port your running nginx is listening on).
+
 0.13 - 2011-03-08
 * documented the TEST_NGINX_PORT environment.
 
