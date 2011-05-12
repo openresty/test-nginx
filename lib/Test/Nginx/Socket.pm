@@ -55,7 +55,6 @@ use IO::Socket;
 
 #our ($PrevRequest, $PrevConfig);
 
-our $HttpProtocol = $ENV{TEST_NGINX_USE_HTTP_10} ? '1.0' : '1.1';
 our $NoLongString = undef;
 
 our @EXPORT = qw( plan run_tests run_test
@@ -207,7 +206,7 @@ $parsed_req->{content}";
                 $len_header .= "Content-Length: " . length($parsed_req->{content}) . "\r\n";
             }
 
-            $req = "$parsed_req->{method} $parsed_req->{url} HTTP/$HttpProtocol\r
+            $req = "$parsed_req->{method} $parsed_req->{url} HTTP/1.1\r
 Host: localhost\r
 Connection: Close\r
 $more_headers$len_header\r
