@@ -385,6 +385,7 @@ sub get_pid_from_pidfile ($) {
     open my $in, $PidFile or
         bail_out("$name - Failed to open the pid file $PidFile for reading: $!");
     my $pid = do { local $/; <$in> };
+    chomp $pid;
     #warn "Pid: $pid\n";
     close $in;
     return $pid;
