@@ -273,7 +273,7 @@ This module has a Git repository on Github, which has access for all.
 
 If you want a commit bit, feel free to drop me a line.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 agentzh (章亦春) C<< <agentzh@gmail.com> >>
 
