@@ -27,7 +27,10 @@ requires:
   LWP::UserAgent: 0
   List::MoreUtils: 0
   POSIX: 0
+  Parallel::ForkManager: 0
+  Test::Base: 0
   Test::LongString: 0
+  Text::Diff: 0
   Time::HiRes: 0
   perl: 5.6.1
 resources:
