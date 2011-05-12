@@ -8,6 +8,8 @@ perl_version    ('5.006001');
 repository      ('http://github.com/agentzh/test-nginx');
 all_from        ('lib/Test/Nginx.pm');
 
+requires        ('Test::Base');
+requires        ('Text::Diff');
 requires        ('Test::LongString');
 requires        ('IO::Socket');
 requires        ('Time::HiRes');
@@ -18,6 +20,8 @@ requires        ('POSIX');
 requires        ('IO::Select');
 requires        ('List::MoreUtils');
 requires        ('ExtUtils::MakeMaker');
+
+requires        ('Parallel::ForkManager');
 
 use_test_base();
 auto_install();

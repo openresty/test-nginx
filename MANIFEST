@@ -29,4 +29,6 @@ inc/Test/More.pm
 META.yml
 t/pod-coverage.t
 t/pod.t
-
+t/apply_moves.t
+t/get_req_from_block.t
+t/parse_request.t
