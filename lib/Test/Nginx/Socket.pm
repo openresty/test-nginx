@@ -1077,6 +1077,7 @@ The following sections are supported:
 Content of this section will be included in the "server" part of the generated
 config file. This is the place where you want to put the "location" directive
 enabling the module you want to test. Example:
+
         location /echo {
             echo_before_body hello;
             echo world;
@@ -1093,6 +1094,7 @@ Please note that config section goes through environment variable expansion
 provided the variables to expand start with TEST_NGINX.
 So, the following is a perfectly legal (provided C<TEST_NGINX_HTML_DIR> is
 set correctly):
+
     location /main {
         echo_subrequest POST /sub -f $TEST_NGINX_HTML_DIR/blah.txt;
     }
@@ -1102,6 +1104,7 @@ set correctly):
 Content of this section will be included in the "http" part of the generated
 config file. This is the place where you want to put the "upstream" directive
 you might want to test. Example:
+
     upstream database {
         postgres_server     127.0.0.1:$TEST_NGINX_POSTGRESQL_PORT
                             dbname=ngx_test user=ngx_test
@@ -1127,6 +1130,7 @@ are going to send to the nginx server. It offers a pretty powerful grammar
 which we are going to walk through one example at a time.
 
 In its most basic form, this section looks like that:
+
     --- request
     GET
 
@@ -1135,6 +1139,7 @@ HTTP/1.1.
 
 Of course, you might want to test something else than the root of your
 web server and even use a different version of HTTP. This is possible:
+
     --- request
     GET /foo HTTP/1.0
 
@@ -1144,6 +1149,7 @@ C<Host> (with value localhost) and C<Connection> (with value Close for
 simple requests and keep-alive for all but the last pipelined_request).
 
 You can also add a content to your request:
+
     --- request
     POST /foo
     Hello world
@@ -1155,6 +1161,7 @@ This being said, as soon as you want to POST real data, you will be interested
 in using the more_headers section and using the power of Test::Base filters
 to urlencode the content you are sending. Which gives us a
 slightly more realistic example:
+
     --- more_headers
     Content-type: application/x-www-form-urlencoded
     --- request eval
@@ -1165,6 +1172,7 @@ slightly more realistic example:
 Sometimes a test is more than one request. Typically you want to POST some
 data and make sure the data has been taken into account with a GET. You can
 do it using arrays:
+
     --- request eval
     ["POST /users
     name=foo", "GET /users/foo"]
@@ -1174,6 +1182,7 @@ This way, REST-like interfaces are pretty easy to test.
 When you develop nifty nginx modules you will eventually want to test things
 with buffers and "weird" network conditions. This is where you split
 your request into network packets:
+
     --- request eval
     [["POST /users\nna", "me=foo"]]
 
@@ -1187,10 +1196,12 @@ C<syswrite>.
 
 A good way to make I<almost> sure the two calls result in two packets is to
 introduce a delay (let's say 2 seconds)before sending the second packet:
+
     --- request eval
     [["POST /users\nna", {value => "me=foo", delay_before => 2}]]
 
 Of course, everything can be combined till your brain starts boiling ;) :
+
     --- request eval
     use URI::Escape;
     my $val="value=".uri_escape("N:12346");
@@ -1203,12 +1214,14 @@ Of course, everything can be combined till your brain starts boiling ;) :
 
 Use of this section is deprecated and tests using it should replace it with
 a C<request> section with an C<eval> filter. More explicitly:
+
     --- request_eval
     "POST /echo_body
     hello\x00\x01\x02
     world\x03\x04\xff"
 
 should be replaced by:
+
     --- request eval
     "POST /echo_body
     hello\x00\x01\x02
@@ -1217,6 +1230,7 @@ should be replaced by:
 =head2 more_headers
 
 Adds the content of this section as headers to the request being sent. Example:
+
     --- more_headers
     X-Foo: blah
 
@@ -1227,12 +1241,14 @@ C<Content-Length>).
 =head2 response_body
 
 The expected value for the body of the submitted request.
+
     --- response_body
     hello
 
 If the test is made of multiple requests, then the response_body B<MUST>
 be an array and each request B<MUST> return the corresponding expected
 body:
+
     --- request eval
     ["GET /hello", "GET /world"]
     --- response_body eval
@@ -1242,11 +1258,13 @@ body:
 
 Use of this section is deprecated and tests using it should replace it
 with a C<request> section with an C<eval> filter. Therefore:
+
     --- response_body_eval
     "hello\x00\x01\x02
     world\x03\x04\xff"
 
 should be replaced by:
+
     --- response_body eval
     "hello\x00\x01\x02
     world\x03\x04\xff"
@@ -1255,6 +1273,7 @@ should be replaced by:
 
 The body returned by the request MUST match the pattern provided by this
 section. Example:
+
     --- response_body_like
     ^elapsed 0\.00[0-5] sec\.$
 
@@ -1264,10 +1283,12 @@ be an array and each request B<MUST> match the corresponding pattern.
 =head2 response_headers
 
 The headers specified in this section are in the response sent by nginx.
+
     --- response_headers
     Content-Type: application/x-resty-dbd-stream
 
 Of course, you can specify many headers in this section:
+
     --- response_headers
     X-Resty-DBD-Module:
     Content-Type: application/x-resty-dbd-stream
@@ -1282,6 +1303,7 @@ response to the corresponding request.
 =head2 response_headers_like
 
 The value of the headers returned by nginx match the patterns.
+
     --- response_headers_like
     X-Resty-DBD-Module: ngx_drizzle \d+\.\d+\.\d+
     Content-Type: application/x-resty-dbd-stream
@@ -1303,6 +1325,7 @@ Checks the headers part of the response against this pattern. This is
 particularly useful when you want to write tests of redirect functions
 that are not bound to the value of the port your nginx server (under
 test) is listening to:
+
     --- raw_response_headers_like: Location: http://localhost(?::\d+)?/foo\r\n
 
 As usual, if the test is made of multiple requests, then
@@ -1312,6 +1335,7 @@ raw_response_headers_like B<MUST> be an array.
 
 The expected value of the HTTP response code. If not set, this is assumed
 to be 200. But you can expect other things such as a redirect:
+
     --- error_code: 302
 
 If the test is made of multiple requests, then
@@ -1323,6 +1347,7 @@ of each request in the test.
 The exact request to send to nginx. This is useful when you want to test
 soem behaviors that are not available with "request" such as an erroneous
 C<Content-Length> header or splitting packets right in the middle of headers:
+
     --- raw_request eval
     ["POST /rrd/taratata HTTP/1.1\r
     Host: localhost\r
@@ -1332,6 +1357,7 @@ C<Content-Length> header or splitting packets right in the middle of headers:
     Content-Length:15\r\n\r\nvalue=N%3A12345"]
 
 This can also be useful to tests "invalid" request lines:
+
     --- raw_request
     GET /foo HTTP/2.0 THE_FUTURE_IS_NOW
 
@@ -1339,6 +1365,7 @@ This can also be useful to tests "invalid" request lines:
 
 With this section you can create a file that will be copied in the
 html directory of the nginx server under test. For example:
+
     --- user_files
     >>> blah.txt
     Hello, world
@@ -1433,7 +1460,7 @@ This module has a Git repository on Github, which has access for all.
 
 If you want a commit bit, feel free to drop me a line.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 agentzh (章亦春) C<< <agentzh@gmail.com> >>
 
