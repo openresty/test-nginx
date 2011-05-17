@@ -492,7 +492,16 @@ sub get_indexed_value($$$$) {
             Test::More::BAIL_OUT("$name - You asked for many requests, the expected results should be arrays as well.");
         }
     } else {
-        return $value;
+        # One element but still provided as an array.
+        if (ref $value && ref $value eq 'ARRAY') {
+            if ($req_idx != 0) {
+                Test::More::BAIL_OUT("$name - SHOULD NOT HAPPEN: idx!=0 and don't need array.");
+            } else {
+                return $$value[0];
+            }
+        } else {
+            return $value;
+        }
     }
 }
 sub check_error_code($$$$$) {
