@@ -1393,6 +1393,97 @@ Both string scalar and string arrays are supported as values.
 Delay in sec between sending successive packets in the "raw_request" array
 value. Also used when a request is split in packets.
 
+=head1 Environment variables
+
+All environment variables starting with C<TEST_NGINX_> are expanded in the
+sections used to build the configuration of the server that tests automatically
+starts. The following environment variables are supported by this module:
+
+=head2 TEST_NGINX_NO_NGINX_MANAGER
+
+Defaults to 0. If set to 1, Test::Nginx module will not manage
+(configure/start/stop) the C<nginx> process. Can be useful to run tests
+against an already configured (and running) nginx server.
+
+=head2 TEST_NGINX_NO_SHUFFLE
+
+Dafaults to 0. If set to 1, will make sure the tests are run in the order
+they appear in the test file (and not in random order).
+
+=head2 TEST_NGINX_USE_VALGRIND
+
+If set to 1, will start nginx with valgrind. nginx is actually started with
+C<valgrind -q --leak-check=full --gen-suppressions=all --suppressions=valgrind.suppress>,
+the suppressions option being used only if there is actually
+a valgrind.suppress file.
+
+=head2 TEST_NGINX_BINARY
+
+The command to start nginx. Defaults to C<nginx>. Can be used as an alternative
+to setting C<PATH> to run a specific nginx instance.
+
+=head2 TEST_NGINX_LOG_LEVEL
+
+Value of the last argument of the C<error_log> configuration directive.
+Defaults to C<debug>.
+
+=head2 TEST_NGINX_MASTER_PROCESS
+
+Value of the C<master_process> configuration directive. Defaults to C<off>.
+
+=head2 TEST_NGINX_SERVER_PORT
+
+Value of the port the server started by Test::Nginx will listen to. If not
+set, C<TEST_NGINX_PORT> is used. If C<TEST_NGINX_PORT> is not set,
+then C<1984> is used. See below for typical use.
+
+=head2 TEST_NGINX_CLIENT_PORT
+
+Value of the port Test::Nginx will diirect requests to. If not
+set, C<TEST_NGINX_PORT> is used. If C<TEST_NGINX_PORT> is not set,
+then C<1984> is used. A typical use of this feature is to test extreme
+network conditions by adding a "proxy" between Test::Nginx and nginx
+itself. This is described in the C<etcproxy integration> section of this
+module README.
+
+=head2 TEST_NGINX_PORT
+
+A shortcut for setting both C<TEST_NGINX_CLIENT_PORT> and
+C<TEST_NGINX_SERVER_PORT>.
+
+=head2 TEST_NGINX_SLEEP
+
+How much time (in seconds) should Test::Nginx sleep between two calls to C<syswrite> when
+sending request data. Defaults to 0.
+
+=head2 TEST_NGINX_FORCE_RESTART_ON_TEST
+
+Defaults to 1. If set to 0, Test::Nginx will not restart the nginx
+server when the config does not change between two tests.
+
+=head2 TEST_NGINX_SERVROOT
+
+The root of the nginx "hierarchy" (where you find the conf, *_tmp and logs
+directories). This value will be used with the C<-p> option of C<nginx>.
+Defaults to appending C<t/servroot> to the current directory.
+
+=head2 TEST_NGINX_IGNORE_MISSING_DIRECTIVES
+
+If set to 1 will SKIP all tests which C<config> sections resulted in a
+C<unknown directive> when trying to start C<nginx>. Useful when you want to
+run tests on a build of nginx that does not include all modules it should.
+By default, these tests will FAIL.
+
+=head2 TEST_NGINX_ERROR_LOG
+
+Error log files from all tests will be appended to the file specified with
+this variable. There is no default value which disables the feature. This
+is very useful when debugging. By default, each test triggers a start/stop
+cycle for C<nginx>. All logs are removed before each restart, so you can
+only see the logs for the last test run (which you usually do not control
+except if you set C<TEST_NGINX_NO_SHUFFLE=1>). With this, you accumulate
+all logs into a single file that is never cleaned up by Test::Nginx.
+
 =head1 Samples
 
 You'll find live samples in the following Nginx 3rd-party modules:
