@@ -11,7 +11,6 @@ use Encode;
 use Data::Dumper;
 use Time::HiRes qw(sleep time);
 use Test::LongString;
-use Test::More;
 use List::MoreUtils qw( any );
 use IO::Select ();
 
