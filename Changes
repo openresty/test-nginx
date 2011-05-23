@@ -1,5 +1,12 @@
 Changes for Test::Nginx
 
+0.15 - 2011-05-23
+* fixed a bug when using arrays in the "response_body" (and other similar) section when there was only one request.
+* fixed presentation problems in the HTML generated from the POD.
+* added documentation for the TEST_NGINX_* variables.
+* added "local $?" in Test::Nginx::Util::END to avoid confusing Test::Builder::_ending()
+* removed "use Test::More" from Test::Nginx::Socket because Test::Base already loads it.
+
 0.14 - 2011-05-12
 * now we require Parallel::ForkManager, Text::Diff, and Test::Base.
 * the --- request section now supports multiple requests and even "packeting"

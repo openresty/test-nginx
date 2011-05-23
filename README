@@ -228,14 +228,18 @@ SOURCE REPOSITORY
 
     If you want a commit bit, feel free to drop me a line.
 
-AUTHOR
+AUTHORS
     agentzh (章亦春) "<agentzh@gmail.com>"
+
+    Antoine BONAVITA "<antoine.bonavita@gmail.com>"
 
 COPYRIGHT & LICENSE
     Copyright (c) 2009-2011, Taobao Inc., Alibaba Group
     (<http://www.taobao.com>).
 
     Copyright (c) 2009-2011, agentzh "<agentzh@gmail.com>".
+
+    Copyright (c) 2011, Antoine Bonavita "<antoine.bonavita@gmail.com>".
 
     This module is licensed under the terms of the BSD license.
 
