@@ -681,6 +681,12 @@ sub parse_response($$) {
         my $decoded = '';
         while (1) {
             if ( $raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx ) {
+                if ( $raw =~ /\G (.+) /gcsx ) {
+                    (my $extra = $1) =~ s/([\0-\037\200-\377])/sprintf('\x{%02x}',ord $1)/eg;
+                    warn "WARNING: $name - unexpected extra bytes after last chunk in ",
+                        "response: \"$extra\"\n";
+                }
+
                 last;
             }
             if ( $raw =~ m{ \G [\ \t]* ( [A-Fa-f0-9]+ ) [\ \t]* \r\n }gcsx ) {
