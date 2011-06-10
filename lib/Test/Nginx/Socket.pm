@@ -460,7 +460,7 @@ sub run_test_helper ($$) {
     my $req_idx = 0;
     for my $one_req (@$r_req_list) {
         my $raw_resp;
-    
+
         if ($dry_run) {
             $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
         }
@@ -468,9 +468,9 @@ sub run_test_helper ($$) {
             $raw_resp = send_request( $one_req, $block->raw_request_middle_delay,
                 $timeout, $block->name );
         }
-    
+
         #warn "raw resonse: [$raw_resp]\n";
-    
+
         my ( $res, $raw_headers ) = parse_response( $name, $raw_resp );
         check_error_code($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
         check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
@@ -1199,7 +1199,7 @@ automatically added for you and the first two letters of the body ("na" in
 our example) in ONE network packet. Then, it will send the next packet (here
 it's "me=foo"). When we talk about packets here, this is nto exactly correct
 as there is no way to guarantee the behavior of the TCP/IP stack. What
-Test::Nginx can guarantee is that this will result in two calls to 
+Test::Nginx can guarantee is that this will result in two calls to
 C<syswrite>.
 
 A good way to make I<almost> sure the two calls result in two packets is to
@@ -1589,11 +1589,11 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 
 =item *
 
-Neither the name of the Taobao Inc. nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. 
+Neither the name of the Taobao Inc. nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 =back
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =head1 SEE ALSO
 
