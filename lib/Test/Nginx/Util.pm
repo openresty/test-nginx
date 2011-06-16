@@ -281,6 +281,13 @@ sub write_user_files ($) {
                 $body = '';
             }
 
+            if ($fname =~ /(.*)\//) {
+                my $dir = "$HtmlDir/$1";
+                if (! -d $dir) {
+                    mkdir $dir or die "$name - Cannot create directory ", $dir;
+                }
+            }
+
             open my $out, ">$HtmlDir/$fname" or
                 die "$name - Cannot open $HtmlDir/$fname for writing: $!\n";
             print $out $body;
