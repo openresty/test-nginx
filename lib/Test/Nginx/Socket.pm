@@ -66,7 +66,7 @@ our @EXPORT = qw( plan run_tests run_test
   timeout no_nginx_manager
 );
 
-sub send_request ($$$$);
+sub send_request ($$$$@);
 
 sub run_test_helper ($$);
 
@@ -735,16 +735,27 @@ sub parse_response($$) {
     return ( $res, $raw_headers );
 }
 
-sub send_request ($$$$) {
-    my ( $req, $middle_delay, $timeout, $name ) = @_;
-
-    my @req_bits = ref $req ? @$req : ($req);
+sub send_request ($$$$@) {
+    my ( $req, $middle_delay, $timeout, $name, $tries ) = @_;
 
     my $sock = IO::Socket::INET->new(
         PeerAddr => $ServerAddr,
         PeerPort => $ServerPortForClient,
         Proto    => 'tcp'
-    ) or die "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+    );
+
+    if (! defined $sock) {
+        $tries ||= 0;
+        if ($tries < 3) {
+            warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+            sleep 1;
+            return send_request($req, $middle_delay, $timeout, $name, $tries + 1);
+        } else {
+            die "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+        }
+    }
+
+    my @req_bits = ref $req ? @$req : ($req);
 
     my $flags = fcntl $sock, F_GETFL, 0
       or die "Failed to get flags: $!\n";
