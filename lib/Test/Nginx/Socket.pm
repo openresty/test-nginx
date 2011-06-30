@@ -131,8 +131,16 @@ sub parse_request ($$) {
         $rel_url_size = length($5);
         $after_rel_url = length($6);
         $http_ver = $8;
-        $http_ver_size = length($8);
-        $after_http_ver = length($9);
+        if (!defined $8) {
+            $http_ver_size = undef;
+        } else {
+            $http_ver_size = length($8);
+        }
+        if (!defined $9) {
+            $after_http_ver = undef;
+        } else {
+            $after_http_ver = length($9);
+        }
         $end_line_size = length($10);
     } else {
         Test::More::BAIL_OUT("$name - Request line is not valid. Should be 'meth [url [version]]'");
