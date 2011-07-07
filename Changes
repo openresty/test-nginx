@@ -1,5 +1,14 @@
 Changes for Test::Nginx
 
+0.16 - 2011-07-07
+* fixed a bug that length(undef) produced lots of warnings on perl 5.10.x. thanks Guo Ying (shrimp).
+* now we automatically retry connecting for 3 times (1 sec delay)
+  in Test::Nginx::Socket::send_request. this will help automatically recovering
+  from random slow valgrind loading problems.
+* when the directories specified in --- user_files do not exist, Test::Nginx will create it
+  automatically.
+* now we'll issue warning when there is extra bytes after the last chunk in the chunked response parser.
+
 0.15 - 2011-05-23
 * fixed a bug when using arrays in the "response_body" (and other similar) section when there was only one request.
 * fixed presentation problems in the HTML generated from the POD.
