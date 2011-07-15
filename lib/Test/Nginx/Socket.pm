@@ -18,6 +18,7 @@ our $ServerAddr = 'localhost';
 our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 2;
 
 use Test::Nginx::Util qw(
+  bail_out
   setup_server_root
   write_config_file
   get_canon_version

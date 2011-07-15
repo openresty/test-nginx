@@ -117,6 +117,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    bail_out
     setup_server_root
     write_config_file
     get_canon_version
@@ -761,7 +762,17 @@ start_nginx:
                 $RunTestHelper->($block, $dry_run);
             }
         } else {
+            if ($block->pre) {
+                eval $block->pre;
+                bail_out("--- pre error:$@") if $@;
+            }
+
             $RunTestHelper->($block, $dry_run);
+
+            if ($block->post) {
+                eval $block->post;
+                bail_out("--- post error:$@") if $@;
+            }
         }
     }
 
