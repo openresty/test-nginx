@@ -895,9 +895,8 @@ sub send_request ($$$$@) {
                 }
 
                 close $hdl;
-            }
 
-            if ( $res == 2 ) {
+            } elsif ( $res == 2 ) {
                 if ( $writable_hdls->exists($hdl) ) {
                     $writable_hdls->remove($hdl);
                 }
@@ -929,10 +928,20 @@ sub write_event_handler ($) {
   #die;
 
         if ( $rest > 0 ) {
-            my $bytes = syswrite(
-                $ctx->{sock}, $ctx->{write_buf},
-                $rest,        $ctx->{write_offset}
-            );
+            my $bytes;
+            eval {
+                $bytes = syswrite(
+                    $ctx->{sock}, $ctx->{write_buf},
+                    $rest,        $ctx->{write_offset}
+                );
+            };
+
+            if ($@) {
+                my $errmsg = "write failed: $@";
+                warn "$errmsg\n";
+                $ctx->{resp} =  $errmsg;
+                return undef;
+            }
 
             if ( !defined $bytes ) {
                 if ( $! == EAGAIN ) {
