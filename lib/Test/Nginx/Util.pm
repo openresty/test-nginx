@@ -255,14 +255,15 @@ sub write_user_files ($) {
         open my $in, '<', \$raw;
 
         my @files;
-        my ($fname, $body);
+        my ($fname, $body, $date);
         while (<$in>) {
-            if (/>>> (\S+)/) {
+            if (/>>> (\S+)(?:\s+(.+))?/) {
                 if ($fname) {
-                    push @files, [$fname, $body];
+                    push @files, [$fname, $body, $date];
                 }
 
                 $fname = $1;
+                $date = $2;
                 undef $body;
             } else {
                 $body .= $_;
@@ -270,11 +271,11 @@ sub write_user_files ($) {
         }
 
         if ($fname) {
-            push @files, [$fname, $body];
+            push @files, [$fname, $body, $date];
         }
 
         for my $file (@files) {
-            my ($fname, $body) = @$file;
+            my ($fname, $body, $date) = @$file;
             #warn "write file $fname with content [$body]\n";
 
             if (!defined $body) {
@@ -292,6 +293,12 @@ sub write_user_files ($) {
                 die "$name - Cannot open $HtmlDir/$fname for writing: $!\n";
             print $out $body;
             close $out;
+
+            if ($date) {
+                my $cmd = "touch -t '$date' $HtmlDir/$fname";
+                system($cmd) == 0 or
+                    die "Failed to run shell command: $cmd\n";
+            }
         }
     }
 }
