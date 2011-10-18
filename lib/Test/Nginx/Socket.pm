@@ -1307,6 +1307,35 @@ should be replaced by:
     hello\x00\x01\x02
     world\x03\x04\xff"
 
+=head2 pipelined_requests
+
+Specify pipelined requests that use a single keep-alive connection to the server.
+
+Here is an example from ngx_lua's test suite:
+
+    === TEST 7: discard body
+    --- config
+        location = /foo {
+            content_by_lua '
+                ngx.req.discard_body()
+                ngx.say("body: ", ngx.var.request_body)
+            ';
+        }
+        location = /bar {
+            content_by_lua '
+                ngx.req.read_body()
+                ngx.say("body: ", ngx.var.request_body)
+            ';
+        }
+    --- pipelined_requests eval
+    ["POST /foo
+    hello, world",
+    "POST /bar
+    hiya, world"]
+    --- response_body eval
+    ["body: nil\n",
+    "body: hiya, world\n"]
+
 =head2 more_headers
 
 Adds the content of this section as headers to the request being sent. Example:
