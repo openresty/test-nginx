@@ -479,12 +479,42 @@ sub run_test_helper ($$) {
 
         #warn "raw resonse: [$raw_resp]\n";
 
-        my ( $res, $raw_headers ) = parse_response( $name, $raw_resp );
-        check_error_code($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
-        check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
-        check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
-        check_response_body($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
+        my ($n, $need_array);
+
+        if ($block->pipelined_requests) {
+            $n = @{ $block->pipelined_requests };
+            $need_array = 1;
+
+        } else {
+            $need_array = $#$r_req_list > 0;
+        }
+
+again:
+        #warn "!!! resp: [$raw_resp]";
+        my ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
+
+        if (!$n) {
+            if ($left) {
+                my $name = $block->name;
+                $left =~ s/([\0-\037\200-\377])/sprintf('\x{%02x}',ord $1)/eg;
+                warn "WARNING: $name - unexpected extra bytes after last chunk in ",
+                    "response: \"$left\"\n";
+            }
+
+        } else {
+            $raw_resp = $left;
+            $n--;
+        }
+
+        check_error_code($block, $res, $dry_run, $req_idx, $need_array);
+        check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
+        check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
+        check_response_body($block, $res, $dry_run, $req_idx, $need_array);
         $req_idx++;
+
+        if ($n) {
+            goto again;
+        }
     }
 }
 
@@ -502,7 +532,7 @@ sub get_indexed_value($$$$) {
         # One element but still provided as an array.
         if (ref $value && ref $value eq 'ARRAY') {
             if ($req_idx != 0) {
-                Test::More::BAIL_OUT("$name - SHOULD NOT HAPPEN: idx!=0 and don't need array.");
+                Test::More::BAIL_OUT("$name - SHOULD NOT HAPPEN: idx != 0 and don't need array.");
             } else {
                 return $$value[0];
             }
@@ -587,6 +617,7 @@ sub check_response_headers($$$$$) {
         }
     }
 }
+
 sub check_response_body() {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
@@ -621,21 +652,28 @@ sub check_response_body() {
             Encode::from_to( $expected, 'UTF-8', $block->charset );
         }
 
-        $expected =~ s/\$ServerPort\b/$ServerPort/g;
-        $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+        unless (ref $expected) {
+            $expected =~ s/\$ServerPort\b/$ServerPort/g;
+            $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+        }
 
         #warn show_all_chars($content);
 
         #warn "no long string: $NoLongString";
         SKIP: {
             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-            if ($NoLongString) {
-                is( $content, $expected,
-                    "$name - response_body - response is expected" );
-            }
-            else {
-                is_string( $content, $expected,
-                    "$name - response_body - response is expected" );
+            if (ref $expected) {
+                like $content, $expected, "$name - response_body - like";
+
+            } else {
+                if ($NoLongString) {
+                    is( $content, $expected,
+                        "$name - response_body - response is expected" );
+                }
+                else {
+                    is_string( $content, $expected,
+                        "$name - response_body - response is expected" );
+                }
             }
         }
 
@@ -666,6 +704,8 @@ sub check_response_body() {
 sub parse_response($$) {
     my ( $name, $raw_resp ) = @_;
 
+    my $left;
+
     my $raw_headers = '';
     if ( $raw_resp =~ /(.*?)\r\n\r\n/s ) {
 
@@ -690,9 +730,7 @@ sub parse_response($$) {
         while (1) {
             if ( $raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx ) {
                 if ( $raw =~ /\G (.+) /gcsx ) {
-                    (my $extra = $1) =~ s/([\0-\037\200-\377])/sprintf('\x{%02x}',ord $1)/eg;
-                    warn "WARNING: $name - unexpected extra bytes after last chunk in ",
-                        "response: \"$extra\"\n";
+                    $left = $1;
                 }
 
                 last;
@@ -740,7 +778,7 @@ sub parse_response($$) {
         #warn "decoded: $decoded\n";
         $res->content($decoded);
     }
-    return ( $res, $raw_headers );
+    return ( $res, $raw_headers, $left );
 }
 
 sub send_request ($$$$@) {
@@ -1188,7 +1226,7 @@ web server and even use a different version of HTTP. This is possible:
 Please note that specifying HTTP/1.0 will not prevent Test::Nginx from
 sending the C<Host> header. Actually Test::Nginx always sends 2 headers:
 C<Host> (with value localhost) and C<Connection> (with value Close for
-simple requests and keep-alive for all but the last pipelined_request).
+simple requests and keep-alive for all but the last pipelined_requests).
 
 You can also add a content to your request:
 
