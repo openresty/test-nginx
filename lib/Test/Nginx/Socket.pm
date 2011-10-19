@@ -124,24 +124,24 @@ sub parse_request ($$) {
     my ($http_ver, $http_ver_size, $after_http_ver);
     my $end_line_size;
     if ($first =~ /^(\s*)(\S+)( *)((\S+)( *))?((\S+)( *))?(\s*)/) {
-        $before_meth = length($1);
+        $before_meth = defined $1 ? length($1) : undef;
         $meth = $2;
-        $after_meth = length($3);
+        $after_meth = defined $3 ? length($3) : undef;
         $rel_url = $5;
-        $rel_url_size = length($5);
-        $after_rel_url = length($6);
+        $rel_url_size = defined $5 ? length($5) : undef;
+        $after_rel_url = defined $6 ? length($6) : undef;
         $http_ver = $8;
         if (!defined $8) {
             $http_ver_size = undef;
         } else {
-            $http_ver_size = length($8);
+            $http_ver_size = defined $8 ? length($8) : undef;
         }
         if (!defined $9) {
             $after_http_ver = undef;
         } else {
-            $after_http_ver = length($9);
+            $after_http_ver = defined $9 ? length($9) : undef;
         }
-        $end_line_size = length($10);
+        $end_line_size = defined $10 ? length($10) : undef;
     } else {
         Test::More::BAIL_OUT("$name - Request line is not valid. Should be 'meth [url [version]]'");
         die;
@@ -724,20 +724,7 @@ sub parse_response($$) {
 
     my $len = $res->header('Content-Length');
 
-    if (defined $len && $len ne '' && $len >= 0) {
-        my $raw = $res->content;
-        if (length $raw < $len) {
-            warn "WARNING: $name - response body truncated: ",
-                "$len expected, but got ", length $raw, "\n";
-
-        } elsif (length $raw > $len) {
-            my $content = substr $raw, 0, $len;
-            $left = substr $raw, $len;
-            $res->content($content);
-            #warn "parsed body: [", $res->content, "]\n";
-        }
-
-    } elsif ( defined $enc && $enc eq 'chunked' ) {
+    if ( defined $enc && $enc eq 'chunked' ) {
 
         #warn "Found chunked!";
         my $raw = $res->content;
@@ -796,7 +783,21 @@ sub parse_response($$) {
 
         #warn "decoded: $decoded\n";
         $res->content($decoded);
+
+    } elsif (defined $len && $len ne '' && $len >= 0) {
+        my $raw = $res->content;
+        if (length $raw < $len) {
+            warn "WARNING: $name - response body truncated: ",
+                "$len expected, but got ", length $raw, "\n";
+
+        } elsif (length $raw > $len) {
+            my $content = substr $raw, 0, $len;
+            $left = substr $raw, $len;
+            $res->content($content);
+            #warn "parsed body: [", $res->content, "]\n";
+        }
     }
+
     return ( $res, $raw_headers, $left );
 }
 
