@@ -491,6 +491,10 @@ sub run_test_helper ($$) {
 
 again:
         #warn "!!! resp: [$raw_resp]";
+        if (!defined $raw_resp) {
+            die "No response found!";
+        }
+
         my ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
 
         if (!$n) {
@@ -718,7 +722,22 @@ sub parse_response($$) {
     my $res = HTTP::Response->parse($raw_resp);
     my $enc = $res->header('Transfer-Encoding');
 
-    if ( defined $enc && $enc eq 'chunked' ) {
+    my $len = $res->header('Content-Length');
+
+    if (defined $len && $len ne '' && $len >= 0) {
+        my $raw = $res->content;
+        if (length $raw < $len) {
+            warn "WARNING: $name - response body truncated: ",
+                "$len expected, but got ", length $raw, "\n";
+
+        } elsif (length $raw > $len) {
+            my $content = substr $raw, 0, $len;
+            $left = substr $raw, $len;
+            $res->content($content);
+            #warn "parsed body: [", $res->content, "]\n";
+        }
+
+    } elsif ( defined $enc && $enc eq 'chunked' ) {
 
         #warn "Found chunked!";
         my $raw = $res->content;
