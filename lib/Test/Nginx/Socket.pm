@@ -711,7 +711,7 @@ sub parse_response($$) {
     my $left;
 
     my $raw_headers = '';
-    if ( $raw_resp =~ /(.*?)\r\n\r\n/s ) {
+    if ( $raw_resp =~ /(.*?\r\n)\r\n/s ) {
 
         #warn "\$1: $1";
         $raw_headers = $1;
