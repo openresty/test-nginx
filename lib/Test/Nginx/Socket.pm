@@ -492,7 +492,7 @@ sub run_test_helper ($$) {
 again:
         #warn "!!! resp: [$raw_resp]";
         if (!defined $raw_resp) {
-            die "No response found!";
+            $raw_resp = '';
         }
 
         my ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
