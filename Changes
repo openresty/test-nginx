@@ -1,5 +1,11 @@
 Changes for Test::Nginx
 
+0.17 - 2011-11-04
+* bugfix: do not strip trailing CRCF for response headers in Test::Nginx::Socket's response parser.
+* bugfix: fixed issues in Content-Length response header handling in case of pipelined reqeusts.
+* bugfix: fixed the pipelined_requests section support.
+* feature: added support for user file timestamp.
+
 0.16 - 2011-07-07
 * fixed a bug that length(undef) produced lots of warnings on perl 5.10.x. thanks Guo Ying (shrimp).
 * now we automatically retry connecting for 3 times (1 sec delay)

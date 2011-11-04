@@ -6,7 +6,7 @@ use Module::Install::Base ();
 
 use vars qw{$VERSION @ISA $ISCORE};
 BEGIN {
-	$VERSION = '1.00';
+	$VERSION = '1.01';
 	@ISA     = 'Module::Install::Base';
 	$ISCORE  = 1;
 }
@@ -515,6 +515,7 @@ sub __extract_license {
 		'GNU Free Documentation license'     => 'unrestricted', 1,
 		'GNU Affero General Public License'  => 'open_source',  1,
 		'(?:Free)?BSD license'               => 'bsd',          1,
+		'Artistic license 2\.0'              => 'artistic_2',   1,
 		'Artistic license'                   => 'artistic',     1,
 		'Apache (?:Software )?license'       => 'apache',       1,
 		'GPL'                                => 'gpl',          1,
@@ -550,9 +551,9 @@ sub license_from {
 
 sub _extract_bugtracker {
 	my @links   = $_[0] =~ m#L<(
-	 \Qhttp://rt.cpan.org/\E[^>]+|
-	 \Qhttp://github.com/\E[\w_]+/[\w_]+/issues|
-	 \Qhttp://code.google.com/p/\E[\w_\-]+/issues/list
+	 https?\Q://rt.cpan.org/\E[^>]+|
+	 https?\Q://github.com/\E[\w_]+/[\w_]+/issues|
+	 https?\Q://code.google.com/p/\E[\w_\-]+/issues/list
 	 )>#gx;
 	my %links;
 	@links{@links}=();
