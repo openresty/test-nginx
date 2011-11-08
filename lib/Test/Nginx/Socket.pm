@@ -1594,6 +1594,14 @@ C<unknown directive> when trying to start C<nginx>. Useful when you want to
 run tests on a build of nginx that does not include all modules it should.
 By default, these tests will FAIL.
 
+=head2 TEST_NGINX_EVENT_TYPE
+
+This environment can be used to specify a event API type to be used by Nginx. Possible values are C<epoll>, C<kqueue>, C<select>, C<rtsig>, C<poll>, and others.
+
+For example,
+
+    $ TEST_NGINX_EVENT_TYPE=select prove -r t
+
 =head2 TEST_NGINX_ERROR_LOG
 
 Error log files from all tests will be appended to the file specified with

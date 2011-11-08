@@ -27,6 +27,8 @@ our $NoShuffle = $ENV{TEST_NGINX_NO_SHUFFLE} || 0;
 
 our $UseValgrind = $ENV{TEST_NGINX_USE_VALGRIND};
 
+our $EventType = $ENV{TEST_NGINX_EVENT_TYPE};
+
 sub no_shuffle () {
     $NoShuffle = 1;
 }
@@ -371,9 +373,16 @@ _EOC_
 
 events {
     worker_connections  $WorkerConnections;
-}
-
 _EOC_
+
+    if ($EventType) {
+        print $out <<_EOC_;
+    use $EventType;
+_EOC_
+    }
+
+    print $out "}\n";
+
     close $out;
 }
 
