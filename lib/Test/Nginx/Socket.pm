@@ -1513,6 +1513,40 @@ If the test is made of multiple requests, then
 error_code B<MUST> be an array with the expected value for the response status
 of each request in the test.
 
+=head2 error_log
+
+Checks if the pattern or multiple patterns all appear in lines of the F<error.log> file.
+
+For example,
+
+    === TEST 1: matched with j
+    --- config
+        location /re {
+            content_by_lua '
+                m = ngx.re.match("hello, 1234", "([0-9]+)", "j")
+                if m then
+                    ngx.say(m[0])
+                else
+                    ngx.say("not matched!")
+                end
+            ';
+        }
+    --- request
+        GET /re
+    --- response_body
+    1234
+    --- error_log: pcre JIT compiling result: 1
+
+Then the substring "pcre JIT compiling result: 1" must appear literally in a line of F<error.log>.
+
+Multiple patterns are also supported, for example:
+
+    --- error_log eval
+    ["abc", qr/blah/]
+
+then the substring "abc" must appear literally in a line of F<error.log>, and the regex C<qr/blah>
+must also match a line in F<error.log>.
+
 =head2 raw_request
 
 The exact request to send to nginx. This is useful when you want to test
