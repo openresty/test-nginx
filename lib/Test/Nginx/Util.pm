@@ -119,6 +119,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    error_log_data
     setup_server_root
     write_config_file
     get_canon_version
@@ -191,6 +192,14 @@ sub server_root () {
 
 sub bail_out ($) {
     Test::More::BAIL_OUT(@_);
+}
+
+sub error_log_data () {
+    open my $in, $ErrLogFile or
+        return undef;
+    my @lines = <$in>;
+    close $in;
+    return \@lines;
 }
 
 sub run_tests () {
@@ -782,7 +791,7 @@ start_nginx:
     }
 
     if (my $total_errlog = $ENV{TEST_NGINX_ERROR_LOG}) {
-        my $errlog = "$LogDir/error.log";
+        my $errlog = $ErrLogFile;
         if (-s $errlog) {
             open my $out, ">>$total_errlog" or
                 die "Failed to append test case title to $total_errlog: $!\n";

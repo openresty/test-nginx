@@ -33,6 +33,7 @@ use Test::Nginx::Util qw(
   $ConfFile
   $RunTestHelper
   $RepeatEach
+  error_log_data
   worker_connections
   master_process_enabled
   config_preamble
@@ -73,6 +74,7 @@ sub run_test_helper ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
+sub check_response_body ($$$$$);
 
 sub no_long_string () {
     $NoLongString = 1;
@@ -514,6 +516,8 @@ again:
         check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
         check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
         check_response_body($block, $res, $dry_run, $req_idx, $need_array);
+        check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+
         $req_idx++;
 
         if ($n) {
@@ -622,7 +626,45 @@ sub check_response_headers($$$$$) {
     }
 }
 
-sub check_response_body() {
+sub check_error_log ($$$$$) {
+    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+    my $name = $block->name;
+
+    if (defined $block->error_log) {
+        my $pats = $block->error_log;
+        if (!ref $pats) {
+            $pats = [$pats];
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        my $lines = error_log_data();
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        pass("$name - pattern \"$pat\" matches a line in error.log");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - pattern \"$pat\" matches a line in error.log");
+                }
+            }
+        }
+    }
+}
+
+sub check_response_body ($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     if (   defined $block->response_body
