@@ -854,7 +854,7 @@ sub send_request ($$$$@) {
 
     if (! defined $sock) {
         $tries ||= 0;
-        if ($tries < 3) {
+        if ($tries < 10) {
             warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
             sleep 1;
             return send_request($req, $middle_delay, $timeout, $name, $tries + 1);

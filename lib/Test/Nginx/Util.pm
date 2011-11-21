@@ -518,12 +518,14 @@ sub run_test ($) {
         # setting these values to something meaningful but should not be used
         $should_restart = 0;
         $should_reconfig = 0;
+
     } elsif ($NoNginxManager) {
         # One config but not manager: it's worth a warning.
         Test::Base::diag("NO_NGINX_MANAGER activated: config for $name ignored");
         # Like above: setting them to something meaningful just in case.
         $should_restart = 0;
         $should_reconfig = 0;
+
     } else {
         # One config and manager. Restart only if forced to or if config
         # changed.
