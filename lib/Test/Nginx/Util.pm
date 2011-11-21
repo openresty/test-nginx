@@ -29,6 +29,8 @@ our $UseValgrind = $ENV{TEST_NGINX_USE_VALGRIND};
 
 our $EventType = $ENV{TEST_NGINX_EVENT_TYPE};
 
+our $PostponeOutput = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
+
 sub no_shuffle () {
     $NoShuffle = 1;
 }
@@ -325,6 +327,17 @@ sub write_config_file ($$$) {
 
     if (!defined $http_config) {
         $http_config = '';
+    }
+
+    if ($http_config =~ /\bpostpone_output\b/) {
+        undef $PostponeOutput;
+    }
+
+    if (defined $PostponeOutput) {
+        if ($PostponeOutput !~ /^\d+$/) {
+            die "Bad TEST_NGINX_POSTPOHNE_OUTPUT value: $PostponeOutput\n";
+        }
+        $http_config .= "\n    postpone_output $PostponeOutput;\n";
     }
 
     if (!defined $main_config) {

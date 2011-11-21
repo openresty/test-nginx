@@ -1595,6 +1595,16 @@ All environment variables starting with C<TEST_NGINX_> are expanded in the
 sections used to build the configuration of the server that tests automatically
 starts. The following environment variables are supported by this module:
 
+=head2 TEST_NGINX_POSTPONE_OUTPUT
+
+Defaults to empty. This environment takes positive integer numbers as its value and it will cause the auto-generated nginx.conf file to have a "postpone_output" setting in the http {} block.
+
+For example, setting TEST_NGINX_POSTPONE_OUTPUT to 1 will have the following line in nginx.conf's http {} block:
+
+    postpone_output 1;
+
+and it will effectively disable the write buffering in nginx's ngx_http_write_module.
+
 =head2 TEST_NGINX_NO_NGINX_MANAGER
 
 Defaults to 0. If set to 1, Test::Nginx module will not manage
