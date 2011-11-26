@@ -497,7 +497,11 @@ again:
             $raw_resp = '';
         }
 
-        my ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
+        my ( $res, $raw_headers, $left );
+
+        if (!defined $block->ignore_response) {
+            ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
+        }
 
         if (!$n) {
             if ($left) {
@@ -512,10 +516,13 @@ again:
             $n--;
         }
 
-        check_error_code($block, $res, $dry_run, $req_idx, $need_array);
-        check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
-        check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
-        check_response_body($block, $res, $dry_run, $req_idx, $need_array);
+        if (!defined $block->ignore_response) {
+            check_error_code($block, $res, $dry_run, $req_idx, $need_array);
+            check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
+            check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
+            check_response_body($block, $res, $dry_run, $req_idx, $need_array);
+        }
+
         check_error_log($block, $res, $dry_run, $req_idx, $need_array);
 
         $req_idx++;
@@ -1565,6 +1572,10 @@ This can also be useful to tests "invalid" request lines:
 
     --- raw_request
     GET /foo HTTP/2.0 THE_FUTURE_IS_NOW
+
+=head2 ignore_response
+
+Do not attempt to parse the response or run the response related subtests.
 
 =head2 user_files
 
