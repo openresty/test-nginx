@@ -746,10 +746,19 @@ start_nginx:
             }
 
             if ($UseValgrind) {
-                if (-f 'valgrind.suppress') {
-                    $cmd = "valgrind -q --leak-check=full --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
+                my $opts;
+
+                if ($UseValgrind =~ /^\d+$/) {
+                    $opts = "--tool=memcheck --leak-check=full";
+
                 } else {
-                    $cmd = "valgrind -q --leak-check=full --gen-suppressions=all $cmd";
+                    $opts = $UseValgrind;
+                }
+
+                if (-f 'valgrind.suppress') {
+                    $cmd = "valgrind -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
+                } else {
+                    $cmd = "valgrind -q $opts --gen-suppressions=all $cmd";
                 }
 
                 warn "$name\n";

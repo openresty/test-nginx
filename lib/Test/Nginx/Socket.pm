@@ -1643,10 +1643,16 @@ they appear in the test file (and not in random order).
 
 =head2 TEST_NGINX_USE_VALGRIND
 
-If set to 1, will start nginx with valgrind. nginx is actually started with
-C<valgrind -q --leak-check=full --gen-suppressions=all --suppressions=valgrind.suppress>,
+If set, Test::Nginx will start nginx with valgrind with the the value of this environment as the options.
+
+Nginx is actually started with
+C<valgrind -q $TEST_NGINX_USE_VALGRIND --gen-suppressions=all --suppressions=valgrind.suppress>,
 the suppressions option being used only if there is actually
 a valgrind.suppress file.
+
+If this environment is set to the number C<1> or any other
+non-zero numbers, then it is equivalent to taking the value
+C<--tool=memcheck --leak-check=full>.
 
 =head2 TEST_NGINX_BINARY
 
