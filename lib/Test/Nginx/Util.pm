@@ -7,13 +7,17 @@ our $VERSION = '0.17';
 
 use base 'Exporter';
 
-use POSIX qw( SIGQUIT SIGKILL SIGTERM );
+use POSIX qw( SIGQUIT SIGKILL SIGTERM SIGHUP );
 use File::Spec ();
 use HTTP::Response;
 use Cwd qw( cwd );
 use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
 use ExtUtils::MakeMaker ();
+
+our $UseHup = $ENV{TEST_NGINX_USE_HUP};
+
+our $Verbose = $ENV{TEST_NGINX_VERBOSE};
 
 our $LatestNginxVersion = 0.008039;
 
@@ -112,6 +116,10 @@ sub master_on () {
     $MasterProcessEnabled = 'on';
 }
 
+sub master_off () {
+    $MasterProcessEnabled = 'off';
+}
+
 sub master_process_enabled (@) {
     if (@_) {
         $MasterProcessEnabled = shift() ? 'on' : 'off';
@@ -142,6 +150,7 @@ our @EXPORT_OK = qw(
     worker_connections
     workers
     master_on
+    master_off
     config_preamble
     repeat_each
     master_process_enabled
@@ -318,6 +327,13 @@ sub write_user_files ($) {
 
 sub write_config_file ($$$) {
     my ($config, $http_config, $main_config) = @_;
+
+    if ($UseHup) {
+        master_on(); # config reload is buggy when master is off
+
+    } elsif ($UseValgrind) {
+        master_off();
+    }
 
     $http_config = expand_env_in_config($http_config);
 
@@ -731,10 +747,19 @@ start_nginx:
             }
 
             if ($UseValgrind) {
-                if (-f 'valgrind.suppress') {
-                    $cmd = "valgrind -q --leak-check=full --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
+                my $opts;
+
+                if ($UseValgrind =~ /^\d+$/) {
+                    $opts = "--tool=memcheck --leak-check=full";
+
                 } else {
-                    $cmd = "valgrind -q --leak-check=full --gen-suppressions=all $cmd";
+                    $opts = $UseValgrind;
+                }
+
+                if (-f 'valgrind.suppress') {
+                    $cmd = "valgrind -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
+                } else {
+                    $cmd = "valgrind -q $opts --gen-suppressions=all $cmd";
                 }
 
                 warn "$name\n";
@@ -792,6 +817,26 @@ start_nginx:
 
     my $i = 0;
     while ($i++ < $RepeatEach) {
+        #warn "Use hup: $UseHup, i: $i\n";
+
+        if ($UseHup && $i > 1) {
+            my $pid = get_pid_from_pidfile($name);
+            if (system("ps $pid > /dev/null") == 0) {
+                if ($Verbose) {
+                    warn "sending HUP signal to $pid\n";
+                }
+
+                if (kill(SIGHUP, $pid) == 0) { # send quit signal
+                    warn("$name - Failed to send HUP signal to the nginx process with PID $pid");
+                }
+                if ($TestNginxSleep) {
+                    sleep $TestNginxSleep;
+                } else {
+                    sleep 0.1;
+                }
+            }
+        }
+
         if ($should_skip) {
             SKIP: {
                 Test::More::skip("$name - $skip_reason", $tests_to_skip);
@@ -826,23 +871,45 @@ start_nginx:
         if (-f $PidFile) {
             #warn "found pid file...";
             my $pid = get_pid_from_pidfile($name);
+            my $i = 0;
+retry:
             if (system("ps $pid > /dev/null") == 0) {
                 write_config_file($config, $block->http_config, $block->main_config);
+
+                if ($Verbose) {
+                    warn "sending QUIT signal to $pid\n";
+                }
+
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
+
                 if ($TestNginxSleep) {
                     sleep $TestNginxSleep;
                 } else {
                     sleep 0.1;
                 }
+
                 if (-f $PidFile) {
-                    #warn "killing with force (valgrind or profile)...\n";
+                    if ($i++ < 5) {
+                        if ($Verbose) {
+                            warn "nginx not quitted, retrying...\n";
+                        }
+
+                        goto retry;
+                    }
+
+                    if ($Verbose) {
+                        warn "sending KILL signal to $pid\n";
+                    }
+
                     kill(SIGKILL, $pid);
                     sleep 0.02;
+
                 } else {
                     #warn "nginx killed";
                 }
+
             } else {
                 unlink $PidFile or
                     die "Failed to remove pid file $PidFile\n";

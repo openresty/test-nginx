@@ -30,6 +30,8 @@ use Test::Nginx::Util qw(
     $RepeatEach
     worker_connections
     master_process_enabled
+    master_on
+    master_off
     config_preamble
     repeat_each
     no_shuffle
@@ -44,7 +46,7 @@ $UserAgent->agent(__PACKAGE__);
 
 our @EXPORT = qw( plan run_tests run_test
     repeat_each config_preamble worker_connections
-    master_process_enabled
+    master_process_enabled master_on master_off
     no_long_string no_shuffle no_root_location);
 
 sub no_long_string () {
@@ -474,8 +476,6 @@ agentzh (章亦春) C<< <agentzh@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2011, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
-
 Copyright (c) 2009-2011, agentzh C<< <agentzh@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
@@ -494,7 +494,7 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 
 =item *
 
-Neither the name of the Taobao Inc. nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. 
+Neither the name of the authors nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. 
 
 =back
 

@@ -40,6 +40,7 @@ use Test::Nginx::Util qw(
   repeat_each
   workers
   master_on
+  master_off
   log_level
   no_shuffle
   no_root_location
@@ -61,7 +62,7 @@ our $NoLongString = undef;
 our @EXPORT = qw( plan run_tests run_test
   repeat_each config_preamble worker_connections
   master_process_enabled
-  no_long_string workers master_on
+  no_long_string workers master_on master_off
   log_level no_shuffle no_root_location
   server_addr server_root html_dir server_port
   timeout no_nginx_manager
@@ -1606,6 +1607,19 @@ All environment variables starting with C<TEST_NGINX_> are expanded in the
 sections used to build the configuration of the server that tests automatically
 starts. The following environment variables are supported by this module:
 
+=head2 TEST_NGINX_VERBOSE
+
+Controls whether to output verbose debugging messages in Test::Nginx. Default to empty.
+
+=head2 TEST_NGINX_USE_HUP
+
+When set to 1, Test::Nginx will try to send HUP signal to the
+nginx master process to reload the config file between
+successive C<repeast_each> tests. When this envirnoment is set
+to 1, it will also enfornce the "master_process on" config line
+in the F<nginx.conf> file,
+because Nginx is buggy in processing HUP signal when the master process is off.
+
 =head2 TEST_NGINX_POSTPONE_OUTPUT
 
 Defaults to empty. This environment takes positive integer numbers as its value and it will cause the auto-generated nginx.conf file to have a "postpone_output" setting in the http {} block.
@@ -1629,10 +1643,16 @@ they appear in the test file (and not in random order).
 
 =head2 TEST_NGINX_USE_VALGRIND
 
-If set to 1, will start nginx with valgrind. nginx is actually started with
-C<valgrind -q --leak-check=full --gen-suppressions=all --suppressions=valgrind.suppress>,
+If set, Test::Nginx will start nginx with valgrind with the the value of this environment as the options.
+
+Nginx is actually started with
+C<valgrind -q $TEST_NGINX_USE_VALGRIND --gen-suppressions=all --suppressions=valgrind.suppress>,
 the suppressions option being used only if there is actually
 a valgrind.suppress file.
+
+If this environment is set to the number C<1> or any other
+non-zero numbers, then it is equivalent to taking the value
+C<--tool=memcheck --leak-check=full>.
 
 =head2 TEST_NGINX_BINARY
 
@@ -1793,8 +1813,6 @@ Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2011, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
-
 Copyright (c) 2009-2011, agentzh C<< <agentzh@gmail.com> >>.
 
 Copyright (c) 2011, Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>.
@@ -1815,7 +1833,7 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 
 =item *
 
-Neither the name of the Taobao Inc. nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+Neither the name of the authors nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 =back
 
