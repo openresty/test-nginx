@@ -76,6 +76,7 @@ sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
 sub check_response_body ($$$$$);
+sub fmt_str ($);
 
 sub no_long_string () {
     $NoLongString = 1;
@@ -637,17 +638,19 @@ sub check_response_headers($$$$$) {
 sub check_error_log ($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
+    my $lines;
 
     if (defined $block->error_log) {
         my $pats = $block->error_log;
         if (!ref $pats) {
             $pats = [$pats];
+
         } else {
             my @clone = @$pats;
             $pats = \@clone;
         }
 
-        my $lines = error_log_data();
+        $lines = error_log_data();
         for my $line (@$lines) {
             for my $pat (@$pats) {
                 next if !defined $pat;
@@ -670,6 +673,56 @@ sub check_error_log ($$$$$) {
             }
         }
     }
+
+    if (defined $block->no_error_log) {
+        #warn "HERE";
+        my $pats = $block->no_error_log;
+        if (!ref $pats) {
+            chomp $pats;
+            $pats = [$pats];
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        $lines ||= error_log_data();
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                #warn "test $pat\n";
+                if ((ref $pat && $line =~ /$pat/) || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        my $ln = fmt_str($line);
+                        my $p = fmt_str($pat);
+                        fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\"");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    my $p = fmt_str($pat);
+                    pass("$name - pattern \"$p\" does not match a line in error.log");
+                }
+            }
+        }
+    }
+
+}
+
+sub fmt_str ($) {
+    my $str = shift;
+    chomp $str;
+    $str =~ s/"/\\"/g;
+    $str =~ s/\r/\\r/g;
+    $str =~ s/\n/\\n/g;
+    $str;
 }
 
 sub check_response_body ($$$$$) {
