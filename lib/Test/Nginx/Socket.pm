@@ -1608,6 +1608,25 @@ Multiple patterns are also supported, for example:
 then the substring "abc" must appear literally in a line of F<error.log>, and the regex C<qr/blah>
 must also match a line in F<error.log>.
 
+=head2 no_error_log
+
+Very much like the C<--- error_log> section, but does the opposite test, i.e.,
+pass only when the specified patterns of lines do not appear in the F<error.log> file at all.
+
+Here is an example:
+
+    --- no_error_log
+    [error]
+
+This test will fail when any of the line in the F<error.log> file contains the string C<"[error]">.
+
+Just like the C<--- error_log> section, one can also specify multiple patterns:
+
+    --- no_error_log eval
+    ["abc", qr/blah/]
+
+Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
+
 =head2 raw_request
 
 The exact request to send to nginx. This is useful when you want to test
