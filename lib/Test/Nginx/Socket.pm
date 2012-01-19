@@ -643,6 +643,7 @@ sub check_error_log ($$$$$) {
     if (defined $block->error_log) {
         my $pats = $block->error_log;
         if (!ref $pats) {
+            chomp $pats;
             $pats = [$pats];
 
         } else {
