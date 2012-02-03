@@ -17,6 +17,7 @@ requires        ('LWP::UserAgent');
 requires        ('HTTP::Response');
 requires        ('Fcntl');
 requires        ('POSIX');
+requires        ('URI::Escape');
 requires        ('IO::Select');
 requires        ('List::MoreUtils');
 requires        ('ExtUtils::MakeMaker');

@@ -1,13 +1,42 @@
 Changes for Test::Nginx
 
+0.18 - 2012-02-03
+* feature: added new section "--- no_error_log" which could be used to specify
+  patterns of lines that do not appear in error.log at all.
+* feature: added MOCKEAGAIN_VERBOSE, DYLD_INSERT_LIBRARIES,
+  MOCKEAGAIN_WRITE_TIMEOUT_PATTERN, and LD_PRELOAD to the
+  environments that should be kept through nginx reload and restart.
+* doc: added Naxsi and ngx_rds_csv to the user module list in the POD documentation.
+* feature: now we can use the environment TEST_NGINX_USE_VALGRIND to specify the
+  valgrind command-line options, when set to 1 or other non-zero numbers, it is
+  effectively equivalent to the value "--tool=memcheck --leak-check=full". To
+  use Valgrind SGCheck to run the tests, just specify the environment
+  TEST_NGINX_USE_VALGRIND="--tool=exp-sgcheck" first.
+* feature: added support for environment TEST_NGINX_VERBOSE.
+* feature: added support for environment TEST_NGINX_USE_HUP.
+* feature: added support for the TEST_NGINX_POSTPONE_OUTPUT environment.
+* feature: now we'll retry sending the QUIT signal for at most 5 times when the
+  nginx process is refusing to quit. after 5 trials, KILL signal will be sent.
+* feature: exposes the "master_off" API which turns off the nginx master process.
+* feature: added new section "--- ignore_response" to test bad responses.
+* bugfix: Test::Nginx::Socket will retry 10 times if fail to connect because nginx
+  with valgrind can be very slow to start in some systems.
+* feature: added new section name "--- error_log" to test error lines. requested
+  by Piotr Sikora in the last year or so.
+* feature: added the TEST_NGINX_EVENT_TYPE environment to specify an event API type
+  (like "epoll" or "select") when running the test suite.
+
 0.17 - 2011-11-04
-* bugfix: do not strip trailing CRCF for response headers in Test::Nginx::Socket's response parser.
-* bugfix: fixed issues in Content-Length response header handling in case of pipelined reqeusts.
+* bugfix: do not strip trailing CRCF for response headers in
+  Test::Nginx::Socket's response parser.
+* bugfix: fixed issues in Content-Length response header handling in case of
+  pipelined reqeusts.
 * bugfix: fixed the pipelined_requests section support.
 * feature: added support for user file timestamp.
 
 0.16 - 2011-07-07
-* fixed a bug that length(undef) produced lots of warnings on perl 5.10.x. thanks Guo Ying (shrimp).
+* fixed a bug that length(undef) produced lots of warnings on perl 5.10.x.
+  thanks Guo Ying (shrimp).
 * now we automatically retry connecting for 3 times (1 sec delay)
   in Test::Nginx::Socket::send_request. this will help automatically recovering
   from random slow valgrind loading problems.

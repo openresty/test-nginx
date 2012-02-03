@@ -3,7 +3,7 @@ package Test::Nginx;
 use strict;
 use warnings;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 __END__
 
@@ -289,9 +289,9 @@ Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2011, agentzh C<< <agentzh@gmail.com> >>.
+Copyright (c) 2009-2012, agentzh C<< <agentzh@gmail.com> >>.
 
-Copyright (c) 2011, Antoine Bonavita C<< <antoine.bonavita@gmail.com> >>.
+Copyright (c) 2011-2012, Antoine Bonavita C<< <antoine.bonavita@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
 

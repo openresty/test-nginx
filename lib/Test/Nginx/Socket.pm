@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 use Encode;
 use Data::Dumper;
@@ -1886,9 +1886,9 @@ Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2011, agentzh C<< <agentzh@gmail.com> >>.
+Copyright (c) 2009-2012, agentzh C<< <agentzh@gmail.com> >>.
 
-Copyright (c) 2011, Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>.
+Copyright (c) 2011-2012, Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
 
