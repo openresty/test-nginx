@@ -732,7 +732,7 @@ sub check_response_body ($$$$$) {
     if (   defined $block->response_body
         || defined $block->response_body_eval )
     {
-        my $content = $res->content;
+        my $content = $res ? $res->content : undef;
         if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
             $content =~ s/^Connection: TE, close\r\n//gms;
