@@ -564,11 +564,11 @@ sub check_error_code($$$$$) {
     SKIP: {
         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
         if ( defined $block->error_code ) {
-            is( $res->code || '',
+            is( ($res && $res->code) || '',
                 get_indexed_value($name, $block->error_code, $req_idx, $need_array),
                 "$name - status code ok" );
         } else {
-            is( $res->code || '', 200, "$name - status code ok" );
+            is( ($res && $res->code) || '', 200, "$name - status code ok" );
         }
     }
 }
@@ -787,11 +787,11 @@ sub check_response_body ($$$$$) {
 
     }
     elsif ( defined $block->response_body_like ) {
-        my $content = $res->content;
+        my $content = $res ? $res->content : undef;
         if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
+            $content =~ s/^Connection: TE, close\r\n//gms;
         }
-        $content =~ s/^Connection: TE, close\r\n//gms;
         my $expected_pat = get_indexed_value($name,
                                              $block->response_body_like,
                                              $req_idx,
