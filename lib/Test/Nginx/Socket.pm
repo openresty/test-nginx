@@ -606,7 +606,7 @@ sub check_response_headers($$$$$) {
                 next;
             }
 
-            my $actual_val = $res->header($key);
+            my $actual_val = $res ? $res->header($key) : undef;
             if ( !defined $actual_val ) {
                 $actual_val = '';
             }
