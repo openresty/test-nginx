@@ -644,7 +644,8 @@ sub check_error_log ($$$$$) {
         my $pats = $block->error_log;
         if (!ref $pats) {
             chomp $pats;
-            $pats = [$pats];
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
 
         } else {
             my @clone = @$pats;
@@ -799,6 +800,9 @@ sub check_response_body ($$$$$) {
         $expected_pat =~ s/\$ServerPort\b/$ServerPort/g;
         $expected_pat =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
         my $summary = trim($content);
+        if (!defined $summary) {
+            $summary = "";
+        }
 
         SKIP: {
             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;

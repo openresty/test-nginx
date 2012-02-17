@@ -457,7 +457,9 @@ sub get_pid_from_pidfile ($) {
 }
 
 sub trim ($) {
-    (my $s = shift) =~ s/^\s+|\s+$//g;
+    my $s = shift;
+    return undef if !defined $s;
+    $s =~ s/^\s+|\s+$//g;
     $s =~ s/\n/ /gs;
     $s =~ s/\s{2,}/ /gs;
     $s;
