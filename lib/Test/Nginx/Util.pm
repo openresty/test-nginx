@@ -130,6 +130,9 @@ sub master_process_enabled (@) {
 
 our @EXPORT_OK = qw(
     error_log_data
+    cache_file_data
+    cache_file_like_data
+    parse_cache_files
     setup_server_root
     write_config_file
     get_canon_version
@@ -209,6 +212,43 @@ sub error_log_data () {
     open my $in, $ErrLogFile or
         return undef;
     my @lines = <$in>;
+    close $in;
+    return \@lines;
+}
+
+sub cache_file_data ($) {
+    my ($cache_file) = @_;
+    open my $in, $cache_file or
+        return undef;
+    my $lines = <$in>;
+    close $in;
+    return $lines;
+}
+
+sub cache_file_like_data ($) {
+    my ($cache_file) = @_;
+    open my $in, $cache_file or
+        return undef;
+    my @lines = <$in>;
+    close $in;
+    return \@lines;
+}
+
+sub parse_cache_files ($) {
+    my $s = shift;
+    my @headers;
+    my @lines;
+    open my $in, '<', \$s;
+    while (<$in>) {
+        s/^\s+|\s+$//g;
+        my $neg = ($_ =~ s/^!\s*//);
+        if (!$neg) {
+            my ($key, $val) = split /\s*:\s*/, $_, 2;
+            @headers = ($key, $val);
+            push @lines, [ @headers ];
+            #warn "neg: $key $val";
+        }
+    }
     close $in;
     return \@lines;
 }

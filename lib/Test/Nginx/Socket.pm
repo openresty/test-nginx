@@ -34,6 +34,9 @@ use Test::Nginx::Util qw(
   $RunTestHelper
   $RepeatEach
   error_log_data
+  cache_file_data
+  cache_file_like_data
+  parse_cache_files
   worker_connections
   master_process_enabled
   config_preamble
@@ -526,6 +529,7 @@ again:
         }
 
         check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+        check_cache_file($block, $res, $dry_run, $req_idx, $need_array);
 
         $req_idx++;
 
@@ -716,6 +720,66 @@ sub check_error_log ($$$$$) {
         }
     }
 
+}
+
+sub check_cache_file ($$$$$) {
+    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+    my $name = $block->name;
+    my $lines;
+
+    if (defined $block->cache_file) {
+        my $pats = parse_cache_files($block->cache_file);
+        
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                my $lines = cache_file_data(@$pat[0]);
+                if ($lines eq @$pat[1]) {
+                    SKIP: {
+                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        pass("$name - content \"@$pat[1]\" matches file \"@$pat[0]\"");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - content \"@$pat[1]\" not matches file \"@$pat[0]\"");
+                }
+            }
+        }
+    }
+        
+    if (defined $block->cache_file_like) {
+        my $pats = parse_cache_files($block->cache_file_like);
+        my %pass;
+        
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                my $lines = cache_file_like_data(@$pat[0]);
+                for my $line (@$lines) {
+                    my $val = @$pat[1];
+                    if ($line =~ /$val/) {
+                        SKIP: {
+                            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                            pass("$name - content \"@$pat[1]\" exists in file \"@$pat[0]\"");
+                        }
+                        undef $pat;
+                    }
+                }
+            }
+        }
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
+                }
+            }
+        }
+    }
 }
 
 sub fmt_str ($) {
