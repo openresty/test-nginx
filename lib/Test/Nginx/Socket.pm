@@ -754,14 +754,13 @@ sub check_cache_file ($$$$$) {
         
     if (defined $block->cache_file_like) {
         my $pats = parse_cache_files($block->cache_file_like);
-        my %pass;
         
         for my $pat (@$pats) {
             if (defined $pat) {
                 my $lines = cache_file_like_data(@$pat[0]);
                 for my $line (@$lines) {
                     my $val = @$pat[1];
-                    if ($line =~ /$val/) {
+                    if ($line =~ /$val/ || $line =~ /\Q$val\E/) {
                         SKIP: {
                             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                             pass("$name - content \"@$pat[1]\" exists in file \"@$pat[0]\"");
@@ -1695,6 +1694,59 @@ Just like the C<--- error_log> section, one can also specify multiple patterns:
     ["abc", qr/blah/]
 
 Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
+
+=head2 cache_file
+
+Checks if content of the file is equal to specified string. First section seperated by colon is file name and the second section is match string.
+
+    --- cache_file
+    /tmp/cache_file: abcd
+
+For example,
+
+    === TEST 1: write to file
+    --- config
+        location /write/to/file {
+            content_by_lua '
+                io.output("/tmp/cache_file",rw);
+                io.write("abcd");
+                io.flush();
+                io.close();
+            ';
+        }
+    --- request
+        GET /write/to/file
+    --- error_code: 200
+    --- cache_file
+    /tmp/cache_file: abcd
+    /tmp/cache_file: abc
+
+Then content of the F</tmp/cache_file> is "abcd", first case should be passed and second case failed.
+
+=head2 cache_file_like
+
+Checks if specified pattern matches one line of the file. First section seperated by colon is file name and the second section is match pattern.
+
+For example,
+
+    === TEST 1: write to file
+    --- config
+        location /write/to/file {
+            content_by_lua '
+                io.output("/tmp/cache_file",rw);
+                io.write("abcd");
+                io.flush();
+                io.close();
+            ';
+        }
+    --- request
+        GET /write/to/file
+    --- error_code: 200
+    --- cache_file_like
+    /tmp/cache_file: abcde
+    /tmp/cache_file: ^abc
+
+Then content of the F</tmp/cache_file> is "abcd", first case should be failed and second case passed.
 
 =head2 raw_request
 

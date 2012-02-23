@@ -220,7 +220,7 @@ sub cache_file_data ($) {
     my ($cache_file) = @_;
     open my $in, $cache_file or
         return undef;
-    my $lines = <$in>;
+    my $lines = do { local $/; <$in>; };
     close $in;
     return $lines;
 }
