@@ -763,7 +763,7 @@ sub check_files ($$$$$) {
                     if ($line =~ /$val/ || $line =~ /\Q$val\E/) {
                         SKIP: {
                             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                            pass("$name - content \"@$pat[1]\" exists in file \"@$pat[0]\"");
+                            pass("$name - files_like: content \"@$pat[1]\" exists in file \"@$pat[0]\"");
                         }
                         undef $pat;
                     }
@@ -774,7 +774,7 @@ sub check_files ($$$$$) {
             if (defined $pat) {
                 SKIP: {
                     skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                    fail("$name - content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
+                    fail("$name - files_like: content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
                 }
             }
         }
@@ -791,7 +791,7 @@ sub check_files ($$$$$) {
                     if ($line =~ /$val/ || $line =~ /\Q$val\E/) {
                         SKIP: {
                             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                            fail("$name - content \"@$pat[1]\" exists in file \"@$pat[0]\"");
+                            fail("$name - files_not_like: content \"@$pat[1]\" exists in file \"@$pat[0]\"");
                         }
                         undef $pat;
                     }
@@ -802,11 +802,72 @@ sub check_files ($$$$$) {
             if (defined $pat) {
                 SKIP: {
                     skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                    pass("$name - content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
+                    pass("$name - files_not_like: content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
                 }
             }
         }
     }
+    
+    if ($block->files_exist) {
+        my $files = $block->files_exist;
+        if (!ref $files) {
+            chomp $files;
+            my @lines = split /\n+/, $files;
+            $files = \@lines;
+        } else {
+            my @clone = @$files;
+            $files = \@clone;
+        }
+        
+        for my $file (@$files) {
+            if (-e $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    pass("$name - files_exist: \"$file\" exists");
+                }
+                undef $file;
+            }
+        }
+        for my $file (@$files) {
+            if (defined $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - files_exist: \"$file\" is not existing");
+                }
+            }
+        }
+    }
+    
+    if ($block->files_not_exist) {
+        my $files = $block->files_not_exist;
+        if (!ref $files) {
+            chomp $files;
+            my @lines = split /\n+/, $files;
+            $files = \@lines;
+        } else {
+            my @clone = @$files;
+            $files = \@clone;
+        }
+        
+        for my $file (@$files) {
+            if (-e $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - files_not_exist: \"$file\" exists");
+                }
+                undef $file;
+            }
+        }
+        for my $file (@$files) {
+            if (defined $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    pass("$name - files_not_exist: \"$file\" is not existing");
+                }
+            }
+        }
+    }
+    
 }
 
 sub fmt_str ($) {
@@ -1801,6 +1862,37 @@ For example,
     /tmp/file: ^bc
 
 Then content of the F</tmp/file> is "abcd", first case should be failed and second case passed.
+
+=head2 pre_remove_files
+
+Remove files before start nginx. Both multi lines and eval are supported. For example:
+    
+    --- pre_remove_files
+    /tmp/file
+    /tmp/file1
+
+and: 
+
+    --- pre_remove_files eval
+    ["/tmp/file", "/tmp/file1"]
+
+=head2 files_exist
+
+Check if specified files exist.
+    
+    --- files_exist
+    /tmp/file
+    /tmp/file1
+
+And "eval" is also supported.
+
+    --- files_exist eval
+    ["/tmp/file2", "/tmp/file3"]
+
+
+=head2 files_not_exist
+
+Likes C<--- files_exist> section, but does the opposite test.
 
 =head2 raw_request
 

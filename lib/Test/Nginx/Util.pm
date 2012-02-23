@@ -253,6 +253,31 @@ sub parse_files ($) {
     return \@lines;
 }
 
+sub pre_remove_files ($) {
+    my $block = shift;
+
+    my $name = $block->name;
+
+    if ($block->pre_remove_files) {
+        my $files = $block->pre_remove_files;
+        if (!ref $files) {
+            chomp $files;
+            my @lines = split /\n+/, $files;
+            $files = \@lines;
+        } else {
+            my @clone = @$files;
+            $files = \@clone;
+        }
+        
+        for my $file (@$files) {
+            if (-e $file) {
+                unlink $file or die "unlink $file failed\n";
+            }
+        }
+
+    }
+}
+
 sub run_tests () {
     $NginxVersion = get_nginx_version();
 
@@ -767,6 +792,7 @@ start_nginx:
             #warn "*** Restarting the nginx server...\n";
             setup_server_root();
             write_user_files($block);
+            pre_remove_files($block);
             write_config_file($config, $block->http_config, $block->main_config);
             #warn "nginx binary: $NginxBinary";
             if ( ! can_run($NginxBinary) ) {
