@@ -1770,7 +1770,7 @@ For example,
     --- request
         GET /write/to/file
     --- error_code: 200
-    --- file_likes
+    --- files_like
     /tmp/file: abcde
     /tmp/file: ^abc
 
