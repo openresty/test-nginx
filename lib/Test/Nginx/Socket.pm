@@ -727,8 +727,8 @@ sub check_files ($$$$$) {
     my $name = $block->name;
     my $lines;
 
-    if (defined $block->files) {
-        my $raw = $block->files;
+    if (defined $block->output_files) {
+        my $raw = $block->output_files;
 
         open my $in, '<', \$raw;
 
@@ -787,8 +787,8 @@ sub check_files ($$$$$) {
 
     }
         
-    if (defined $block->files_like) {
-        my $pats = parse_files($block->files_like);
+    if (defined $block->output_files_like) {
+        my $pats = parse_files($block->output_files_like);
         
         for my $pat (@$pats) {
             if (defined $pat) {
@@ -815,8 +815,8 @@ sub check_files ($$$$$) {
         }
     }
     
-    if (defined $block->files_not_like) {
-        my $pats = parse_files($block->files_not_like);
+    if (defined $block->output_files_unlike) {
+        my $pats = parse_files($block->output_files_unlike);
         
         for my $pat (@$pats) {
             if (defined $pat) {
@@ -1819,7 +1819,7 @@ Just like the C<--- error_log> section, one can also specify multiple patterns:
 
 Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
 
-=head2 files
+=head2 output_files
 
 Checks if content of the file is equal to specified string. Usage most likes user_files, additional directive "chop" is added to remove unnecessary "\n" for some files.
 
@@ -1841,7 +1841,7 @@ For example,
     --- request
         GET /write/to/file
     --- error_code: 200
-    --- files
+    --- output_files
     >>> /tmp/file chop
     hello
     >>> /tmp/file1 
@@ -1851,7 +1851,7 @@ For example,
 
 Then content of the F</tmp/file> is "abcd", first case should be passed and second case failed.
 
-=head2 files_like
+=head2 output_files_like
 
 Checks if specified pattern matches one line of the file. First section seperated by colon is file name and the second section is match pattern.
 
@@ -1870,15 +1870,15 @@ For example,
     --- request
         GET /write/to/file
     --- error_code: 200
-    --- files_like
+    --- output_files_like
     /tmp/file: abcde
     /tmp/file: ^abc
 
 Then content of the F</tmp/file> is "abcd", first case should be failed and second case passed.
 
-=head2 files_not_like
+=head2 output_files_unlike
 
-Likes C<--- file_like> section, but does the opposite test, i.e.,
+Likes C<--- output_files_like> section, but does the opposite test, i.e.,
 checks if specified pattern matches none line of the file. First section seperated by colon is file name and the second section is match pattern.
 
 For example,
@@ -1896,7 +1896,7 @@ For example,
     --- request
         GET /write/to/file
     --- error_code: 200
-    --- files_not_like
+    --- output_files_unlike
     /tmp/file: abc
     /tmp/file: ^bc
 
