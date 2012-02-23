@@ -728,28 +728,63 @@ sub check_files ($$$$$) {
     my $lines;
 
     if (defined $block->files) {
-        my $pats = parse_files($block->files);
+        my $raw = $block->files;
+
+        open my $in, '<', \$raw;
+
+        my @files;
+        my ($fname, $body, $chop);
+        while (<$in>) {
+            if (/>>> (\S+)\s?(\S*)/) {
+                if ($fname) {
+                    push @files, [$fname, $body, $chop];
+                }
+                $fname = $1;
+                if ($2 eq "chop") {
+                    $chop = 1;
+                } else {
+                    $chop = 0;
+                }
+                undef $body;
+            } else {
+                $body .= $_;
+            }
+        }
+        if ($fname) {
+            push @files, [$fname, $body, $chop];
+        }
         
-        for my $pat (@$pats) {
-            if (defined $pat) {
-                my $lines = file_data(@$pat[0]);
-                if ($lines eq @$pat[1]) {
+        for my $file (@files) {
+            my ($fname, $body, $chop) = @$file;
+
+            if (!defined $body) {
+                $body = '';
+            }
+            if (defined $file) {
+                my $lines = file_data($fname);
+                if ($chop == 1) {
+                    chop $body;
+                }
+                if ($lines eq $body) {
                     SKIP: {
                         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                        pass("$name - content \"@$pat[1]\" matches file \"@$pat[0]\"");
+                        pass("$name - content \"$body\" matches file \"$fname\"");
                     }
-                    undef $pat;
+                    undef $file;
                 }
             }
         }
-        for my $pat (@$pats) {
-            if (defined $pat) {
+        
+        for my $file (@files) {
+            if (defined $file) {
+                my ($fname, $body, $chop) = @$file;
                 SKIP: {
                     skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                    fail("$name - content \"@$pat[1]\" not matches file \"@$pat[0]\"");
+                    fail("$name - content \"$body\" not matches file \"$fname\"");
                 }
             }
         }
+
     }
         
     if (defined $block->files_like) {
@@ -1786,19 +1821,19 @@ Then if any line in F<error.log> contains the string C<"abc"> or match the Perl 
 
 =head2 files
 
-Checks if content of the file is equal to specified string. First section seperated by colon is file name and the second section is match string.
-
-    --- files
-    /tmp/file: abcd
+Checks if content of the file is equal to specified string. Usage most likes user_files, additional directive "chop" is added to remove unnecessary "\n" for some files.
 
 For example,
 
-    === TEST 1: write to file
+    === TEST 0: write to file
     --- config
         location /write/to/file {
             content_by_lua '
                 io.output("/tmp/file",rw);
-                io.write("abcd");
+                io.write("hello");
+                io.flush();
+                io.output("/tmp/file1",rw);
+                io.write("hello\\nworld\\n");
                 io.flush();
                 io.close();
             ';
@@ -1807,8 +1842,12 @@ For example,
         GET /write/to/file
     --- error_code: 200
     --- files
-    /tmp/file: abcd
-    /tmp/file: abc
+    >>> /tmp/file chop
+    hello
+    >>> /tmp/file1 
+    hello
+    world
+
 
 Then content of the F</tmp/file> is "abcd", first case should be passed and second case failed.
 
