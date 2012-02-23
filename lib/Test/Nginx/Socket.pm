@@ -34,9 +34,9 @@ use Test::Nginx::Util qw(
   $RunTestHelper
   $RepeatEach
   error_log_data
-  cache_file_data
-  cache_file_like_data
-  parse_cache_files
+  file_data
+  file_like_data
+  parse_files
   worker_connections
   master_process_enabled
   config_preamble
@@ -529,7 +529,7 @@ again:
         }
 
         check_error_log($block, $res, $dry_run, $req_idx, $need_array);
-        check_cache_file($block, $res, $dry_run, $req_idx, $need_array);
+        check_files($block, $res, $dry_run, $req_idx, $need_array);
 
         $req_idx++;
 
@@ -722,17 +722,17 @@ sub check_error_log ($$$$$) {
 
 }
 
-sub check_cache_file ($$$$$) {
+sub check_files ($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     my $lines;
 
-    if (defined $block->cache_file) {
-        my $pats = parse_cache_files($block->cache_file);
+    if (defined $block->files) {
+        my $pats = parse_files($block->files);
         
         for my $pat (@$pats) {
             if (defined $pat) {
-                my $lines = cache_file_data(@$pat[0]);
+                my $lines = file_data(@$pat[0]);
                 if ($lines eq @$pat[1]) {
                     SKIP: {
                         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
@@ -752,12 +752,12 @@ sub check_cache_file ($$$$$) {
         }
     }
         
-    if (defined $block->cache_file_like) {
-        my $pats = parse_cache_files($block->cache_file_like);
+    if (defined $block->files_like) {
+        my $pats = parse_files($block->files_like);
         
         for my $pat (@$pats) {
             if (defined $pat) {
-                my $lines = cache_file_like_data(@$pat[0]);
+                my $lines = file_like_data(@$pat[0]);
                 for my $line (@$lines) {
                     my $val = @$pat[1];
                     if ($line =~ /$val/ || $line =~ /\Q$val\E/) {
@@ -775,6 +775,34 @@ sub check_cache_file ($$$$$) {
                 SKIP: {
                     skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                     fail("$name - content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
+                }
+            }
+        }
+    }
+    
+    if (defined $block->files_not_like) {
+        my $pats = parse_files($block->files_not_like);
+        
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                my $lines = file_like_data(@$pat[0]);
+                for my $line (@$lines) {
+                    my $val = @$pat[1];
+                    if ($line =~ /$val/ || $line =~ /\Q$val\E/) {
+                        SKIP: {
+                            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                            fail("$name - content \"@$pat[1]\" exists in file \"@$pat[0]\"");
+                        }
+                        undef $pat;
+                    }
+                }
+            }
+        }
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    pass("$name - content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
                 }
             }
         }
@@ -1695,12 +1723,12 @@ Just like the C<--- error_log> section, one can also specify multiple patterns:
 
 Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
 
-=head2 cache_file
+=head2 files
 
 Checks if content of the file is equal to specified string. First section seperated by colon is file name and the second section is match string.
 
-    --- cache_file
-    /tmp/cache_file: abcd
+    --- files
+    /tmp/file: abcd
 
 For example,
 
@@ -1708,7 +1736,7 @@ For example,
     --- config
         location /write/to/file {
             content_by_lua '
-                io.output("/tmp/cache_file",rw);
+                io.output("/tmp/file",rw);
                 io.write("abcd");
                 io.flush();
                 io.close();
@@ -1717,13 +1745,13 @@ For example,
     --- request
         GET /write/to/file
     --- error_code: 200
-    --- cache_file
-    /tmp/cache_file: abcd
-    /tmp/cache_file: abc
+    --- files
+    /tmp/file: abcd
+    /tmp/file: abc
 
-Then content of the F</tmp/cache_file> is "abcd", first case should be passed and second case failed.
+Then content of the F</tmp/file> is "abcd", first case should be passed and second case failed.
 
-=head2 cache_file_like
+=head2 files_like
 
 Checks if specified pattern matches one line of the file. First section seperated by colon is file name and the second section is match pattern.
 
@@ -1733,7 +1761,7 @@ For example,
     --- config
         location /write/to/file {
             content_by_lua '
-                io.output("/tmp/cache_file",rw);
+                io.output("/tmp/file",rw);
                 io.write("abcd");
                 io.flush();
                 io.close();
@@ -1742,11 +1770,37 @@ For example,
     --- request
         GET /write/to/file
     --- error_code: 200
-    --- cache_file_like
-    /tmp/cache_file: abcde
-    /tmp/cache_file: ^abc
+    --- file_likes
+    /tmp/file: abcde
+    /tmp/file: ^abc
 
-Then content of the F</tmp/cache_file> is "abcd", first case should be failed and second case passed.
+Then content of the F</tmp/file> is "abcd", first case should be failed and second case passed.
+
+=head2 files_not_like
+
+Likes C<--- file_like> section, but does the opposite test, i.e.,
+checks if specified pattern matches none line of the file. First section seperated by colon is file name and the second section is match pattern.
+
+For example,
+
+    === TEST 1: write to file
+    --- config
+        location /write/to/file {
+            content_by_lua '
+                io.output("/tmp/file",rw);
+                io.write("abcd");
+                io.flush();
+                io.close();
+            ';
+        }
+    --- request
+        GET /write/to/file
+    --- error_code: 200
+    --- files_not_like
+    /tmp/file: abc
+    /tmp/file: ^bc
+
+Then content of the F</tmp/file> is "abcd", first case should be failed and second case passed.
 
 =head2 raw_request
 

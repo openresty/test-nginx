@@ -130,9 +130,9 @@ sub master_process_enabled (@) {
 
 our @EXPORT_OK = qw(
     error_log_data
-    cache_file_data
-    cache_file_like_data
-    parse_cache_files
+    file_data
+    file_like_data
+    parse_files
     setup_server_root
     write_config_file
     get_canon_version
@@ -216,25 +216,25 @@ sub error_log_data () {
     return \@lines;
 }
 
-sub cache_file_data ($) {
-    my ($cache_file) = @_;
-    open my $in, $cache_file or
+sub file_data ($) {
+    my ($file) = @_;
+    open my $in, $file or
         return undef;
     my $lines = do { local $/; <$in>; };
     close $in;
     return $lines;
 }
 
-sub cache_file_like_data ($) {
-    my ($cache_file) = @_;
-    open my $in, $cache_file or
+sub file_like_data ($) {
+    my ($file) = @_;
+    open my $in, $file or
         return undef;
     my @lines = <$in>;
     close $in;
     return \@lines;
 }
 
-sub parse_cache_files ($) {
+sub parse_files ($) {
     my $s = shift;
     my @headers;
     my @lines;
