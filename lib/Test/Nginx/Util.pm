@@ -14,6 +14,7 @@ use Cwd qw( cwd );
 use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
 use ExtUtils::MakeMaker ();
+use File::Path qw(make_path);
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
@@ -304,15 +305,23 @@ sub write_user_files ($) {
                 $body = '';
             }
 
-            if ($fname =~ /(.*)\//) {
-                my $dir = "$HtmlDir/$1";
+            my $path;
+            if ($fname !~ m{^/}) {
+                $path = "$HtmlDir/$fname";
+
+            } else {
+                $path = $fname;
+            }
+
+            if ($path =~ /(.*)\//) {
+                my $dir = $1;
                 if (! -d $dir) {
-                    mkdir $dir or die "$name - Cannot create directory ", $dir;
+                    make_path($dir) or die "$name - Cannot create directory ", $dir;
                 }
             }
 
-            open my $out, ">$HtmlDir/$fname" or
-                die "$name - Cannot open $HtmlDir/$fname for writing: $!\n";
+            open my $out, ">$path" or
+                die "$name - Cannot open $path for writing: $!\n";
             print $out $body;
             close $out;
 
