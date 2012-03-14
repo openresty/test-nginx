@@ -681,7 +681,8 @@ sub check_error_log ($$$$$) {
         my $pats = $block->no_error_log;
         if (!ref $pats) {
             chomp $pats;
-            $pats = [$pats];
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
 
         } else {
             my @clone = @$pats;
