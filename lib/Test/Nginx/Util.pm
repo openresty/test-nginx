@@ -326,7 +326,7 @@ sub write_user_files ($) {
             close $out;
 
             if ($date) {
-                my $cmd = "touch -t '$date' $HtmlDir/$fname";
+                my $cmd = "TZ=GMT touch -t '$date' $HtmlDir/$fname";
                 system($cmd) == 0 or
                     die "Failed to run shell command: $cmd\n";
             }
