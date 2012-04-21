@@ -378,6 +378,7 @@ master_process $MasterProcessEnabled;
 error_log $ErrLogFile $LogLevel;
 pid       $PidFile;
 env MOCKEAGAIN_VERBOSE;
+env MOCKEAGAIN;
 env MOCKEAGAIN_WRITE_TIMEOUT_PATTERN;
 env LD_PRELOAD;
 env DYLD_INSERT_LIBRARIES;
