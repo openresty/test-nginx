@@ -21,6 +21,7 @@ use Test::Nginx::Util qw(
   write_config_file
   get_canon_version
   get_nginx_version
+  bail_out
   trim
   show_all_chars
   parse_headers
@@ -110,8 +111,7 @@ sub parse_request ($$) {
     open my $in, '<', $rrequest;
     my $first = <$in>;
     if ( !$first ) {
-        Test::More::BAIL_OUT("$name - Request line should be non-empty");
-        die;
+        bail_out("$name - Request line should be non-empty");
     }
     #$first =~ s/^\s+|\s+$//gs;
     my ($before_meth, $meth, $after_meth);
@@ -138,8 +138,7 @@ sub parse_request ($$) {
         }
         $end_line_size = defined $10 ? length($10) : undef;
     } else {
-        Test::More::BAIL_OUT("$name - Request line is not valid. Should be 'meth [url [version]]'");
-        die;
+        bail_out("$name - Request line is not valid. Should be 'meth [url [version]]'");
     }
     if ( !defined $rel_url ) {
         $rel_url = '/';
@@ -361,7 +360,7 @@ sub get_req_from_block ($) {
         if ( $block->pipelined_requests ) {
             my $reqs = $block->pipelined_requests;
             if ( !ref $reqs || ref $reqs ne 'ARRAY' ) {
-                Test::More::BAIL_OUT(
+                bail_out(
                     "$name - invalid entries in --- pipelined_requests");
             }
             my $i = 0;
@@ -409,7 +408,7 @@ sub get_req_from_block ($) {
                                 # Packet is a hash with a value...
                                 push @packet_array, $one_packet->{value};
                             } else {
-                                Test::More::BAIL_OUT "$name - Invalid syntax. $one_packet should be a string or hash with value.";
+                                bail_out "$name - Invalid syntax. $one_packet should be a string or hash with value.";
                             }
                         }
                         my $transformed_packet_array = build_request_from_packets($name, $more_headers,
@@ -429,11 +428,11 @@ sub get_req_from_block ($) {
                         }
                         push @req_list, \@transformed_req;
                     } else {
-                        Test::More::BAIL_OUT "$name - Invalid syntax. $one_req should be a string or an array of packets.";
+                        bail_out "$name - Invalid syntax. $one_req should be a string or an array of packets.";
                     }
                 }
             } else {
-                Test::More::BAIL_OUT(
+                bail_out(
                     "$name - invalid ---request : MUST be string or array of requests");
             }
         }
@@ -450,7 +449,7 @@ sub run_test_helper ($$) {
     my $r_req_list = get_req_from_block($block);
 
     if ( $#$r_req_list < 0 ) {
-        Test::More::BAIL_OUT("$name - request empty");
+        bail_out("$name - request empty");
     }
 
     #warn "request: $req\n";
@@ -533,22 +532,24 @@ sub get_indexed_value($$$$) {
     if ($need_array) {
         if (ref $value && ref $value eq 'ARRAY') {
             return $$value[$req_idx];
-        } else {
-            Test::More::BAIL_OUT("$name - You asked for many requests, the expected results should be arrays as well.");
         }
+
+        bail_out("$name - You asked for many requests, the expected results should be arrays as well.");
+
     } else {
         # One element but still provided as an array.
         if (ref $value && ref $value eq 'ARRAY') {
             if ($req_idx != 0) {
-                Test::More::BAIL_OUT("$name - SHOULD NOT HAPPEN: idx != 0 and don't need array.");
-            } else {
-                return $$value[0];
+                bail_out("$name - SHOULD NOT HAPPEN: idx != 0 and don't need array.");
             }
-        } else {
-            return $value;
+
+            return $$value[0];
         }
+
+        return $value;
     }
 }
+
 sub check_error_code($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
@@ -904,10 +905,16 @@ sub parse_response($$) {
 sub send_request ($$$$@) {
     my ( $req, $middle_delay, $timeout, $name, $tries ) = @_;
 
+    #warn "connecting...\n";
+
     my $sock = IO::Socket::INET->new(
-        PeerAddr => $ServerAddr,
-        PeerPort => $ServerPortForClient,
-        Proto    => 'tcp'
+        PeerAddr  => $ServerAddr,
+        PeerPort  => $ServerPortForClient,
+        Proto     => 'tcp',
+        #ReuseAddr => 1,
+        #ReusePort => 1,
+        Blocking  => 0,
+        Timeout   => $timeout,
     );
 
     if (! defined $sock) {
@@ -915,19 +922,23 @@ sub send_request ($$$$@) {
         if ($tries < 10) {
             warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
             sleep 1;
+            #warn "sending request";
             return send_request($req, $middle_delay, $timeout, $name, $tries + 1);
-        } else {
-            die "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+
         }
+
+        bail_out("Can't connect to $ServerAddr:$ServerPortForClient: $! (Aborted)\n");
     }
+
+    #warn "connected";
 
     my @req_bits = ref $req ? @$req : ($req);
 
-    my $flags = fcntl $sock, F_GETFL, 0
-      or die "Failed to get flags: $!\n";
+    #my $flags = fcntl $sock, F_GETFL, 0
+    #or die "Failed to get flags: $!\n";
 
-    fcntl $sock, F_SETFL, $flags | O_NONBLOCK
-      or die "Failed to set flags: $!\n";
+    #fcntl $sock, F_SETFL, $flags | O_NONBLOCK
+    #or die "Failed to set flags: $!\n";
 
     my $ctx = {
         resp         => '',
@@ -951,6 +962,8 @@ sub send_request ($$$$@) {
         {
             last;
         }
+
+        #warn "doing select...\n";
 
         my ( $new_readable, $new_writable, $new_err ) =
           IO::Select->select( $readable_hdls, $writable_hdls, $err_hdls,

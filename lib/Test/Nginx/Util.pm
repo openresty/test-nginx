@@ -57,10 +57,12 @@ sub no_nginx_manager () {
 
 our $ForkManager;
 
+sub bail_out (@);
+
 if ($Profiling || $UseValgrind) {
     eval "use Parallel::ForkManager";
     if ($@) {
-        die "Failed to load Parallel::ForkManager: $@\n";
+        bail_out "Failed to load Parallel::ForkManager: $@\n";
     }
     $ForkManager = new Parallel::ForkManager($MAX_PROCESSES);
 }
@@ -143,6 +145,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    bail_out
     error_log_data
     setup_server_root
     write_config_file
@@ -216,8 +219,56 @@ sub server_root () {
     return $ServRoot;
 }
 
-sub bail_out ($) {
+sub bail_out (@) {
+    cleanup();
     Test::More::BAIL_OUT(@_);
+}
+
+sub cleanup () {
+    if (!defined $ForkManager) {
+        return;
+    }
+
+    if ($Profiling || $UseValgrind) {
+        my $pid = $ChildPid;
+        eval {
+            if (defined $pid) {
+                kill(SIGQUIT, $pid);
+            }
+
+            local $SIG{ALRM} = sub { die "alarm\n" };
+            alarm timeout();
+            $ForkManager->wait_all_children;
+            alarm 0;
+        };
+
+        if ($@) {
+            warn "WARNING: nginx/valgrind child process $pid timed out.\n";
+            my $i = 1;
+            while ($i <= 10) {
+                warn "Killing the child process $pid.\n";
+                if (kill(SIGQUIT, $pid) == 0) { # send quit signal
+                    warn("Failed to send quit signal to the child process with PID $pid.\n");
+                }
+
+                sleep 0.5;
+
+                if (system("ps $pid > /dev/null") == 0) {
+                    if ($i < 10) {
+                        next;
+                    }
+
+                    warn "Killing the child process $pid with force.\n";
+                    kill(SIGKILL, $pid);
+                }
+
+            } continue {
+                $i++;
+            }
+        }
+
+        undef $ChildPid;
+    }
 }
 
 sub error_log_data () {
@@ -241,28 +292,7 @@ sub run_tests () {
         #}
     }
 
-    if ($Profiling || $UseValgrind) {
-        eval {
-            local $SIG{ALRM} = sub { die "alarm\n" };
-            alarm timeout();
-            $ForkManager->wait_all_children;
-            alarm 0;
-        };
-        if ($@) {
-            my $pid = $ChildPid;
-            warn "WARNING: nginx/valgrind child process $pid timed out.\n";
-            if (kill(SIGTERM, $pid) == 0) { # send quit signal
-                warn("Failed to send quit signal to the child process with PID $pid.\n");
-            }
-
-            sleep 0.1;
-
-            if (system("ps $pid > /dev/null") == 0) {
-                warn "Killing the child process $pid with force.\n";
-                kill(SIGKILL, $pid);
-            }
-        }
-    }
+    cleanup();
 }
 
 sub setup_server_root () {
@@ -270,34 +300,34 @@ sub setup_server_root () {
         # Take special care, so we won't accidentally remove
         # real user data when TEST_NGINX_SERVROOT is mis-used.
         system("rm -rf $ConfDir > /dev/null") == 0 or
-            die "Can't remove $ConfDir";
+            bail_out "Can't remove $ConfDir";
         system("rm -rf $HtmlDir > /dev/null") == 0 or
-            die "Can't remove $HtmlDir";
+            bail_out "Can't remove $HtmlDir";
         system("rm -rf $LogDir > /dev/null") == 0 or
-            die "Can't remove $LogDir";
+            bail_out "Can't remove $LogDir";
         system("rm -rf $ServRoot/*_temp > /dev/null") == 0 or
-            die "Can't remove $ServRoot/*_temp";
+            bail_out "Can't remove $ServRoot/*_temp";
         system("rmdir $ServRoot > /dev/null") == 0 or
-            die "Can't remove $ServRoot (not empty?)";
+            bail_out "Can't remove $ServRoot (not empty?)";
     }
     mkdir $ServRoot or
-        die "Failed to do mkdir $ServRoot\n";
+        bail_out "Failed to do mkdir $ServRoot\n";
     mkdir $LogDir or
-        die "Failed to do mkdir $LogDir\n";
+        bail_out "Failed to do mkdir $LogDir\n";
     mkdir $HtmlDir or
-        die "Failed to do mkdir $HtmlDir\n";
+        bail_out "Failed to do mkdir $HtmlDir\n";
 
     my $index_file = "$HtmlDir/index.html";
 
     open my $out, ">$index_file" or
-        die "Can't open $index_file for writing: $!\n";
+        bail_out "Can't open $index_file for writing: $!\n";
 
     print $out '<html><head><title>It works!</title></head><body>It works!</body></html>';
 
     close $out;
 
     mkdir $ConfDir or
-        die "Failed to do mkdir $ConfDir\n";
+        bail_out "Failed to do mkdir $ConfDir\n";
 }
 
 sub write_user_files ($) {
@@ -349,19 +379,19 @@ sub write_user_files ($) {
             if ($path =~ /(.*)\//) {
                 my $dir = $1;
                 if (! -d $dir) {
-                    make_path($dir) or die "$name - Cannot create directory ", $dir;
+                    make_path($dir) or bail_out "$name - Cannot create directory ", $dir;
                 }
             }
 
             open my $out, ">$path" or
-                die "$name - Cannot open $path for writing: $!\n";
+                bail_out "$name - Cannot open $path for writing: $!\n";
             print $out $body;
             close $out;
 
             if ($date) {
                 my $cmd = "TZ=GMT touch -t '$date' $HtmlDir/$fname";
                 system($cmd) == 0 or
-                    die "Failed to run shell command: $cmd\n";
+                    bail_out "Failed to run shell command: $cmd\n";
             }
         }
     }
@@ -393,7 +423,7 @@ sub write_config_file ($$$) {
 
     if (defined $PostponeOutput) {
         if ($PostponeOutput !~ /^\d+$/) {
-            die "Bad TEST_NGINX_POSTPOHNE_OUTPUT value: $PostponeOutput\n";
+            bail_out "Bad TEST_NGINX_POSTPOHNE_OUTPUT value: $PostponeOutput\n";
         }
         $http_config .= "\n    postpone_output $PostponeOutput;\n";
     }
@@ -403,7 +433,7 @@ sub write_config_file ($$$) {
     }
 
     open my $out, ">$ConfFile" or
-        die "Can't open $ConfFile for writing: $!\n";
+        bail_out "Can't open $ConfFile for writing: $!\n";
     print $out <<_EOC_;
 worker_processes  $Workers;
 daemon $DaemonEnabled;
@@ -755,7 +785,7 @@ sub run_test ($) {
                 undef $nginx_is_running;
             } else {
                 unlink $PidFile or
-                    die "Failed to remove pid file $PidFile\n";
+                    bail_out "Failed to remove pid file $PidFile\n";
                 undef $nginx_is_running;
             }
         } else {
@@ -816,8 +846,9 @@ start_nginx:
 
                 if (!$pid) {
                     # child process
-                    my $rc = system($cmd);
-                    $ForkManager->finish($rc);
+                    #my $rc = system($cmd);
+                    #$ForkManager->finish($rc);
+                    exec "exec $cmd";
 
                 } else {
                     $ChildPid = $pid;
@@ -897,11 +928,11 @@ start_nginx:
         my $errlog = $ErrLogFile;
         if (-s $errlog) {
             open my $out, ">>$total_errlog" or
-                die "Failed to append test case title to $total_errlog: $!\n";
+                bail_out "Failed to append test case title to $total_errlog: $!\n";
             print $out "\n=== $0 $name\n";
             close $out;
             system("cat $errlog >> $total_errlog") == 0 or
-                die "Failed to append $errlog to $total_errlog. Abort.\n";
+                bail_out "Failed to append $errlog to $total_errlog. Abort.\n";
         }
     }
 
@@ -946,7 +977,7 @@ retry:
                     sleep 0.1;
 
                     unlink $PidFile or
-                        die "Failed to remove pid file $PidFile\n";
+                        bail_out "Failed to remove pid file $PidFile\n";
 
                 } else {
                     #warn "nginx killed";
@@ -954,7 +985,7 @@ retry:
 
             } else {
                 unlink $PidFile or
-                    die "Failed to remove pid file $PidFile\n";
+                    bail_out "Failed to remove pid file $PidFile\n";
             }
         } else {
             #warn "pid file not found";
@@ -968,7 +999,7 @@ END {
         if (-f $PidFile) {
             my $pid = get_pid_from_pidfile('');
             if (!$pid) {
-                die "No pid found.";
+                bail_out "No pid found.";
             }
             if (system("ps $pid > /dev/null") == 0) {
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
