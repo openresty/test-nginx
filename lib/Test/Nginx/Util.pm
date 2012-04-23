@@ -36,6 +36,17 @@ our $EventType = $ENV{TEST_NGINX_EVENT_TYPE};
 
 our $PostponeOutput = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
 
+our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 3;
+
+sub timeout (@) {
+    if (@_) {
+        $Timeout = shift;
+    }
+    else {
+        $Timeout;
+    }
+}
+
 sub no_shuffle () {
     $NoShuffle = 1;
 }
@@ -67,6 +78,8 @@ our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
+
+our $ChildPid;
 
 sub server_port (@) {
     if (@_) {
@@ -148,6 +161,7 @@ our @EXPORT_OK = qw(
     $RunTestHelper
     $NoNginxManager
     $RepeatEach
+    timeout
     worker_connections
     workers
     master_on
@@ -228,7 +242,26 @@ sub run_tests () {
     }
 
     if ($Profiling || $UseValgrind) {
-        $ForkManager->wait_all_children;
+        eval {
+            local $SIG{ALRM} = sub { die "alarm\n" };
+            alarm timeout();
+            $ForkManager->wait_all_children;
+            alarm 0;
+        };
+        if ($@) {
+            my $pid = $ChildPid;
+            warn "WARNING: nginx/valgrind child process $pid timed out.\n";
+            if (kill(SIGTERM, $pid) == 0) { # send quit signal
+                warn("Failed to send quit signal to the child process with PID $pid.\n");
+            }
+
+            sleep 0.1;
+
+            if (system("ps $pid > /dev/null") == 0) {
+                warn "Killing the child process $pid with force.\n";
+                kill(SIGKILL, $pid);
+            }
+        }
     }
 }
 
@@ -780,29 +813,23 @@ start_nginx:
 
             if ($Profiling || $UseValgrind) {
                 my $pid = $ForkManager->start;
+
                 if (!$pid) {
                     # child process
-                    exec $cmd;
+                    my $rc = system($cmd);
+                    $ForkManager->finish($rc);
 
-=begin cmt
-
-                    if (system($cmd) != 0) {
-                        Test::More::BAIL_OUT("$name - Cannot start nginx using command \"$cmd\".");
-                    }
-
-                    $ForkManager->finish; # terminate the child process
-
-=end cmt
-
-=cut
-
+                } else {
+                    $ChildPid = $pid;
                 }
-                #warn "sleeping";
+
                 if ($TestNginxSleep) {
                     sleep $TestNginxSleep;
+
                 } else {
                     sleep 1;
                 }
+
             } else {
                 if (system($cmd) != 0) {
                     if ($ENV{TEST_NGINX_IGNORE_MISSING_DIRECTIVES} and
@@ -916,7 +943,10 @@ retry:
                     }
 
                     kill(SIGKILL, $pid);
-                    sleep 0.02;
+                    sleep 0.1;
+
+                    unlink $PidFile or
+                        die "Failed to remove pid file $PidFile\n";
 
                 } else {
                     #warn "nginx killed";

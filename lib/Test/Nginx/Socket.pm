@@ -15,7 +15,6 @@ use List::MoreUtils qw( any );
 use IO::Select ();
 
 our $ServerAddr = 'localhost';
-our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 2;
 
 use Test::Nginx::Util qw(
   setup_server_root
@@ -33,6 +32,7 @@ use Test::Nginx::Util qw(
   $ConfFile
   $RunTestHelper
   $RepeatEach
+  timeout
   error_log_data
   worker_connections
   master_process_enabled
@@ -90,15 +90,6 @@ sub server_addr (@) {
     }
     else {
         return $ServerAddr;
-    }
-}
-
-sub timeout (@) {
-    if (@_) {
-        $Timeout = shift;
-    }
-    else {
-        $Timeout;
     }
 }
 
@@ -466,7 +457,7 @@ sub run_test_helper ($$) {
 
     my $timeout = $block->timeout;
     if ( !defined $timeout ) {
-        $timeout = $Timeout;
+        $timeout = timeout();
     }
 
     my $req_idx = 0;
