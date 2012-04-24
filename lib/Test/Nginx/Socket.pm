@@ -555,7 +555,13 @@ sub check_error_code($$$$$) {
     my $name = $block->name;
     SKIP: {
         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-        if ( defined $block->error_code ) {
+        if ( defined $block->error_code_like ) {
+            my $val = get_indexed_value($name, $block->error_code_like, $req_idx, $need_array);
+            like( ($res && $res->code) || '',
+                qr/$val/sm,
+                "$name - status code ok" );
+
+        } elsif ( defined $block->error_code ) {
             is( ($res && $res->code) || '',
                 get_indexed_value($name, $block->error_code, $req_idx, $need_array),
                 "$name - status code ok" );
@@ -1582,6 +1588,16 @@ to be 200. But you can expect other things such as a redirect:
 
 If the test is made of multiple requests, then
 error_code B<MUST> be an array with the expected value for the response status
+of each request in the test.
+
+=head2 error_code_like
+
+Just like C<error_code>, but accepts a Perl regex as the value, for example:
+
+    --- error_code_like: ^(?:500)?$
+
+If the test is made of multiple requests, then
+error_code_like B<MUST> be an array with the expected value for the response status
 of each request in the test.
 
 =head2 error_log
