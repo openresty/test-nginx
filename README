@@ -5,9 +5,9 @@ DESCRIPTION
     This distribution provides two testing modules for Nginx C module
     development:
 
-    *   Test::Nginx::LWP
+    *   Test::Nginx::Socket (This is recommended.)
 
-    *   Test::Nginx::Socket
+    *   Test::Nginx::LWP (This is obsolete.)
 
     All of them are based on Test::Base.
 

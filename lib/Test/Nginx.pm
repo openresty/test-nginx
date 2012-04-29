@@ -3,7 +3,7 @@ package Test::Nginx;
 use strict;
 use warnings;
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 __END__
 
@@ -21,11 +21,11 @@ This distribution provides two testing modules for Nginx C module development:
 
 =item *
 
-L<Test::Nginx::LWP>
+L<Test::Nginx::Socket> (This is recommended.)
 
 =item *
 
-L<Test::Nginx::Socket>
+L<Test::Nginx::LWP> (This is obsolete.)
 
 =back
 
