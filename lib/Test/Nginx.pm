@@ -3,7 +3,7 @@ package Test::Nginx;
 use strict;
 use warnings;
 
-our $VERSION = '0.15';
+our $VERSION = '0.19';
 
 __END__
 
@@ -21,11 +21,11 @@ This distribution provides two testing modules for Nginx C module development:
 
 =item *
 
-L<Test::Nginx::LWP>
+L<Test::Nginx::Socket> (This is recommended.)
 
 =item *
 
-L<Test::Nginx::Socket>
+L<Test::Nginx::LWP> (This is obsolete.)
 
 =back
 
@@ -223,6 +223,10 @@ L<http://github.com/chaoslawful/drizzle-nginx-module>
 
 L<http://github.com/agentzh/rds-json-nginx-module>
 
+=item ngx_rds_csv
+
+L<http://github.com/agentzh/rds-csv-nginx-module>
+
 =item ngx_xss
 
 L<http://github.com/agentzh/xss-nginx-module>
@@ -263,6 +267,10 @@ L<http://github.com/FRiCKLE/ngx_postgres>
 
 L<http://github.com/FRiCKLE/ngx_coolkit>
 
+=item Naxsi
+
+L<http://code.google.com/p/naxsi/>
+
 =back
 
 =head1 SOURCE REPOSITORY
@@ -273,6 +281,11 @@ This module has a Git repository on Github, which has access for all.
 
 If you want a commit bit, feel free to drop me a line.
 
+=head1 DEBIAN PACKAGES
+
+António P. P. Almeida is maintaining a Debian package for this module
+in his Debian repository: http://debian.perusio.net
+
 =head1 AUTHORS
 
 agentzh (章亦春) C<< <agentzh@gmail.com> >>
@@ -281,11 +294,9 @@ Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2011, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
+Copyright (c) 2009-2012, agentzh C<< <agentzh@gmail.com> >>.
 
-Copyright (c) 2009-2011, agentzh C<< <agentzh@gmail.com> >>.
-
-Copyright (c) 2011, Antoine Bonavita C<< <antoine.bonavita@gmail.com> >>.
+Copyright (c) 2011-2012, Antoine Bonavita C<< <antoine.bonavita@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
 
@@ -303,11 +314,11 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 
 =item *
 
-Neither the name of the Taobao Inc. nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. 
+Neither the name of the authors nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 =back
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =head1 SEE ALSO
 

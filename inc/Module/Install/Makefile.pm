@@ -8,7 +8,7 @@ use Fcntl qw/:flock :seek/;
 
 use vars qw{$VERSION @ISA $ISCORE};
 BEGIN {
-	$VERSION = '1.00';
+	$VERSION = '1.04';
 	@ISA     = 'Module::Install::Base';
 	$ISCORE  = 1;
 }
@@ -219,14 +219,14 @@ sub write {
 		# an underscore, even though its own version may contain one!
 		# Hence the funny regexp to get rid of it.  See RT #35800
 		# for details.
-		my $v = $ExtUtils::MakeMaker::VERSION =~ /^(\d+\.\d+)/;
+		my ($v) = $ExtUtils::MakeMaker::VERSION =~ /^(\d+\.\d+)/;
 		$self->build_requires(     'ExtUtils::MakeMaker' => $v );
 		$self->configure_requires( 'ExtUtils::MakeMaker' => $v );
 	} else {
 		# Allow legacy-compatibility with 5.005 by depending on the
 		# most recent EU:MM that supported 5.005.
-		$self->build_requires(     'ExtUtils::MakeMaker' => 6.42 );
-		$self->configure_requires( 'ExtUtils::MakeMaker' => 6.42 );
+		$self->build_requires(     'ExtUtils::MakeMaker' => 6.36 );
+		$self->configure_requires( 'ExtUtils::MakeMaker' => 6.36 );
 	}
 
 	# Generate the MakeMaker params
@@ -241,7 +241,6 @@ in a module, and provide its file path via 'version_from' (or
 'all_from' if you prefer) in Makefile.PL.
 EOT
 
-	$DB::single = 1;
 	if ( $self->tests ) {
 		my @tests = split ' ', $self->tests;
 		my %seen;
@@ -412,4 +411,4 @@ sub postamble {
 
 __END__
 
-#line 541
+#line 540

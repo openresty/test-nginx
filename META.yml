@@ -3,11 +3,12 @@ abstract: 'Testing modules for Nginx C module development'
 author:
   - 'agentzh (章亦春) C<< <agentzh@gmail.com> >>'
 build_requires:
-  ExtUtils::MakeMaker: 6.42
+  ExtUtils::MakeMaker: 6.55
 configure_requires:
-  ExtUtils::MakeMaker: 6.42
+  ExtUtils::MakeMaker: 6.55
 distribution_type: module
-generated_by: 'Module::Install version 1.00'
+dynamic_config: 1
+generated_by: 'Module::Install version 1.04'
 license: bsd
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -20,6 +21,7 @@ no_index:
 requires:
   ExtUtils::MakeMaker: 0
   Fcntl: 0
+  File::Path: 0
   Filter::Util::Call: 0
   HTTP::Response: 0
   IO::Select: 0
@@ -32,8 +34,9 @@ requires:
   Test::LongString: 0
   Text::Diff: 0
   Time::HiRes: 0
+  URI::Escape: 0
   perl: 5.6.1
 resources:
   license: http://opensource.org/licenses/bsd-license.php
   repository: http://github.com/agentzh/test-nginx
-version: 0.15
+version: 0.19

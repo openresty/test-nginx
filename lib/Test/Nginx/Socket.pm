@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.15';
+our $VERSION = '0.19';
 
 use Encode;
 use Data::Dumper;
@@ -15,7 +15,6 @@ use List::MoreUtils qw( any );
 use IO::Select ();
 
 our $ServerAddr = 'localhost';
-our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 2;
 
 use Test::Nginx::Util qw(
   bail_out
@@ -23,6 +22,7 @@ use Test::Nginx::Util qw(
   write_config_file
   get_canon_version
   get_nginx_version
+  bail_out
   trim
   show_all_chars
   parse_headers
@@ -34,12 +34,15 @@ use Test::Nginx::Util qw(
   $ConfFile
   $RunTestHelper
   $RepeatEach
+  timeout
+  error_log_data
   worker_connections
   master_process_enabled
   config_preamble
   repeat_each
   workers
   master_on
+  master_off
   log_level
   no_shuffle
   no_root_location
@@ -61,7 +64,7 @@ our $NoLongString = undef;
 our @EXPORT = qw( plan run_tests run_test
   repeat_each config_preamble worker_connections
   master_process_enabled
-  no_long_string workers master_on
+  no_long_string workers master_on master_off
   log_level no_shuffle no_root_location
   server_addr server_root html_dir server_port
   timeout no_nginx_manager
@@ -74,6 +77,8 @@ sub run_test_helper ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
+sub check_response_body ($$$$$);
+sub fmt_str ($);
 
 sub no_long_string () {
     $NoLongString = 1;
@@ -87,15 +92,6 @@ sub server_addr (@) {
     }
     else {
         return $ServerAddr;
-    }
-}
-
-sub timeout (@) {
-    if (@_) {
-        $Timeout = shift;
-    }
-    else {
-        $Timeout;
     }
 }
 
@@ -116,8 +112,7 @@ sub parse_request ($$) {
     open my $in, '<', $rrequest;
     my $first = <$in>;
     if ( !$first ) {
-        Test::More::BAIL_OUT("$name - Request line should be non-empty");
-        die;
+        bail_out("$name - Request line should be non-empty");
     }
     #$first =~ s/^\s+|\s+$//gs;
     my ($before_meth, $meth, $after_meth);
@@ -125,27 +120,26 @@ sub parse_request ($$) {
     my ($http_ver, $http_ver_size, $after_http_ver);
     my $end_line_size;
     if ($first =~ /^(\s*)(\S+)( *)((\S+)( *))?((\S+)( *))?(\s*)/) {
-        $before_meth = length($1);
+        $before_meth = defined $1 ? length($1) : undef;
         $meth = $2;
-        $after_meth = length($3);
+        $after_meth = defined $3 ? length($3) : undef;
         $rel_url = $5;
-        $rel_url_size = length($5);
-        $after_rel_url = length($6);
+        $rel_url_size = defined $5 ? length($5) : undef;
+        $after_rel_url = defined $6 ? length($6) : undef;
         $http_ver = $8;
         if (!defined $8) {
             $http_ver_size = undef;
         } else {
-            $http_ver_size = length($8);
+            $http_ver_size = defined $8 ? length($8) : undef;
         }
         if (!defined $9) {
             $after_http_ver = undef;
         } else {
-            $after_http_ver = length($9);
+            $after_http_ver = defined $9 ? length($9) : undef;
         }
-        $end_line_size = length($10);
+        $end_line_size = defined $10 ? length($10) : undef;
     } else {
-        Test::More::BAIL_OUT("$name - Request line is not valid. Should be 'meth [url [version]]'");
-        die;
+        bail_out("$name - Request line is not valid. Should be 'meth [url [version]]'");
     }
     if ( !defined $rel_url ) {
         $rel_url = '/';
@@ -367,7 +361,7 @@ sub get_req_from_block ($) {
         if ( $block->pipelined_requests ) {
             my $reqs = $block->pipelined_requests;
             if ( !ref $reqs || ref $reqs ne 'ARRAY' ) {
-                Test::More::BAIL_OUT(
+                bail_out(
                     "$name - invalid entries in --- pipelined_requests");
             }
             my $i = 0;
@@ -415,7 +409,7 @@ sub get_req_from_block ($) {
                                 # Packet is a hash with a value...
                                 push @packet_array, $one_packet->{value};
                             } else {
-                                Test::More::BAIL_OUT "$name - Invalid syntax. $one_packet should be a string or hash with value.";
+                                bail_out "$name - Invalid syntax. $one_packet should be a string or hash with value.";
                             }
                         }
                         my $transformed_packet_array = build_request_from_packets($name, $more_headers,
@@ -435,11 +429,11 @@ sub get_req_from_block ($) {
                         }
                         push @req_list, \@transformed_req;
                     } else {
-                        Test::More::BAIL_OUT "$name - Invalid syntax. $one_req should be a string or an array of packets.";
+                        bail_out "$name - Invalid syntax. $one_req should be a string or an array of packets.";
                     }
                 }
             } else {
-                Test::More::BAIL_OUT(
+                bail_out(
                     "$name - invalid ---request : MUST be string or array of requests");
             }
         }
@@ -456,14 +450,14 @@ sub run_test_helper ($$) {
     my $r_req_list = get_req_from_block($block);
 
     if ( $#$r_req_list < 0 ) {
-        Test::More::BAIL_OUT("$name - request empty");
+        bail_out("$name - request empty");
     }
 
     #warn "request: $req\n";
 
     my $timeout = $block->timeout;
     if ( !defined $timeout ) {
-        $timeout = $Timeout;
+        $timeout = timeout();
     }
 
     my $req_idx = 0;
@@ -480,12 +474,55 @@ sub run_test_helper ($$) {
 
         #warn "raw resonse: [$raw_resp]\n";
 
-        my ( $res, $raw_headers ) = parse_response( $name, $raw_resp );
-        check_error_code($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
-        check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
-        check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $#$r_req_list > 0);
-        check_response_body($block, $res, $dry_run, $req_idx, $#$r_req_list > 0);
+        my ($n, $need_array);
+
+        if ($block->pipelined_requests) {
+            $n = @{ $block->pipelined_requests };
+            $need_array = 1;
+
+        } else {
+            $need_array = $#$r_req_list > 0;
+        }
+
+again:
+        #warn "!!! resp: [$raw_resp]";
+        if (!defined $raw_resp) {
+            $raw_resp = '';
+        }
+
+        my ( $res, $raw_headers, $left );
+
+        if (!defined $block->ignore_response) {
+            ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
+        }
+
+        if (!$n) {
+            if ($left) {
+                my $name = $block->name;
+                $left =~ s/([\0-\037\200-\377])/sprintf('\x{%02x}',ord $1)/eg;
+                warn "WARNING: $name - unexpected extra bytes after last chunk in ",
+                    "response: \"$left\"\n";
+            }
+
+        } else {
+            $raw_resp = $left;
+            $n--;
+        }
+
+        if (!defined $block->ignore_response) {
+            check_error_code($block, $res, $dry_run, $req_idx, $need_array);
+            check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
+            check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
+            check_response_body($block, $res, $dry_run, $req_idx, $need_array);
+        }
+
+        check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+
         $req_idx++;
+
+        if ($n) {
+            goto again;
+        }
     }
 }
 
@@ -496,33 +533,41 @@ sub get_indexed_value($$$$) {
     if ($need_array) {
         if (ref $value && ref $value eq 'ARRAY') {
             return $$value[$req_idx];
-        } else {
-            Test::More::BAIL_OUT("$name - You asked for many requests, the expected results should be arrays as well.");
         }
+
+        bail_out("$name - You asked for many requests, the expected results should be arrays as well.");
+
     } else {
         # One element but still provided as an array.
         if (ref $value && ref $value eq 'ARRAY') {
             if ($req_idx != 0) {
-                Test::More::BAIL_OUT("$name - SHOULD NOT HAPPEN: idx!=0 and don't need array.");
-            } else {
-                return $$value[0];
+                bail_out("$name - SHOULD NOT HAPPEN: idx != 0 and don't need array.");
             }
-        } else {
-            return $value;
+
+            return $$value[0];
         }
+
+        return $value;
     }
 }
+
 sub check_error_code($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     SKIP: {
         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-        if ( defined $block->error_code ) {
-            is( $res->code || '',
+        if ( defined $block->error_code_like ) {
+            my $val = get_indexed_value($name, $block->error_code_like, $req_idx, $need_array);
+            like( ($res && $res->code) || '',
+                qr/$val/sm,
+                "$name - status code ok" );
+
+        } elsif ( defined $block->error_code ) {
+            is( ($res && $res->code) || '',
                 get_indexed_value($name, $block->error_code, $req_idx, $need_array),
                 "$name - status code ok" );
         } else {
-            is( $res->code || '', 200, "$name - status code ok" );
+            is( ($res && $res->code) || '', 200, "$name - status code ok" );
         }
     }
 }
@@ -560,7 +605,7 @@ sub check_response_headers($$$$$) {
                 next;
             }
 
-            my $actual_val = $res->header($key);
+            my $actual_val = $res ? $res->header($key) : undef;
             if ( !defined $actual_val ) {
                 $actual_val = '';
             }
@@ -588,13 +633,107 @@ sub check_response_headers($$$$$) {
         }
     }
 }
-sub check_response_body() {
+
+sub check_error_log ($$$$$) {
+    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+    my $name = $block->name;
+    my $lines;
+
+    if (defined $block->error_log) {
+        my $pats = $block->error_log;
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        $lines = error_log_data();
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        pass("$name - pattern \"$pat\" matches a line in error.log");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - pattern \"$pat\" matches a line in error.log");
+                }
+            }
+        }
+    }
+
+    if (defined $block->no_error_log) {
+        #warn "HERE";
+        my $pats = $block->no_error_log;
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        $lines ||= error_log_data();
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                #warn "test $pat\n";
+                if ((ref $pat && $line =~ /$pat/) || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        my $ln = fmt_str($line);
+                        my $p = fmt_str($pat);
+                        fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\"");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    my $p = fmt_str($pat);
+                    pass("$name - pattern \"$p\" does not match a line in error.log");
+                }
+            }
+        }
+    }
+
+}
+
+sub fmt_str ($) {
+    my $str = shift;
+    chomp $str;
+    $str =~ s/"/\\"/g;
+    $str =~ s/\r/\\r/g;
+    $str =~ s/\n/\\n/g;
+    $str;
+}
+
+sub check_response_body ($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     if (   defined $block->response_body
         || defined $block->response_body_eval )
     {
-        my $content = $res->content;
+        my $content = $res ? $res->content : undef;
         if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
             $content =~ s/^Connection: TE, close\r\n//gms;
@@ -622,31 +761,38 @@ sub check_response_body() {
             Encode::from_to( $expected, 'UTF-8', $block->charset );
         }
 
-        $expected =~ s/\$ServerPort\b/$ServerPort/g;
-        $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+        unless (ref $expected) {
+            $expected =~ s/\$ServerPort\b/$ServerPort/g;
+            $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+        }
 
         #warn show_all_chars($content);
 
         #warn "no long string: $NoLongString";
         SKIP: {
             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-            if ($NoLongString) {
-                is( $content, $expected,
-                    "$name - response_body - response is expected" );
-            }
-            else {
-                is_string( $content, $expected,
-                    "$name - response_body - response is expected" );
+            if (ref $expected) {
+                like $content, $expected, "$name - response_body - like";
+
+            } else {
+                if ($NoLongString) {
+                    is( $content, $expected,
+                        "$name - response_body - response is expected" );
+                }
+                else {
+                    is_string( $content, $expected,
+                        "$name - response_body - response is expected" );
+                }
             }
         }
 
     }
     elsif ( defined $block->response_body_like ) {
-        my $content = $res->content;
+        my $content = $res ? $res->content : undef;
         if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
+            $content =~ s/^Connection: TE, close\r\n//gms;
         }
-        $content =~ s/^Connection: TE, close\r\n//gms;
         my $expected_pat = get_indexed_value($name,
                                              $block->response_body_like,
                                              $req_idx,
@@ -654,6 +800,9 @@ sub check_response_body() {
         $expected_pat =~ s/\$ServerPort\b/$ServerPort/g;
         $expected_pat =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
         my $summary = trim($content);
+        if (!defined $summary) {
+            $summary = "";
+        }
 
         SKIP: {
             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
@@ -667,8 +816,10 @@ sub check_response_body() {
 sub parse_response($$) {
     my ( $name, $raw_resp ) = @_;
 
+    my $left;
+
     my $raw_headers = '';
-    if ( $raw_resp =~ /(.*?)\r\n\r\n/s ) {
+    if ( $raw_resp =~ /(.*?\r\n)\r\n/s ) {
 
         #warn "\$1: $1";
         $raw_headers = $1;
@@ -678,6 +829,8 @@ sub parse_response($$) {
 
     my $res = HTTP::Response->parse($raw_resp);
     my $enc = $res->header('Transfer-Encoding');
+
+    my $len = $res->header('Content-Length');
 
     if ( defined $enc && $enc eq 'chunked' ) {
 
@@ -691,9 +844,7 @@ sub parse_response($$) {
         while (1) {
             if ( $raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx ) {
                 if ( $raw =~ /\G (.+) /gcsx ) {
-                    (my $extra = $1) =~ s/([\0-\037\200-\377])/sprintf('\x{%02x}',ord $1)/eg;
-                    warn "WARNING: $name - unexpected extra bytes after last chunk in ",
-                        "response: \"$extra\"\n";
+                    $left = $1;
                 }
 
                 last;
@@ -740,37 +891,61 @@ sub parse_response($$) {
 
         #warn "decoded: $decoded\n";
         $res->content($decoded);
+
+    } elsif (defined $len && $len ne '' && $len >= 0) {
+        my $raw = $res->content;
+        if (length $raw < $len) {
+            warn "WARNING: $name - response body truncated: ",
+                "$len expected, but got ", length $raw, "\n";
+
+        } elsif (length $raw > $len) {
+            my $content = substr $raw, 0, $len;
+            $left = substr $raw, $len;
+            $res->content($content);
+            #warn "parsed body: [", $res->content, "]\n";
+        }
     }
-    return ( $res, $raw_headers );
+
+    return ( $res, $raw_headers, $left );
 }
 
 sub send_request ($$$$@) {
     my ( $req, $middle_delay, $timeout, $name, $tries ) = @_;
 
+    #warn "connecting...\n";
+
     my $sock = IO::Socket::INET->new(
-        PeerAddr => $ServerAddr,
-        PeerPort => $ServerPortForClient,
-        Proto    => 'tcp'
+        PeerAddr  => $ServerAddr,
+        PeerPort  => $ServerPortForClient,
+        Proto     => 'tcp',
+        #ReuseAddr => 1,
+        #ReusePort => 1,
+        Blocking  => 0,
+        Timeout   => $timeout,
     );
 
     if (! defined $sock) {
         $tries ||= 0;
-        if ($tries < 3) {
+        if ($tries < 10) {
             warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
             sleep 1;
+            #warn "sending request";
             return send_request($req, $middle_delay, $timeout, $name, $tries + 1);
-        } else {
-            die "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+
         }
+
+        bail_out("Can't connect to $ServerAddr:$ServerPortForClient: $! (Aborted)\n");
     }
+
+    #warn "connected";
 
     my @req_bits = ref $req ? @$req : ($req);
 
-    my $flags = fcntl $sock, F_GETFL, 0
-      or die "Failed to get flags: $!\n";
+    #my $flags = fcntl $sock, F_GETFL, 0
+    #or die "Failed to get flags: $!\n";
 
-    fcntl $sock, F_SETFL, $flags | O_NONBLOCK
-      or die "Failed to set flags: $!\n";
+    #fcntl $sock, F_SETFL, $flags | O_NONBLOCK
+    #or die "Failed to set flags: $!\n";
 
     my $ctx = {
         resp         => '',
@@ -794,6 +969,8 @@ sub send_request ($$$$@) {
         {
             last;
         }
+
+        #warn "doing select...\n";
 
         my ( $new_readable, $new_writable, $new_err ) =
           IO::Select->select( $readable_hdls, $writable_hdls, $err_hdls,
@@ -896,9 +1073,8 @@ sub send_request ($$$$@) {
                 }
 
                 close $hdl;
-            }
 
-            if ( $res == 2 ) {
+            } elsif ( $res == 2 ) {
                 if ( $writable_hdls->exists($hdl) ) {
                     $writable_hdls->remove($hdl);
                 }
@@ -930,10 +1106,20 @@ sub write_event_handler ($) {
   #die;
 
         if ( $rest > 0 ) {
-            my $bytes = syswrite(
-                $ctx->{sock}, $ctx->{write_buf},
-                $rest,        $ctx->{write_offset}
-            );
+            my $bytes;
+            eval {
+                $bytes = syswrite(
+                    $ctx->{sock}, $ctx->{write_buf},
+                    $rest,        $ctx->{write_offset}
+                );
+            };
+
+            if ($@) {
+                my $errmsg = "write failed: $@";
+                warn "$errmsg\n";
+                $ctx->{resp} =  $errmsg;
+                return undef;
+            }
 
             if ( !defined $bytes ) {
                 if ( $! == EAGAIN ) {
@@ -1180,7 +1366,7 @@ web server and even use a different version of HTTP. This is possible:
 Please note that specifying HTTP/1.0 will not prevent Test::Nginx from
 sending the C<Host> header. Actually Test::Nginx always sends 2 headers:
 C<Host> (with value localhost) and C<Connection> (with value Close for
-simple requests and keep-alive for all but the last pipelined_request).
+simple requests and keep-alive for all but the last pipelined_requests).
 
 You can also add a content to your request:
 
@@ -1260,6 +1446,35 @@ should be replaced by:
     "POST /echo_body
     hello\x00\x01\x02
     world\x03\x04\xff"
+
+=head2 pipelined_requests
+
+Specify pipelined requests that use a single keep-alive connection to the server.
+
+Here is an example from ngx_lua's test suite:
+
+    === TEST 7: discard body
+    --- config
+        location = /foo {
+            content_by_lua '
+                ngx.req.discard_body()
+                ngx.say("body: ", ngx.var.request_body)
+            ';
+        }
+        location = /bar {
+            content_by_lua '
+                ngx.req.read_body()
+                ngx.say("body: ", ngx.var.request_body)
+            ';
+        }
+    --- pipelined_requests eval
+    ["POST /foo
+    hello, world",
+    "POST /bar
+    hiya, world"]
+    --- response_body eval
+    ["body: nil\n",
+    "body: hiya, world\n"]
 
 =head2 more_headers
 
@@ -1376,6 +1591,69 @@ If the test is made of multiple requests, then
 error_code B<MUST> be an array with the expected value for the response status
 of each request in the test.
 
+=head2 error_code_like
+
+Just like C<error_code>, but accepts a Perl regex as the value, for example:
+
+    --- error_code_like: ^(?:500)?$
+
+If the test is made of multiple requests, then
+error_code_like B<MUST> be an array with the expected value for the response status
+of each request in the test.
+
+=head2 error_log
+
+Checks if the pattern or multiple patterns all appear in lines of the F<error.log> file.
+
+For example,
+
+    === TEST 1: matched with j
+    --- config
+        location /re {
+            content_by_lua '
+                m = ngx.re.match("hello, 1234", "([0-9]+)", "j")
+                if m then
+                    ngx.say(m[0])
+                else
+                    ngx.say("not matched!")
+                end
+            ';
+        }
+    --- request
+        GET /re
+    --- response_body
+    1234
+    --- error_log: pcre JIT compiling result: 1
+
+Then the substring "pcre JIT compiling result: 1" must appear literally in a line of F<error.log>.
+
+Multiple patterns are also supported, for example:
+
+    --- error_log eval
+    ["abc", qr/blah/]
+
+then the substring "abc" must appear literally in a line of F<error.log>, and the regex C<qr/blah>
+must also match a line in F<error.log>.
+
+=head2 no_error_log
+
+Very much like the C<--- error_log> section, but does the opposite test, i.e.,
+pass only when the specified patterns of lines do not appear in the F<error.log> file at all.
+
+Here is an example:
+
+    --- no_error_log
+    [error]
+
+This test will fail when any of the line in the F<error.log> file contains the string C<"[error]">.
+
+Just like the C<--- error_log> section, one can also specify multiple patterns:
+
+    --- no_error_log eval
+    ["abc", qr/blah/]
+
+Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
+
 =head2 raw_request
 
 The exact request to send to nginx. This is useful when you want to test
@@ -1394,6 +1672,10 @@ This can also be useful to tests "invalid" request lines:
 
     --- raw_request
     GET /foo HTTP/2.0 THE_FUTURE_IS_NOW
+
+=head2 ignore_response
+
+Do not attempt to parse the response or run the response related subtests.
 
 =head2 user_files
 
@@ -1424,6 +1706,29 @@ All environment variables starting with C<TEST_NGINX_> are expanded in the
 sections used to build the configuration of the server that tests automatically
 starts. The following environment variables are supported by this module:
 
+=head2 TEST_NGINX_VERBOSE
+
+Controls whether to output verbose debugging messages in Test::Nginx. Default to empty.
+
+=head2 TEST_NGINX_USE_HUP
+
+When set to 1, Test::Nginx will try to send HUP signal to the
+nginx master process to reload the config file between
+successive C<repeast_each> tests. When this envirnoment is set
+to 1, it will also enfornce the "master_process on" config line
+in the F<nginx.conf> file,
+because Nginx is buggy in processing HUP signal when the master process is off.
+
+=head2 TEST_NGINX_POSTPONE_OUTPUT
+
+Defaults to empty. This environment takes positive integer numbers as its value and it will cause the auto-generated nginx.conf file to have a "postpone_output" setting in the http {} block.
+
+For example, setting TEST_NGINX_POSTPONE_OUTPUT to 1 will have the following line in nginx.conf's http {} block:
+
+    postpone_output 1;
+
+and it will effectively disable the write buffering in nginx's ngx_http_write_module.
+
 =head2 TEST_NGINX_NO_NGINX_MANAGER
 
 Defaults to 0. If set to 1, Test::Nginx module will not manage
@@ -1437,10 +1742,16 @@ they appear in the test file (and not in random order).
 
 =head2 TEST_NGINX_USE_VALGRIND
 
-If set to 1, will start nginx with valgrind. nginx is actually started with
-C<valgrind -q --leak-check=full --gen-suppressions=all --suppressions=valgrind.suppress>,
+If set, Test::Nginx will start nginx with valgrind with the the value of this environment as the options.
+
+Nginx is actually started with
+C<valgrind -q $TEST_NGINX_USE_VALGRIND --gen-suppressions=all --suppressions=valgrind.suppress>,
 the suppressions option being used only if there is actually
 a valgrind.suppress file.
+
+If this environment is set to the number C<1> or any other
+non-zero numbers, then it is equivalent to taking the value
+C<--tool=memcheck --leak-check=full>.
 
 =head2 TEST_NGINX_BINARY
 
@@ -1498,6 +1809,14 @@ If set to 1 will SKIP all tests which C<config> sections resulted in a
 C<unknown directive> when trying to start C<nginx>. Useful when you want to
 run tests on a build of nginx that does not include all modules it should.
 By default, these tests will FAIL.
+
+=head2 TEST_NGINX_EVENT_TYPE
+
+This environment can be used to specify a event API type to be used by Nginx. Possible values are C<epoll>, C<kqueue>, C<select>, C<rtsig>, C<poll>, and others.
+
+For example,
+
+    $ TEST_NGINX_EVENT_TYPE=select prove -r t
 
 =head2 TEST_NGINX_ERROR_LOG
 
@@ -1585,6 +1904,11 @@ This module has a Git repository on Github, which has access for all.
 
 If you want a commit bit, feel free to drop me a line.
 
+=head1 DEBIAN PACKAGES
+
+António P. P. Almeida is maintaining a Debian package for this module
+in his Debian repository: http://debian.perusio.net
+
 =head1 AUTHORS
 
 agentzh (章亦春) C<< <agentzh@gmail.com> >>
@@ -1593,11 +1917,9 @@ Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2011, Taobao Inc., Alibaba Group (L<http://www.taobao.com>).
+Copyright (c) 2009-2012, agentzh C<< <agentzh@gmail.com> >>.
 
-Copyright (c) 2009-2011, agentzh C<< <agentzh@gmail.com> >>.
-
-Copyright (c) 2011, Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>.
+Copyright (c) 2011-2012, Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>.
 
 This module is licensed under the terms of the BSD license.
 
@@ -1615,7 +1937,7 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 
 =item *
 
-Neither the name of the Taobao Inc. nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+Neither the name of the authors nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 =back
 
