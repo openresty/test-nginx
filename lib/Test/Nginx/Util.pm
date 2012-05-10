@@ -201,7 +201,11 @@ sub run_tests () {
 
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
         #for (1..3) {
+        Test::More::subtest $block->name => sub {
+            Test::More::plan 'no_plan';
+
             run_test($block);
+        }
         #}
     }
 
