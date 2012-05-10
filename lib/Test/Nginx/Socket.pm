@@ -17,7 +17,6 @@ use IO::Select ();
 our $ServerAddr = 'localhost';
 
 use Test::Nginx::Util qw(
-  bail_out
   setup_server_root
   write_config_file
   get_canon_version
