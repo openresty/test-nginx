@@ -461,13 +461,13 @@ sub run_test_helper ($$) {
 
     my $req_idx = 0;
     for my $one_req (@$r_req_list) {
-        my $raw_resp;
+        my ($raw_resp, $head_req);
 
         if ($dry_run) {
             $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
-        }
-        else {
-            $raw_resp = send_request( $one_req, $block->raw_request_middle_delay,
+
+        } else {
+            ($raw_resp, $head_req) = send_request( $one_req, $block->raw_request_middle_delay,
                 $timeout, $block->name );
         }
 
@@ -492,7 +492,7 @@ again:
         my ( $res, $raw_headers, $left );
 
         if (!defined $block->ignore_response) {
-            ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
+            ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
         }
 
         if (!$n) {
@@ -812,8 +812,8 @@ sub check_response_body ($$$$$) {
     }
 }
 
-sub parse_response($$) {
-    my ( $name, $raw_resp ) = @_;
+sub parse_response($$$) {
+    my ( $name, $raw_resp, $head_req ) = @_;
 
     my $left;
 
@@ -894,8 +894,10 @@ sub parse_response($$) {
     } elsif (defined $len && $len ne '' && $len >= 0) {
         my $raw = $res->content;
         if (length $raw < $len) {
-            warn "WARNING: $name - response body truncated: ",
-                "$len expected, but got ", length $raw, "\n";
+            if (!$head_req) {
+                warn "WARNING: $name - response body truncated: ",
+                    "$len expected, but got ", length $raw, "\n";
+            }
 
         } elsif (length $raw > $len) {
             my $content = substr $raw, 0, $len;
@@ -939,6 +941,16 @@ sub send_request ($$$$@) {
     #warn "connected";
 
     my @req_bits = ref $req ? @$req : ($req);
+
+    my $head_req = 0;
+    {
+        my $req = join '', map { $_->{value} } @req_bits;
+        #warn "Request: $req\n";
+        if ($req =~ /^\s*HEAD\s+/) {
+            #warn "Found HEAD request!\n";
+            $head_req = 1;
+        }
+    }
 
     #my $flags = fcntl $sock, F_GETFL, 0
     #or die "Failed to get flags: $!\n";
@@ -1081,7 +1093,7 @@ sub send_request ($$$$@) {
         }
     }
 
-    return $ctx->{resp};
+    return ($ctx->{resp}, $head_req);
 }
 
 sub timeout_event_handler ($) {
