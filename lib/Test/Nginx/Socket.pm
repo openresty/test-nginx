@@ -1098,7 +1098,7 @@ sub send_request ($$$$@) {
 
 sub timeout_event_handler ($) {
     my $ctx = shift;
-    warn "ERROR: socket client: timed out - $ctx->{name}\n";
+    fail("ERROR: client socket timed out - $ctx->{name}\n");
 }
 
 sub error_event_handler ($) {
