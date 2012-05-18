@@ -1778,6 +1778,12 @@ test) is listening to:
 As usual, if the test is made of multiple requests, then
 raw_response_headers_like B<MUST> be an array.
 
+=head2 timeout
+
+Specifys the timeout value for test case running, default to 2(sec).
+
+    --- timeout: 50
+
 =head2 error_code
 
 The expected value of the HTTP response code. If not set, this is assumed
