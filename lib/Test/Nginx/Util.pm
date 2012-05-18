@@ -147,6 +147,9 @@ sub master_process_enabled (@) {
 our @EXPORT_OK = qw(
     bail_out
     error_log_data
+    file_data
+    file_like_data
+    parse_files
     setup_server_root
     write_config_file
     get_canon_version
@@ -277,6 +280,68 @@ sub error_log_data () {
     my @lines = <$in>;
     close $in;
     return \@lines;
+}
+
+sub file_data ($) {
+    my ($file) = @_;
+    open my $in, $file or
+        return undef;
+    my $lines = do { local $/; <$in>; };
+    close $in;
+    return $lines;
+}
+
+sub file_like_data ($) {
+    my ($file) = @_;
+    open my $in, $file or
+        return undef;
+    my @lines = <$in>;
+    close $in;
+    return \@lines;
+}
+
+sub parse_files ($) {
+    my $s = shift;
+    my @headers;
+    my @lines;
+    open my $in, '<', \$s;
+    while (<$in>) {
+        s/^\s+|\s+$//g;
+        my $neg = ($_ =~ s/^!\s*//);
+        if (!$neg) {
+            my ($key, $val) = split /\s*:\s*/, $_, 2;
+            @headers = ($key, $val);
+            push @lines, [ @headers ];
+            #warn "neg: $key $val";
+        }
+    }
+    close $in;
+    return \@lines;
+}
+
+sub pre_remove_files ($) {
+    my $block = shift;
+
+    my $name = $block->name;
+
+    if ($block->pre_remove_files) {
+        my $files = $block->pre_remove_files;
+        if (!ref $files) {
+            chomp $files;
+            my @lines = split /\n+/, $files;
+            $files = \@lines;
+        } else {
+            my @clone = @$files;
+            $files = \@clone;
+        }
+        
+        for my $file (@$files) {
+            if (-e $file) {
+                unlink $file or die "unlink $file failed\n";
+            }
+        }
+
+    }
 }
 
 sub run_tests () {
@@ -800,6 +865,7 @@ start_nginx:
             #warn "*** Restarting the nginx server...\n";
             setup_server_root();
             write_user_files($block);
+            pre_remove_files($block);
             write_config_file($config, $block->http_config, $block->main_config);
             #warn "nginx binary: $NginxBinary";
             if ( ! can_run($NginxBinary) ) {

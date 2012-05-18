@@ -35,6 +35,9 @@ use Test::Nginx::Util qw(
   $RepeatEach
   timeout
   error_log_data
+  file_data
+  file_like_data
+  parse_files
   worker_connections
   master_process_enabled
   config_preamble
@@ -516,6 +519,7 @@ again:
         }
 
         check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+        check_files($block, $res, $dry_run, $req_idx, $need_array);
 
         $req_idx++;
 
@@ -715,6 +719,189 @@ sub check_error_log ($$$$$) {
         }
     }
 
+}
+
+sub check_files ($$$$$) {
+    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+    my $name = $block->name;
+    my $lines;
+
+    if (defined $block->output_files) {
+        my $raw = $block->output_files;
+
+        open my $in, '<', \$raw;
+
+        my @files;
+        my ($fname, $body, $chop);
+        while (<$in>) {
+            if (/>>> (\S+)\s?(\S*)/) {
+                if ($fname) {
+                    push @files, [$fname, $body, $chop];
+                }
+                $fname = $1;
+                if ($2 eq "chop") {
+                    $chop = 1;
+                } else {
+                    $chop = 0;
+                }
+                undef $body;
+            } else {
+                $body .= $_;
+            }
+        }
+        if ($fname) {
+            push @files, [$fname, $body, $chop];
+        }
+        
+        for my $file (@files) {
+            my ($fname, $body, $chop) = @$file;
+
+            if (!defined $body) {
+                $body = '';
+            }
+            if (defined $file) {
+                my $lines = file_data($fname);
+                if ($chop == 1) {
+                    chop $body;
+                }
+                if ($lines eq $body) {
+                    SKIP: {
+                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        pass("$name - content \"$body\" matches file \"$fname\"");
+                    }
+                    undef $file;
+                }
+            }
+        }
+        
+        for my $file (@files) {
+            if (defined $file) {
+                my ($fname, $body, $chop) = @$file;
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - content \"$body\" not matches file \"$fname\"");
+                }
+            }
+        }
+
+    }
+        
+    if (defined $block->output_files_like) {
+        my $pats = parse_files($block->output_files_like);
+        
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                my $lines = file_like_data(@$pat[0]);
+                for my $line (@$lines) {
+                    my $val = @$pat[1];
+                    if ($line =~ /$val/ || $line =~ /\Q$val\E/) {
+                        SKIP: {
+                            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                            pass("$name - files_like: content \"@$pat[1]\" exists in file \"@$pat[0]\"");
+                        }
+                        undef $pat;
+                    }
+                }
+            }
+        }
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - files_like: content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
+                }
+            }
+        }
+    }
+    
+    if (defined $block->output_files_unlike) {
+        my $pats = parse_files($block->output_files_unlike);
+        
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                my $lines = file_like_data(@$pat[0]);
+                for my $line (@$lines) {
+                    my $val = @$pat[1];
+                    if ($line =~ /$val/ || $line =~ /\Q$val\E/) {
+                        SKIP: {
+                            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                            fail("$name - files_not_like: content \"@$pat[1]\" exists in file \"@$pat[0]\"");
+                        }
+                        undef $pat;
+                    }
+                }
+            }
+        }
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    pass("$name - files_not_like: content \"@$pat[1]\" not exists in file \"@$pat[0]\"");
+                }
+            }
+        }
+    }
+    
+    if ($block->files_exist) {
+        my $files = $block->files_exist;
+        if (!ref $files) {
+            chomp $files;
+            my @lines = split /\n+/, $files;
+            $files = \@lines;
+        } else {
+            my @clone = @$files;
+            $files = \@clone;
+        }
+        
+        for my $file (@$files) {
+            if (-e $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    pass("$name - files_exist: \"$file\" exists");
+                }
+                undef $file;
+            }
+        }
+        for my $file (@$files) {
+            if (defined $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - files_exist: \"$file\" is not existing");
+                }
+            }
+        }
+    }
+    
+    if ($block->files_not_exist) {
+        my $files = $block->files_not_exist;
+        if (!ref $files) {
+            chomp $files;
+            my @lines = split /\n+/, $files;
+            $files = \@lines;
+        } else {
+            my @clone = @$files;
+            $files = \@clone;
+        }
+        
+        for my $file (@$files) {
+            if (-e $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - files_not_exist: \"$file\" exists");
+                }
+                undef $file;
+            }
+        }
+        for my $file (@$files) {
+            if (defined $file) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    pass("$name - files_not_exist: \"$file\" is not existing");
+                }
+            }
+        }
+    }
+    
 }
 
 sub fmt_str ($) {
@@ -1591,6 +1778,12 @@ test) is listening to:
 As usual, if the test is made of multiple requests, then
 raw_response_headers_like B<MUST> be an array.
 
+=head2 timeout
+
+Specifys the timeout value for test case running, default to 2(sec).
+
+    --- timeout: 50
+
 =head2 error_code
 
 The expected value of the HTTP response code. If not set, this is assumed
@@ -1664,6 +1857,120 @@ Just like the C<--- error_log> section, one can also specify multiple patterns:
     ["abc", qr/blah/]
 
 Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
+
+=head2 output_files
+
+Checks if content of the file is equal to specified string. Usage most likes user_files, additional directive "chop" is added to remove unnecessary "\n" for some files.
+
+For example,
+
+    === TEST 0: write to file
+    --- config
+        location /write/to/file {
+            content_by_lua '
+                io.output("/tmp/file",rw);
+                io.write("hello");
+                io.flush();
+                io.output("/tmp/file1",rw);
+                io.write("hello\\nworld\\n");
+                io.flush();
+                io.close();
+            ';
+        }
+    --- request
+        GET /write/to/file
+    --- error_code: 200
+    --- output_files
+    >>> /tmp/file chop
+    hello
+    >>> /tmp/file1 
+    hello
+    world
+
+
+Then content of the F</tmp/file> is "abcd", first case should be passed and second case failed.
+
+=head2 output_files_like
+
+Checks if specified pattern matches one line of the file. First section seperated by colon is file name and the second section is match pattern.
+
+For example,
+
+    === TEST 1: write to file
+    --- config
+        location /write/to/file {
+            content_by_lua '
+                io.output("/tmp/file",rw);
+                io.write("abcd");
+                io.flush();
+                io.close();
+            ';
+        }
+    --- request
+        GET /write/to/file
+    --- error_code: 200
+    --- output_files_like
+    /tmp/file: abcde
+    /tmp/file: ^abc
+
+Then content of the F</tmp/file> is "abcd", first case should be failed and second case passed.
+
+=head2 output_files_unlike
+
+Likes C<--- output_files_like> section, but does the opposite test, i.e.,
+checks if specified pattern matches none line of the file. First section seperated by colon is file name and the second section is match pattern.
+
+For example,
+
+    === TEST 1: write to file
+    --- config
+        location /write/to/file {
+            content_by_lua '
+                io.output("/tmp/file",rw);
+                io.write("abcd");
+                io.flush();
+                io.close();
+            ';
+        }
+    --- request
+        GET /write/to/file
+    --- error_code: 200
+    --- output_files_unlike
+    /tmp/file: abc
+    /tmp/file: ^bc
+
+Then content of the F</tmp/file> is "abcd", first case should be failed and second case passed.
+
+=head2 pre_remove_files
+
+Remove files before start nginx. Both multi lines and eval are supported. For example:
+    
+    --- pre_remove_files
+    /tmp/file
+    /tmp/file1
+
+and: 
+
+    --- pre_remove_files eval
+    ["/tmp/file", "/tmp/file1"]
+
+=head2 files_exist
+
+Check if specified files exist.
+    
+    --- files_exist
+    /tmp/file
+    /tmp/file1
+
+And "eval" is also supported.
+
+    --- files_exist eval
+    ["/tmp/file2", "/tmp/file3"]
+
+
+=head2 files_not_exist
+
+Likes C<--- files_exist> section, but does the opposite test.
 
 =head2 raw_request
 
