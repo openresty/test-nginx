@@ -1,5 +1,26 @@
 Changes for Test::Nginx
 
+0.19 - 2012-04-29
+* feature: added new section "--- error_code_like".
+* bugfix: tests could hang on slow machines after maximal number of connecting
+  attempts (as well as other exceptions). Now we eliminate dying directly from
+  within the test scaffold. Instead, we always use Test::More::BAIL_OUT. Also,
+  we always politely clean up all the forked child processes before we quit.
+  Finally, we add timeout protection to the connect operation.
+* bugfix: prevented blocking indefinitely on ForkManager's wait_all_children call.
+  also made timeout an API provided by Test::Nginx::Util.
+* feature: now we preserve environment "MOCKEAGAIN" as well.
+* bugfix: the timestamps for the "--- user_files" directive should be GMT rather
+  than localtime.
+* feature: now section "no_error_log" also supports multi-line values to mean
+  multiple literal patterns (per line).
+* feature: the "--- user_files" sections now support absolute file paths and creating
+  arbitrarily nested directories in the file path. thanks @penjin2012 for suggesting it.
+* feature: the "--- error_log" section now supports multiple lines to mean multiple
+  literal patterns.
+* bugfix: fixed places that crash for bad responses.
+* bugfix: fixed another crash when no response object is constructed.
+
 0.18 - 2012-02-03
 * feature: added new section "--- no_error_log" which could be used to specify
   patterns of lines that do not appear in error.log at all.

@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 use Encode;
 use Data::Dumper;
@@ -15,13 +15,13 @@ use List::MoreUtils qw( any );
 use IO::Select ();
 
 our $ServerAddr = 'localhost';
-our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 2;
 
 use Test::Nginx::Util qw(
   setup_server_root
   write_config_file
   get_canon_version
   get_nginx_version
+  bail_out
   trim
   show_all_chars
   parse_headers
@@ -33,6 +33,7 @@ use Test::Nginx::Util qw(
   $ConfFile
   $RunTestHelper
   $RepeatEach
+  timeout
   error_log_data
   file_data
   file_like_data
@@ -96,15 +97,6 @@ sub server_addr (@) {
     }
 }
 
-sub timeout (@) {
-    if (@_) {
-        $Timeout = shift;
-    }
-    else {
-        $Timeout;
-    }
-}
-
 $RunTestHelper = \&run_test_helper;
 
 #  This will parse a "request"" string. The expected format is:
@@ -122,8 +114,7 @@ sub parse_request ($$) {
     open my $in, '<', $rrequest;
     my $first = <$in>;
     if ( !$first ) {
-        Test::More::BAIL_OUT("$name - Request line should be non-empty");
-        die;
+        bail_out("$name - Request line should be non-empty");
     }
     #$first =~ s/^\s+|\s+$//gs;
     my ($before_meth, $meth, $after_meth);
@@ -150,8 +141,7 @@ sub parse_request ($$) {
         }
         $end_line_size = defined $10 ? length($10) : undef;
     } else {
-        Test::More::BAIL_OUT("$name - Request line is not valid. Should be 'meth [url [version]]'");
-        die;
+        bail_out("$name - Request line is not valid. Should be 'meth [url [version]]'");
     }
     if ( !defined $rel_url ) {
         $rel_url = '/';
@@ -373,7 +363,7 @@ sub get_req_from_block ($) {
         if ( $block->pipelined_requests ) {
             my $reqs = $block->pipelined_requests;
             if ( !ref $reqs || ref $reqs ne 'ARRAY' ) {
-                Test::More::BAIL_OUT(
+                bail_out(
                     "$name - invalid entries in --- pipelined_requests");
             }
             my $i = 0;
@@ -421,7 +411,7 @@ sub get_req_from_block ($) {
                                 # Packet is a hash with a value...
                                 push @packet_array, $one_packet->{value};
                             } else {
-                                Test::More::BAIL_OUT "$name - Invalid syntax. $one_packet should be a string or hash with value.";
+                                bail_out "$name - Invalid syntax. $one_packet should be a string or hash with value.";
                             }
                         }
                         my $transformed_packet_array = build_request_from_packets($name, $more_headers,
@@ -441,11 +431,11 @@ sub get_req_from_block ($) {
                         }
                         push @req_list, \@transformed_req;
                     } else {
-                        Test::More::BAIL_OUT "$name - Invalid syntax. $one_req should be a string or an array of packets.";
+                        bail_out "$name - Invalid syntax. $one_req should be a string or an array of packets.";
                     }
                 }
             } else {
-                Test::More::BAIL_OUT(
+                bail_out(
                     "$name - invalid ---request : MUST be string or array of requests");
             }
         }
@@ -462,25 +452,25 @@ sub run_test_helper ($$) {
     my $r_req_list = get_req_from_block($block);
 
     if ( $#$r_req_list < 0 ) {
-        Test::More::BAIL_OUT("$name - request empty");
+        bail_out("$name - request empty");
     }
 
     #warn "request: $req\n";
 
     my $timeout = $block->timeout;
     if ( !defined $timeout ) {
-        $timeout = $Timeout;
+        $timeout = timeout();
     }
 
     my $req_idx = 0;
     for my $one_req (@$r_req_list) {
-        my $raw_resp;
+        my ($raw_resp, $head_req);
 
         if ($dry_run) {
             $raw_resp = "200 OK HTTP/1.0\r\nContent-Length: 0\r\n\r\n";
-        }
-        else {
-            $raw_resp = send_request( $one_req, $block->raw_request_middle_delay,
+
+        } else {
+            ($raw_resp, $head_req) = send_request( $one_req, $block->raw_request_middle_delay,
                 $timeout, $block->name );
         }
 
@@ -505,7 +495,7 @@ again:
         my ( $res, $raw_headers, $left );
 
         if (!defined $block->ignore_response) {
-            ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp );
+            ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
         }
 
         if (!$n) {
@@ -546,28 +536,36 @@ sub get_indexed_value($$$$) {
     if ($need_array) {
         if (ref $value && ref $value eq 'ARRAY') {
             return $$value[$req_idx];
-        } else {
-            Test::More::BAIL_OUT("$name - You asked for many requests, the expected results should be arrays as well.");
         }
+
+        bail_out("$name - You asked for many requests, the expected results should be arrays as well.");
+
     } else {
         # One element but still provided as an array.
         if (ref $value && ref $value eq 'ARRAY') {
             if ($req_idx != 0) {
-                Test::More::BAIL_OUT("$name - SHOULD NOT HAPPEN: idx != 0 and don't need array.");
-            } else {
-                return $$value[0];
+                bail_out("$name - SHOULD NOT HAPPEN: idx != 0 and don't need array.");
             }
-        } else {
-            return $value;
+
+            return $$value[0];
         }
+
+        return $value;
     }
 }
+
 sub check_error_code($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     SKIP: {
         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-        if ( defined $block->error_code ) {
+        if ( defined $block->error_code_like ) {
+            my $val = get_indexed_value($name, $block->error_code_like, $req_idx, $need_array);
+            like( ($res && $res->code) || '',
+                qr/$val/sm,
+                "$name - status code ok" );
+
+        } elsif ( defined $block->error_code ) {
             is( ($res && $res->code) || '',
                 get_indexed_value($name, $block->error_code, $req_idx, $need_array),
                 "$name - status code ok" );
@@ -685,7 +683,8 @@ sub check_error_log ($$$$$) {
         my $pats = $block->no_error_log;
         if (!ref $pats) {
             chomp $pats;
-            $pats = [$pats];
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
 
         } else {
             my @clone = @$pats;
@@ -1000,8 +999,8 @@ sub check_response_body ($$$$$) {
     }
 }
 
-sub parse_response($$) {
-    my ( $name, $raw_resp ) = @_;
+sub parse_response($$$) {
+    my ( $name, $raw_resp, $head_req ) = @_;
 
     my $left;
 
@@ -1082,8 +1081,10 @@ sub parse_response($$) {
     } elsif (defined $len && $len ne '' && $len >= 0) {
         my $raw = $res->content;
         if (length $raw < $len) {
-            warn "WARNING: $name - response body truncated: ",
-                "$len expected, but got ", length $raw, "\n";
+            if (!$head_req) {
+                warn "WARNING: $name - response body truncated: ",
+                    "$len expected, but got ", length $raw, "\n";
+            }
 
         } elsif (length $raw > $len) {
             my $content = substr $raw, 0, $len;
@@ -1099,10 +1100,16 @@ sub parse_response($$) {
 sub send_request ($$$$@) {
     my ( $req, $middle_delay, $timeout, $name, $tries ) = @_;
 
+    #warn "connecting...\n";
+
     my $sock = IO::Socket::INET->new(
-        PeerAddr => $ServerAddr,
-        PeerPort => $ServerPortForClient,
-        Proto    => 'tcp'
+        PeerAddr  => $ServerAddr,
+        PeerPort  => $ServerPortForClient,
+        Proto     => 'tcp',
+        #ReuseAddr => 1,
+        #ReusePort => 1,
+        Blocking  => 0,
+        Timeout   => $timeout,
     );
 
     if (! defined $sock) {
@@ -1110,19 +1117,33 @@ sub send_request ($$$$@) {
         if ($tries < 10) {
             warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
             sleep 1;
+            #warn "sending request";
             return send_request($req, $middle_delay, $timeout, $name, $tries + 1);
-        } else {
-            die "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+
         }
+
+        bail_out("Can't connect to $ServerAddr:$ServerPortForClient: $! (Aborted)\n");
     }
+
+    #warn "connected";
 
     my @req_bits = ref $req ? @$req : ($req);
 
-    my $flags = fcntl $sock, F_GETFL, 0
-      or die "Failed to get flags: $!\n";
+    my $head_req = 0;
+    {
+        my $req = join '', map { $_->{value} } @req_bits;
+        #warn "Request: $req\n";
+        if ($req =~ /^\s*HEAD\s+/) {
+            #warn "Found HEAD request!\n";
+            $head_req = 1;
+        }
+    }
 
-    fcntl $sock, F_SETFL, $flags | O_NONBLOCK
-      or die "Failed to set flags: $!\n";
+    #my $flags = fcntl $sock, F_GETFL, 0
+    #or die "Failed to get flags: $!\n";
+
+    #fcntl $sock, F_SETFL, $flags | O_NONBLOCK
+    #or die "Failed to set flags: $!\n";
 
     my $ctx = {
         resp         => '',
@@ -1146,6 +1167,8 @@ sub send_request ($$$$@) {
         {
             last;
         }
+
+        #warn "doing select...\n";
 
         my ( $new_readable, $new_writable, $new_err ) =
           IO::Select->select( $readable_hdls, $writable_hdls, $err_hdls,
@@ -1257,12 +1280,12 @@ sub send_request ($$$$@) {
         }
     }
 
-    return $ctx->{resp};
+    return ($ctx->{resp}, $head_req);
 }
 
 sub timeout_event_handler ($) {
     my $ctx = shift;
-    warn "ERROR: socket client: timed out - $ctx->{name}\n";
+    fail("ERROR: client socket timed out - $ctx->{name}\n");
 }
 
 sub error_event_handler ($) {
@@ -1766,6 +1789,16 @@ If the test is made of multiple requests, then
 error_code B<MUST> be an array with the expected value for the response status
 of each request in the test.
 
+=head2 error_code_like
+
+Just like C<error_code>, but accepts a Perl regex as the value, for example:
+
+    --- error_code_like: ^(?:500)?$
+
+If the test is made of multiple requests, then
+error_code_like B<MUST> be an array with the expected value for the response status
+of each request in the test.
+
 =head2 error_log
 
 Checks if the pattern or multiple patterns all appear in lines of the F<error.log> file.
@@ -2182,6 +2215,11 @@ This module has a Git repository on Github, which has access for all.
     http://github.com/agentzh/test-nginx
 
 If you want a commit bit, feel free to drop me a line.
+
+=head1 DEBIAN PACKAGES
+
+António P. P. Almeida is maintaining a Debian package for this module
+in his Debian repository: http://debian.perusio.net
 
 =head1 AUTHORS
 

@@ -21,6 +21,7 @@ no_index:
 requires:
   ExtUtils::MakeMaker: 0
   Fcntl: 0
+  File::Path: 0
   Filter::Util::Call: 0
   HTTP::Response: 0
   IO::Select: 0
@@ -38,4 +39,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/bsd-license.php
   repository: http://github.com/agentzh/test-nginx
-version: 0.18
+version: 0.19

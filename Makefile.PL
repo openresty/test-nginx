@@ -19,6 +19,7 @@ requires        ('Fcntl');
 requires        ('POSIX');
 requires        ('URI::Escape');
 requires        ('IO::Select');
+requires        ('File::Path');
 requires        ('List::MoreUtils');
 requires        ('ExtUtils::MakeMaker');
 

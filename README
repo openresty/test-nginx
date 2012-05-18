@@ -5,9 +5,9 @@ DESCRIPTION
     This distribution provides two testing modules for Nginx C module
     development:
 
-    *   Test::Nginx::LWP
+    *   Test::Nginx::Socket (This is recommended.)
 
-    *   Test::Nginx::Socket
+    *   Test::Nginx::LWP (This is obsolete.)
 
     All of them are based on Test::Base.
 
@@ -233,6 +233,10 @@ SOURCE REPOSITORY
         http://github.com/agentzh/test-nginx
 
     If you want a commit bit, feel free to drop me a line.
+
+DEBIAN PACKAGES
+    António P. P. Almeida is maintaining a Debian package for this module in
+    his Debian repository: http://debian.perusio.net
 
 AUTHORS
     agentzh (章亦春) "<agentzh@gmail.com>"

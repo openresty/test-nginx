@@ -4,7 +4,7 @@ use lib 'lib';
 use lib 'inc';
 use Test::Base -Base;
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 our $NoLongString;
 
@@ -104,6 +104,7 @@ sub run_test_helper ($$) {
     my $request = $block->request;
 
     my $name = $block->name;
+
     #if (defined $TODO) {
     #$name .= "# $TODO";
     #}
