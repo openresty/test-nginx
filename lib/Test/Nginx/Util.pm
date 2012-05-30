@@ -15,6 +15,7 @@ use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
 use ExtUtils::MakeMaker ();
 use File::Path qw(make_path);
+use File::Find qw(find);
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
@@ -76,7 +77,7 @@ our $DaemonEnabled          = 'on';
 our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
 our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
 our $NoRootLocation         = 0;
-our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0;
+our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.05;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
@@ -251,7 +252,7 @@ sub cleanup () {
                     warn("Failed to send quit signal to the child process with PID $pid.\n");
                 }
 
-                sleep 0.5;
+                sleep $TestNginxSleep;
 
                 if (system("ps $pid > /dev/null") == 0) {
                     if ($i < 10) {
@@ -272,6 +273,9 @@ sub cleanup () {
 }
 
 sub error_log_data () {
+    # this is for logging in the log-phase which is after the serser closes the connection:
+    sleep $TestNginxSleep;
+
     open my $in, $ErrLogFile or
         return undef;
     my @lines = <$in>;
@@ -297,23 +301,49 @@ sub run_tests () {
 
 sub setup_server_root () {
     if (-d $ServRoot) {
-        # Take special care, so we won't accidentally remove
-        # real user data when TEST_NGINX_SERVROOT is mis-used.
-        system("rm -rf $ConfDir > /dev/null") == 0 or
-            bail_out "Can't remove $ConfDir";
-        system("rm -rf $HtmlDir > /dev/null") == 0 or
-            bail_out "Can't remove $HtmlDir";
-        system("rm -rf $LogDir > /dev/null") == 0 or
-            bail_out "Can't remove $LogDir";
-        system("rm -rf $ServRoot/*_temp > /dev/null") == 0 or
-            bail_out "Can't remove $ServRoot/*_temp";
-        system("rmdir $ServRoot > /dev/null") == 0 or
-            bail_out "Can't remove $ServRoot (not empty?)";
+        if ($UseHup) {
+            find({ bydepth => 1, no_chdir => 1, wanted => sub {
+                 if (-d $_) {
+                     if ($_ ne $ServRoot && $_ ne $LogDir) {
+                         #warn "removing directory $_";
+                         rmdir $_ or warn "Failed to rmdir $_\n";
+                     }
+
+                 } else {
+                     if ($_ =~ /\bnginx\.pid$/) {
+                         return;
+                     }
+
+                     #warn "removing file $_";
+                     system("rm $_") == 0 or warn "Failed to remove $_\n";
+                 }
+
+            }}, $ServRoot);
+
+        } else {
+
+            # Take special care, so we won't accidentally remove
+            # real user data when TEST_NGINX_SERVROOT is mis-used.
+            system("rm -rf $ConfDir > /dev/null") == 0 or
+                bail_out "Can't remove $ConfDir";
+            system("rm -rf $HtmlDir > /dev/null") == 0 or
+                bail_out "Can't remove $HtmlDir";
+            system("rm -rf $LogDir > /dev/null") == 0 or
+                bail_out "Can't remove $LogDir";
+            system("rm -rf $ServRoot/*_temp > /dev/null") == 0 or
+                bail_out "Can't remove $ServRoot/*_temp";
+            system("rmdir $ServRoot > /dev/null") == 0 or
+                bail_out "Can't remove $ServRoot (not empty?)";
+        }
     }
-    mkdir $ServRoot or
-        bail_out "Failed to do mkdir $ServRoot\n";
-    mkdir $LogDir or
-        bail_out "Failed to do mkdir $LogDir\n";
+    if (!-d $ServRoot) {
+        mkdir $ServRoot or
+            bail_out "Failed to do mkdir $ServRoot\n";
+    }
+    if (!-d $LogDir) {
+        mkdir $LogDir or
+            bail_out "Failed to do mkdir $LogDir\n";
+    }
     mkdir $HtmlDir or
         bail_out "Failed to do mkdir $HtmlDir\n";
 
@@ -520,6 +550,7 @@ sub get_nginx_version () {
 
 sub get_pid_from_pidfile ($) {
     my ($name) = @_;
+
     open my $in, $PidFile or
         bail_out("$name - Failed to open the pid file $PidFile for reading: $!");
     my $pid = do { local $/; <$in> };
@@ -612,6 +643,8 @@ sub run_test ($) {
     my $should_restart = 1;
     my $should_reconfig = 1;
 
+    #warn "run test\n";
+
     if (!defined $config) {
         if (!$NoNginxManager) {
             # Manager without config.
@@ -648,6 +681,8 @@ sub run_test ($) {
             $should_restart = 0;
         }
     }
+
+    #warn "should restart: $should_restart\n";
 
     my $skip_nginx = $block->skip_nginx;
     my $skip_nginx2 = $block->skip_nginx2;
@@ -758,31 +793,87 @@ sub run_test ($) {
         $todo_reason = "various reasons";
     }
 
+    #warn "HERE";
+
     if (!$NoNginxManager && !$should_skip && $should_restart) {
+        #warn "HERE";
+
         if ($should_reconfig) {
             $PrevConfig = $config;
         }
+
         my $nginx_is_running = 1;
+
+        #warn "pid file: ", -f $PidFile;
+
         if (-f $PidFile) {
+            #warn "HERE";
             my $pid = get_pid_from_pidfile($name);
+
+            #warn "PID: $pid\n";
+
             if (!defined $pid or $pid eq '') {
+                #warn "HERE";
                 undef $nginx_is_running;
                 goto start_nginx;
             }
 
+            #warn "HERE";
+
             if (system("ps $pid > /dev/null") == 0) {
                 #warn "found running nginx...";
-                write_config_file($config, $block->http_config, $block->main_config);
+
+                if ($UseHup) {
+                    setup_server_root();
+                    write_user_files($block);
+                    write_config_file($config, $block->http_config, $block->main_config);
+
+                    if ($Verbose) {
+                        warn "sending HUP signal to $pid.\n";
+                    }
+                    if (system("kill -HUP $pid") == 0) {
+                        sleep $TestNginxSleep;
+
+                        if ($Verbose) {
+                            warn "sending USR1 signal to $pid.\n";
+                        }
+
+                        if (system("kill -USR1 $pid") == 0) {
+                            sleep $TestNginxSleep;
+
+
+                            if ($Verbose) {
+                                warn "skip starting nginx from scratch\n";
+                            }
+
+                            $nginx_is_running = 1;
+                            goto request;
+
+                        } else {
+                            if ($Verbose) {
+                                warn "$name - Failed to send HUP signal";
+                            }
+                        }
+
+                    } else {
+                        warn "$name - Failed to send USR1 signal";
+                    }
+                }
+
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
-                sleep 0.02;
+
+                sleep $TestNginxSleep;
+
                 if (system("ps $pid > /dev/null") == 0) {
                     #warn "killing with force...\n";
                     kill(SIGKILL, $pid);
-                    sleep 0.02;
+                    sleep $TestNginxSleep;
                 }
+
                 undef $nginx_is_running;
+
             } else {
                 unlink $PidFile or
                     bail_out "Failed to remove pid file $PidFile\n";
@@ -795,6 +886,10 @@ sub run_test ($) {
 start_nginx:
 
         unless ($nginx_is_running) {
+            if ($Verbose) {
+                warn "starting nginx from scratch\n";
+            }
+
             #system("killall -9 nginx");
 
             #warn "*** Restarting the nginx server...\n";
@@ -855,12 +950,7 @@ start_nginx:
                     $ChildPid = $pid;
                 }
 
-                if ($TestNginxSleep) {
-                    sleep $TestNginxSleep;
-
-                } else {
-                    sleep 1;
-                }
+                sleep $TestNginxSleep;
 
             } else {
                 if (system($cmd) != 0) {
@@ -875,8 +965,14 @@ start_nginx:
                 }
             }
 
-            sleep 0.1;
+            sleep $TestNginxSleep;
         }
+    }
+
+request:
+
+    if ($Verbose) {
+        warn "preparing requesting...\n";
     }
 
     if ($block->init) {
@@ -890,22 +986,8 @@ start_nginx:
     while ($i++ < $RepeatEach) {
         #warn "Use hup: $UseHup, i: $i\n";
 
-        if ($UseHup && $i > 1) {
-            my $pid = get_pid_from_pidfile($name);
-            if (system("ps $pid > /dev/null") == 0) {
-                if ($Verbose) {
-                    warn "sending HUP signal to $pid\n";
-                }
-
-                if (kill(SIGHUP, $pid) == 0) { # send quit signal
-                    warn("$name - Failed to send HUP signal to the nginx process with PID $pid");
-                }
-                if ($TestNginxSleep) {
-                    sleep $TestNginxSleep;
-                } else {
-                    sleep 0.1;
-                }
-            }
+        if ($Verbose) {
+            warn "Run the test block...\n";
         }
 
         if ($should_skip) {
@@ -955,11 +1037,7 @@ retry:
                     warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
 
-                if ($TestNginxSleep) {
-                    sleep $TestNginxSleep;
-                } else {
-                    sleep 0.1;
-                }
+                sleep $TestNginxSleep;
 
                 if (-f $PidFile) {
                     if ($i++ < 5) {
@@ -975,7 +1053,8 @@ retry:
                     }
 
                     kill(SIGKILL, $pid);
-                    sleep 0.1;
+
+                    sleep $TestNginxSleep;
 
                     unlink $PidFile or
                         bail_out "Failed to remove pid file $PidFile\n";
@@ -1006,15 +1085,13 @@ END {
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     #warn("Failed to send quit signal to the nginx process with PID $pid");
                 }
-                if ($TestNginxSleep) {
-                    sleep $TestNginxSleep;
-                } else {
-                    sleep 0.02;
-                }
+
+                sleep $TestNginxSleep;
+
                 if (system("ps $pid > /dev/null") == 0) {
                     #warn "killing with force...\n";
                     kill(SIGKILL, $pid);
-                    sleep 0.02;
+                    sleep $TestNginxSleep;
                 }
             } else {
                 unlink $PidFile;

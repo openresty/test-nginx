@@ -672,6 +672,7 @@ sub check_error_log ($$$$$) {
                 SKIP: {
                     skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                     fail("$name - pattern \"$pat\" matches a line in error.log");
+                    #die join("", @$lines);
                 }
             }
         }
