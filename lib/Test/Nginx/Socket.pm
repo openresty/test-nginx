@@ -1729,7 +1729,8 @@ Controls whether to output verbose debugging messages in Test::Nginx. Default to
 
 When set to 1, Test::Nginx will try to send HUP signal to the
 nginx master process to reload the config file between
-successive C<repeast_each> tests. When this envirnoment is set
+successive test blocks (but not successive C<repeast_each>
+sub-tests within the same test block). When this envirnoment is set
 to 1, it will also enfornce the "master_process on" config line
 in the F<nginx.conf> file,
 because Nginx is buggy in processing HUP signal when the master process is off.
