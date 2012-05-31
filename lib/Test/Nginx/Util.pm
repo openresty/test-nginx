@@ -1019,7 +1019,7 @@ request:
         }
     }
 
-    if ($Profiling || $UseValgrind) {
+    if (($Profiling || $UseValgrind) && !$UseHup) {
         #warn "Found quit...";
         if (-f $PidFile) {
             #warn "found pid file...";
