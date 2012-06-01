@@ -846,6 +846,11 @@ sub run_test ($) {
                             }
 
                             $nginx_is_running = 1;
+
+                            if ($UseValgrind) {
+                                warn "$name\n";
+                            }
+
                             goto request;
 
                         } else {
