@@ -20,6 +20,7 @@ requires        ('POSIX');
 requires        ('URI::Escape');
 requires        ('IO::Select');
 requires        ('File::Path');
+requires        ('File::Temp');
 requires        ('List::MoreUtils');
 requires        ('List::Util');
 requires        ('Encode');
