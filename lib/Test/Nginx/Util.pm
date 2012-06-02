@@ -39,6 +39,8 @@ our $PostponeOutput = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
 
 our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 3;
 
+our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
+
 sub timeout (@) {
     if (@_) {
         $Timeout = shift;
@@ -60,7 +62,7 @@ our $ForkManager;
 
 sub bail_out (@);
 
-if ($Profiling || $UseValgrind) {
+if ($Profiling || $UseValgrind || $CheckLeak) {
     eval "use Parallel::ForkManager";
     if ($@) {
         bail_out "Failed to load Parallel::ForkManager: $@\n";
@@ -94,6 +96,9 @@ sub server_port (@) {
 
 sub repeat_each (@) {
     if (@_) {
+        if ($CheckLeak) {
+            return;
+        }
         $RepeatEach = shift;
     } else {
         return $RepeatEach;
@@ -130,6 +135,9 @@ sub log_level (@) {
 }
 
 sub master_on () {
+    if ($CheckLeak) {
+        return;
+    }
     $MasterProcessEnabled = 'on';
 }
 
@@ -138,6 +146,10 @@ sub master_off () {
 }
 
 sub master_process_enabled (@) {
+    if ($CheckLeak) {
+        return;
+    }
+
     if (@_) {
         $MasterProcessEnabled = shift() ? 'on' : 'off';
     } else {
@@ -156,6 +168,7 @@ our @EXPORT_OK = qw(
     show_all_chars
     parse_headers
     run_tests
+    get_pid_from_pidfile
     $ServerPortForClient
     $ServerPort
     $NginxVersion
@@ -165,6 +178,7 @@ our @EXPORT_OK = qw(
     $RunTestHelper
     $NoNginxManager
     $RepeatEach
+    $CheckLeak
     timeout
     worker_connections
     workers
@@ -291,9 +305,7 @@ sub run_tests () {
     }
 
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
-        #for (1..3) {
-            run_test($block);
-        #}
+        run_test($block);
     }
 
     cleanup();
@@ -460,6 +472,10 @@ sub write_config_file ($$$) {
 
     if (!defined $main_config) {
         $main_config = '';
+    }
+
+    if ($CheckLeak) {
+        $LogLevel = 'warn';
     }
 
     open my $out, ">$ConfFile" or
@@ -951,6 +967,7 @@ start_nginx:
                     exec "exec $cmd";
 
                 } else {
+                    # main process
                     $ChildPid = $pid;
                 }
 

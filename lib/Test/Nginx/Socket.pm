@@ -7,11 +7,13 @@ use Test::Base -Base;
 
 our $VERSION = '0.19';
 
+use POSIX qw( SIGQUIT SIGKILL SIGTERM SIGHUP );
 use Encode;
-use Data::Dumper;
+#use Data::Dumper;
 use Time::HiRes qw(sleep time);
 use Test::LongString;
 use List::MoreUtils qw( any );
+use List::Util qw( sum );
 use IO::Select ();
 
 our $ServerAddr = 'localhost';
@@ -24,6 +26,7 @@ use Test::Nginx::Util qw(
   bail_out
   trim
   show_all_chars
+  get_pid_from_pidfile
   parse_headers
   run_tests
   $ServerPortForClient
@@ -33,6 +36,7 @@ use Test::Nginx::Util qw(
   $ConfFile
   $RunTestHelper
   $RepeatEach
+  $CheckLeak
   timeout
   error_log_data
   worker_connections
@@ -78,6 +82,8 @@ sub read_event_handler ($);
 sub write_event_handler ($);
 sub check_response_body ($$$$$);
 sub fmt_str ($);
+sub gen_cmd_from_req ($);
+sub get_linear_regression_slope ($);
 
 sub no_long_string () {
     $NoLongString = 1;
@@ -450,6 +456,77 @@ sub run_test_helper ($$) {
 
     if ( $#$r_req_list < 0 ) {
         bail_out("$name - request empty");
+    }
+
+    if ($CheckLeak) {
+        $dry_run = 1;
+
+        warn "$name\n";
+
+        my $req = $r_req_list->[0];
+        my $cmd = gen_cmd_from_req($req);
+
+        # start a sub-process to run ab or weighttp
+        my $pid = $Test::Nginx::Util::ForkManager->start;
+        if (!$pid) {
+            # child process
+            exec @$cmd;
+
+        } else {
+            # main process
+            my $ngx_pid = get_pid_from_pidfile($name);
+            sleep 0.8;
+            my @rss_list;
+            for (my $i = 0; $i < 100; $i++) {
+                sleep 0.02;
+                my $out = `ps -eo pid,rss|grep $ngx_pid`;
+                my @lines = grep { $_->[0] eq $ngx_pid }
+                                 map { s/^\s+|\s+$//g; [ split /\s+/, $_ ] }
+                                 split /\n/, $out;
+
+                if (@lines == 0) {
+                    last;
+                }
+
+                if (@lines > 1) {
+                    warn "Bad ps output: \"$out\"\n";
+                    next;
+                }
+
+                my $ln = shift @lines;
+                push @rss_list, $ln->[1];
+            }
+
+            #if ($Test::Nginx::Util::Verbose) {
+            warn "LeakTest: [@rss_list]\n";
+            #}
+
+            if (@rss_list == 0) {
+                warn "LeakTest: k=N/A\n";
+
+            } else {
+                my $k = get_linear_regression_slope(\@rss_list);
+                warn "LeakTest: k=$k\n";
+                #$k = get_linear_regression_slope([1 .. 100]);
+                #warn "K = $k (1 expected)\n";
+                #$k = get_linear_regression_slope([map { $_ * 2 } 1 .. 100]);
+                #warn "K = $k (2 expected)\n";
+            }
+
+            if (system("ps $pid > /dev/null") == 0) {
+                kill(SIGTERM, $pid);
+
+                sleep 0.2;
+
+                if (system("ps $pid > /dev/null") == 0) {
+                    if ($Test::Nginx::Util::Verbose) {
+                        warn "killing $pid with force\n";
+                    }
+
+                    kill(SIGKILL, $pid);
+                }
+            }
+        }
     }
 
     #warn "request: $req\n";
@@ -1205,6 +1282,75 @@ sub read_event_handler ($) {
 
     # impossible to reach here...
     return undef;
+}
+
+sub gen_cmd_from_req ($) {
+    my $req = shift;
+
+    $req = join '', map { $_->{value} } @$req;
+
+    #warn "Req: $req\n";
+
+    my ($meth, $uri, $http_ver);
+    if ($req =~ m{^\s*(\w+)\s+(.*\S)\s*HTTP/(\S+)\r\n}gcs) {
+        ($meth, $uri, $http_ver) = ($1, $2, $3);
+
+    } else {
+        bail_out "cannot parse the status line in the request: $req";
+    }
+
+    #warn "HTTP version: $http_ver\n";
+
+    my $prog;
+    if ($http_ver eq '1.1') {
+        $prog = 'weighttp';
+
+    } else {
+        # HTTP 1.0
+        $prog = 'ab';
+    }
+
+    my @headers;
+    if ($req =~ m{\G(.*?)\r\n\r\n}gcs) {
+        my $headers = $1;
+        #warn "raw headers: $headers\n";
+        @headers = grep { !/^Connection\s*:/i && !/^Host: localhost$/i } split /\r\n/, $headers;
+
+    } else {
+        bail_out "cannot parse the header entries in the request: $req";
+    }
+
+    #warn "headers: @headers ", scalar(@headers), "\n";
+
+    my @opts = ('-c2', '-k', '-n100000');
+    for my $h (@headers) {
+        #warn "h: $h\n";
+        push @opts, '-H', $h;
+    }
+
+    my $server = server_addr();
+    my $port = server_port();
+    my @cmd = ($prog, @opts, "http://$server:$port$uri");
+
+    if ($Test::Nginx::Util::Verbose) {
+        warn "command: @cmd\n";
+    }
+
+    return \@cmd;
+}
+
+sub get_linear_regression_slope ($) {
+    my $list = shift;
+
+    my $n = @$list;
+    my $avg_x = ($n + 1) / 2;
+    my $avg_y = sum(@$list) / $n;
+
+    my $x = 0;
+    my $avg_xy = sum(map { $x++; $x * $_ } @$list) / $n;
+    my $avg_x2 = sum(map { $_ * $_ } 1 .. $n) / $n;
+    my $k = ($avg_xy - $avg_x * $avg_y) / ($avg_x2 - $avg_x * $avg_x);
+    return sprintf("%.01f", $k);
 }
 
 1;

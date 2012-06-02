@@ -21,6 +21,8 @@ requires        ('URI::Escape');
 requires        ('IO::Select');
 requires        ('File::Path');
 requires        ('List::MoreUtils');
+requires        ('List::Util');
+requires        ('Encode');
 requires        ('ExtUtils::MakeMaker');
 
 requires        ('Parallel::ForkManager');
