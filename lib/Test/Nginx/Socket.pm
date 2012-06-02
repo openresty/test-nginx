@@ -15,6 +15,7 @@ use Test::LongString;
 use List::MoreUtils qw( any );
 use List::Util qw( sum );
 use IO::Select ();
+use File::Temp qw( tempfile );
 
 our $ServerAddr = 'localhost';
 
@@ -475,7 +476,7 @@ sub run_test_helper ($$) {
         } else {
             # main process
             my $ngx_pid = get_pid_from_pidfile($name);
-            sleep 0.8;
+            sleep 1;
             my @rss_list;
             for (my $i = 0; $i < 100; $i++) {
                 sleep 0.02;
@@ -514,17 +515,7 @@ sub run_test_helper ($$) {
             }
 
             if (system("ps $pid > /dev/null") == 0) {
-                kill(SIGTERM, $pid);
-
-                sleep 0.2;
-
-                if (system("ps $pid > /dev/null") == 0) {
-                    if ($Test::Nginx::Util::Verbose) {
-                        warn "killing $pid with force\n";
-                    }
-
-                    kill(SIGKILL, $pid);
-                }
+                kill(SIGKILL, $pid);
             }
         }
     }
@@ -1301,20 +1292,26 @@ sub gen_cmd_from_req ($) {
 
     #warn "HTTP version: $http_ver\n";
 
+    my @opts = ('-c2', '-k', '-n100000');
+
     my $prog;
-    if ($http_ver eq '1.1') {
+    if ($http_ver eq '1.1' and $meth eq 'GET') {
         $prog = 'weighttp';
 
     } else {
         # HTTP 1.0
         $prog = 'ab';
+        unshift @opts, '-r', '-d', '-S';
     }
 
     my @headers;
     if ($req =~ m{\G(.*?)\r\n\r\n}gcs) {
         my $headers = $1;
         #warn "raw headers: $headers\n";
-        @headers = grep { !/^Connection\s*:/i && !/^Host: localhost$/i } split /\r\n/, $headers;
+        @headers = grep {
+            !/^Connection\s*:/i && !/^Host: localhost$/i
+                && !/^Content-Length\s*:/i
+        } split /\r\n/, $headers;
 
     } else {
         bail_out "cannot parse the header entries in the request: $req";
@@ -1322,15 +1319,56 @@ sub gen_cmd_from_req ($) {
 
     #warn "headers: @headers ", scalar(@headers), "\n";
 
-    my @opts = ('-c2', '-k', '-n100000');
     for my $h (@headers) {
         #warn "h: $h\n";
-        push @opts, '-H', $h;
+        if ($prog eq 'ab' && $h =~ /^\s*Content-Type\s*:\s*(.*\S)/i) {
+            my $type = $1;
+            push @opts, '-T', $type;
+
+        } else {
+            push @opts, '-H', $h;
+        }
     }
 
-    my $server = server_addr();
-    my $port = server_port();
-    my @cmd = ($prog, @opts, "http://$server:$port$uri");
+    my $bodyfile;
+
+    if ($req =~ m{\G.+}gcs || $meth eq 'POST' || $meth eq 'PUT') {
+        my $body = $&;
+
+        if (!defined $body) {
+            $body = '';
+        }
+
+        my ($out, $bodyfile) = tempfile("bodyXXXXXXX", UNLINK => 1,
+                                        SUFFIX => '.temp', TMPDIR => 1);
+        print $out $body;
+        close $out;
+
+        if ($meth eq 'PUT') {
+            push @opts, '-u', $bodyfile;
+
+        } elsif ($meth eq 'POST') {
+            push @opts, '-p', $bodyfile;
+
+        } else {
+            warn "WARNING: method $meth not supported for ab when taking a request body\n";
+            $meth = 'PUT';
+            push @opts, '-p', $bodyfile;
+        }
+    }
+
+    if ($meth eq 'HEAD') {
+        unshift @opts, '-i';
+    }
+
+    my $link;
+    {
+        my $server = $ServerAddr;
+        my $port = $ServerPortForClient;
+        $link = "http://$server:$port$uri";
+    }
+
+    my @cmd = ($prog, @opts, $link);
 
     if ($Test::Nginx::Util::Verbose) {
         warn "command: @cmd\n";
@@ -1871,10 +1909,66 @@ starts. The following environment variables are supported by this module:
 
 Controls whether to output verbose debugging messages in Test::Nginx. Default to empty.
 
+=head2 TEST_NGINX_CHECK_LEAK
+
+When set to 1, the test scaffold performs the most general memory leak test by means of calling weighttpd/ab and "ps".
+
+Specifically, it starts C<weighttp> (for HTTP 1.1 C<GET> requests) or
+C<ab> (for HTTP 1.0 requests) to repeatedly hitting Nginx for
+seconds in a sub-process, and then after about 1 second, it will
+start sampling the RSS value of the Nginx process by calling
+the C<ps> utility every 20 ms. Finally, it will output all
+the sample point data and the
+line slope of the linear regression result on the 100 sample points.
+
+One typical output for non-leaking test cases:
+
+    t/075-logby.t .. 3/17 TEST 2: log_by_lua_file
+    LeakTest: [2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176 2176 2176 2176 2176 2176 2176
+     2176 2176 2176]
+    LeakTest: k=0.0
+
+and here is an example of leaking:
+
+    TEST 5: ngx.ctx available in log_by_lua (not defined yet)
+    LeakTest: [4396 4440 4476 4564 4620 4708 4752
+     4788 4884 4944 4996 5032 5080 5132 5188 5236
+     5348 5404 5464 5524 5596 5652 5700 5776 5828
+     5912 5964 6040 6108 6108 6316 6316 6584 6672
+     6672 6752 6820 6912 6912 6980 7064 7152 7152
+     7240 7340 7340 7432 7508 7508 7600 7700 7700
+     7792 7896 7896 7992 7992 8100 8100 8204 8296
+     8296 8416 8416 8512 8512 8624 8624 8744 8744
+     8848 8848 8968 8968 9084 9084 9204 9204 9324
+     9324 9444 9444 9584 9584 9704 9704 9832 9832
+     9864 9964 9964 10096 10096 10488 10488 10488
+     10488 10488 11052 11052]
+    LeakTest: k=64.1
+
+Even very small leaks can be amplified and caught easily by this
+testing mode because their slopes will usually be far above C<1.0>.
+
+For now, only C<GET>, C<POST>, C<PUT>, and C<HEAD> requests are supported
+(due to the limited HTTP support in both C<ab> and C<weighttp>).
+Other methods specified in the test cases will turn to C<GET> with force.
+
+The tests in this mode will always succeed because this mode also
+enforces the "dry-run" mode.
+
 =head2 TEST_NGINX_USE_HUP
 
-When set to 1, Test::Nginx will try to send HUP signal to the
-nginx master process to reload the config file between
+When set to 1, the test scaffold will try to send C<HUP> signal to the
+Nginx master process to reload the config file between
 successive test blocks (but not successive C<repeast_each>
 sub-tests within the same test block). When this envirnoment is set
 to 1, it will also enfornce the "master_process on" config line
