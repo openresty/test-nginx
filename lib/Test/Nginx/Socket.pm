@@ -1911,7 +1911,8 @@ Controls whether to output verbose debugging messages in Test::Nginx. Default to
 
 =head2 TEST_NGINX_CHECK_LEAK
 
-When set to 1, the test scaffold performs the most general memory leak test by means of calling weighttpd/ab and "ps".
+When set to 1, the test scaffold performs the most general memory
+leak test by means of calling C<weighttpd>/C<ab> and C<ps>.
 
 Specifically, it starts C<weighttp> (for HTTP 1.1 C<GET> requests) or
 C<ab> (for HTTP 1.0 requests) to repeatedly hitting Nginx for
