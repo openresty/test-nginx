@@ -1011,6 +1011,10 @@ request:
             warn "Run the test block...\n";
         }
 
+        if ($i > 1) {
+            write_user_files($block);
+        }
+
         if ($should_skip) {
             SKIP: {
                 Test::More::skip("$name - $skip_reason", $tests_to_skip);
