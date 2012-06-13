@@ -1800,6 +1800,32 @@ If the test is made of multiple requests, then
 error_code_like B<MUST> be an array with the expected value for the response status
 of each request in the test.
 
+=head2 timeout
+
+Specify the timeout value (in seconds) for the HTTP client embeded into the test scaffold. This has nothing
+to do with the server side configuration.
+
+Note that, just as almost all the timeout settings in the nginx world, this timeout
+also specifies the maximum waiting time between two successive I/O events on the same socket handle,
+rather than the total waiting time for the current socket operation.
+
+When the timeout setting expires, a test failure will be
+triggered with the message "ERROR: client socket timed out - TEST NAME".
+
+Here is an example:
+
+    === TEST 1: test timeout
+    --- location
+        location = /t {
+            echo_sleep 1;
+            echo ok;
+        }
+    --- request
+        GET /t
+    --- response_body
+    ok
+    --- timeout: 1.5
+
 =head2 error_log
 
 Checks if the pattern or multiple patterns all appear in lines of the F<error.log> file.
