@@ -638,6 +638,7 @@ sub check_error_code($$$$$) {
         }
     }
 }
+
 sub check_raw_response_headers($$$$$) {
     my ($block, $raw_headers, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
@@ -652,6 +653,7 @@ sub check_raw_response_headers($$$$$) {
         }
     }
 }
+
 sub check_response_headers($$$$$) {
     my ($block, $res, $raw_headers, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
