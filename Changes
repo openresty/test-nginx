@@ -1,5 +1,44 @@
 Changes for Test::Nginx
 
+0.20 - 2012-06-25
+* feature: now "--- error_log" allows a single regexp object as its value.
+
+* feature: made client socket timeout as a test failure.
+
+* feature: added support for the environment TEST_NGINX_CHECK_LEAK=1
+  that enables the most general memory leak check by calling
+  ab/weighttp + ps (for the nginx process's RSS).
+
+* feature: when the TEST_NGINX_USE_HUP environment is set to true,
+  then HUP signal will be used to update the nginx config between
+  different test blocks and there will be no HUP reload between
+  every two successive test cases within the same test block when
+  "repeat_each" is set to a number more than 1.
+
+* bugfix: fixed the TEST_NGINX_SLEEP environment support.
+
+* bugfix: we should always restore user files before each
+  "repeat_each" iteration because some test case may modify
+  the user files.
+
+* bugfix: setting environment TEST_NGINX_USE_HUP could not work
+  with TEST_NGINX_USE_VALGRIND=1 properly.
+
+* bugfix: print out every test block's name when
+  TEST_NGINX_USE_HUP=1 and TEST_NGINX_USE_VALGRIND=1.
+
+* bugfix: the "response body truncated" warning was a false alarm
+  for HEAD requests. thanks Piotr Sikora for reporting this in
+  github issue #1.
+
+* bugfix: do not add --gen-suppressions and --suppressions options
+  to the valgrind command line when custom non-number
+  TEST_NGINX_USE_VALGRIND env value is specified.
+
+* docs: documented the "--- timeout" section.
+
+* docs: added a link to António P. P. Almeida's debian package for this module.
+
 0.19 - 2012-04-29
 * feature: added new section "--- error_code_like".
 * bugfix: tests could hang on slow machines after maximal number of connecting

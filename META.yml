@@ -19,15 +19,19 @@ no_index:
     - inc
     - t
 requires:
+  Encode: 0
   ExtUtils::MakeMaker: 0
   Fcntl: 0
+  File::Find: 0
   File::Path: 0
+  File::Temp: 0
   Filter::Util::Call: 0
   HTTP::Response: 0
   IO::Select: 0
   IO::Socket: 0
   LWP::UserAgent: 0
   List::MoreUtils: 0
+  List::Util: 0
   POSIX: 0
   Parallel::ForkManager: 0
   Test::Base: 0
@@ -39,4 +43,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/bsd-license.php
   repository: http://github.com/agentzh/test-nginx
-version: 0.19
+version: 0.20
