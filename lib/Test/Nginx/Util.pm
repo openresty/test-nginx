@@ -845,17 +845,17 @@ sub run_test ($) {
                     write_config_file($config, $block->http_config, $block->main_config);
 
                     if ($Verbose) {
-                        warn "sending HUP signal to $pid.\n";
+                        warn "sending USR1 signal to $pid.\n";
                     }
-                    if (system("kill -HUP $pid") == 0) {
-                        sleep $TestNginxSleep * 2;
+                    if (system("kill -USR1 $pid") == 0) {
+                        sleep $TestNginxSleep;
 
                         if ($Verbose) {
-                            warn "sending USR1 signal to $pid.\n";
+                            warn "sending HUP signal to $pid.\n";
                         }
 
-                        if (system("kill -USR1 $pid") == 0) {
-                            sleep $TestNginxSleep;
+                        if (system("kill -HUP $pid") == 0) {
+                            sleep $TestNginxSleep * 3;
 
                             if ($Verbose) {
                                 warn "skip starting nginx from scratch\n";
