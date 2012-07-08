@@ -1881,6 +1881,28 @@ Just like the C<--- error_log> section, one can also specify multiple patterns:
 
 Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
 
+=head2 log_level
+
+Overrides the default error log level for the current test block.
+
+For example:
+
+    --- log_level: debug
+
+The default error log level can be specified in the Perl code by calling the `log_level()` function, as in
+
+    use Test::Nginx::Socket;
+
+    repeat_each(2);
+    plan tests => repeat_each() * (3 * blocks());
+
+    log_level('warn');
+
+    run_tests();
+
+    __DATA__
+    ...
+
 =head2 raw_request
 
 The exact request to send to nginx. This is useful when you want to test

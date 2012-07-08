@@ -660,6 +660,10 @@ sub run_test ($) {
     my $should_reconfig = 1;
 
     #warn "run test\n";
+    local $LogLevel = $LogLevel;
+    if ($block->log_level) {
+        $LogLevel = $block->log_level;
+    }
 
     if (!defined $config) {
         if (!$NoNginxManager) {
