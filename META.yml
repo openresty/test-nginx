@@ -3,9 +3,9 @@ abstract: 'Testing modules for Nginx C module development'
 author:
   - 'agentzh (章亦春) C<< <agentzh@gmail.com> >>'
 build_requires:
-  ExtUtils::MakeMaker: 6.55
+  ExtUtils::MakeMaker: 6.62
 configure_requires:
-  ExtUtils::MakeMaker: 6.55
+  ExtUtils::MakeMaker: 6.62
 distribution_type: module
 dynamic_config: 1
 generated_by: 'Module::Install version 1.04'
