@@ -1940,7 +1940,53 @@ server tested. The file will contain the text "Hello, world".
 
 =head2 skip_nginx
 
+Skip the specified number of subtests (in the current test block)
+for the specified version range of nginx.
+
+The format for this section is
+
+    --- skip_nginx
+    <subtest-count>: <op> <version>
+
+The <subtest-count> value must be a positive integer.
+The <op> value could be either C<< > >>, C<< >= >>, C<< < >>, or C<< <= >>. the <version> part is a valid nginx version number, like C<1.0.2>.
+
+An example is
+
+    === TEST 1: sample
+    --- config
+        location /t { echo hello; }
+    --- request
+        GET /t
+    --- response_body
+    --- skip_nginx
+    2: < 0.8.54
+
+That is, skipping 2 subtests in this test block for nginx versions older than 0.8.54.
+
+This C<skip_nginx> section only allows you to specify one boolean expression as
+the skip condition. If you want to use two boolean expressions, you should
+use the C<skip_nginx2> section instead.
+
 =head2 skip_nginx2
+
+This seciton is similar to C<skip_nginx>, but the skip condition consists of two boolean expressions joined by the operator C<and> or C<or>.
+
+The format for this section is
+
+    --- skip_nginx2
+    <subtest-count>: <op> <version> and|or <op> <version>
+
+For example:
+
+    === TEST 1: sample
+    --- config
+        location /t { echo hello; }
+    --- request
+        GET /t
+    --- response_body
+    --- skip_nginx2
+    2: < 0.8.53 and >= 0.8.41
 
 Both string scalar and string arrays are supported as values.
 
