@@ -2273,6 +2273,15 @@ If this environment is set to the number C<1> or any other
 non-zero numbers, then it is equivalent to taking the value
 C<--tool=memcheck --leak-check=full>.
 
+=head2 TEST_NGINX_USE_STAP
+
+When set to true values (like 1), the test scaffold will use systemtap to instrument the nginx
+process.
+
+You can specify the stap script in the C<stap> section.
+
+Note that you need to use the C<stap-nginx> script from the C<nginx-dtrace> project.
+
 =head2 TEST_NGINX_BINARY
 
 The command to start nginx. Defaults to C<nginx>. Can be used as an alternative
