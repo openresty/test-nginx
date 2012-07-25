@@ -16,6 +16,7 @@ use Time::HiRes qw( sleep );
 use ExtUtils::MakeMaker ();
 use File::Path qw(make_path);
 use File::Find qw(find);
+use File::Temp qw( tempfile );
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
@@ -33,6 +34,10 @@ our $NoShuffle = $ENV{TEST_NGINX_NO_SHUFFLE} || 0;
 
 our $UseValgrind = $ENV{TEST_NGINX_USE_VALGRIND};
 
+our $UseStap = $ENV{TEST_NGINX_USE_STAP};
+
+our $StapOutFile = $ENV{TEST_NGINX_STAP_OUT};
+
 our $EventType = $ENV{TEST_NGINX_EVENT_TYPE};
 
 our $PostponeOutput = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
@@ -40,6 +45,16 @@ our $PostponeOutput = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
 our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 3;
 
 our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
+
+our $StapOutFileHandle;
+
+sub stap_out_fh {
+    return $StapOutFileHandle;
+}
+
+sub stap_out_fname {
+    return $StapOutFile;
+}
 
 sub timeout (@) {
     if (@_) {
@@ -62,7 +77,7 @@ our $ForkManager;
 
 sub bail_out (@);
 
-if ($Profiling || $UseValgrind || $CheckLeak) {
+if ($Profiling || $UseValgrind || $CheckLeak || $UseStap) {
     eval "use Parallel::ForkManager";
     if ($@) {
         bail_out "Failed to load Parallel::ForkManager: $@\n";
@@ -85,6 +100,10 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
 
 our $ChildPid;
+
+sub sleep_time {
+    return $TestNginxSleep;
+}
 
 sub server_port (@) {
     if (@_) {
@@ -158,6 +177,10 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    $UseStap
+    sleep_time
+    stap_out_fh
+    stap_out_fname
     bail_out
     error_log_data
     setup_server_root
@@ -197,7 +220,7 @@ our @EXPORT_OK = qw(
 );
 
 
-if ($Profiling || $UseValgrind) {
+if ($Profiling || $UseValgrind || $UseStap) {
     $DaemonEnabled          = 'off';
     $MasterProcessEnabled   = 'off';
 }
@@ -244,7 +267,7 @@ sub cleanup () {
         return;
     }
 
-    if ($Profiling || $UseValgrind) {
+    if ($Profiling || $UseValgrind || $UseStap) {
         my $pid = $ChildPid;
         eval {
             if (defined $pid) {
@@ -445,7 +468,7 @@ sub write_config_file ($$$) {
     if ($UseHup) {
         master_on(); # config reload is buggy when master is off
 
-    } elsif ($UseValgrind) {
+    } elsif ($UseValgrind || $UseStap) {
         master_off();
     }
 
@@ -959,9 +982,47 @@ start_nginx:
 
                 warn "$name\n";
                 #warn "$cmd\n";
+
+                undef $UseStap;
+
+            } elsif ($UseStap) {
+
+                if ($StapOutFileHandle) {
+                    close $StapOutFileHandle;
+                    undef $StapOutFileHandle;
+                }
+
+                if ($block->stap) {
+                    my ($stap_fh, $stap_fname) = tempfile("XXXXXXX", SUFFIX => '.stp', TMPDIR => 1);
+                    my $stap = $block->stap;
+                    $stap =~ s/^\bF\((\w+)\)/probe process("nginx").function("$1")/smg;
+                    $stap =~ s/^\bM\(([-\w]+)\)/probe process("nginx").mark("$1")/smg;
+                    $stap =~ s/\bT\(\)/println("Fire ", pp())/smg;
+                    print $stap_fh $stap;
+                    close $stap_fh;
+
+                    my ($out, $outfile);
+
+                    if (!$StapOutFile) {
+                        ($out, $outfile) = tempfile("XXXXXXXX", SUFFIX => '.stp-out', TMPDIR => 1);
+                        close $out;
+
+                        $StapOutFile = $outfile;
+
+                    } else {
+                        $outfile = $StapOutFile;
+                    }
+
+                    open $out, $outfile or
+                        bail_out("Cannot open $outfile for reading: $!\n");
+
+                    $StapOutFileHandle = $out;
+                    $cmd = "stap-nginx -c '$cmd' -o $outfile $stap_fname";
+                    warn "CMD: $cmd\n";
+                }
             }
 
-            if ($Profiling || $UseValgrind) {
+            if ($Profiling || $UseValgrind || $UseStap) {
                 my $pid = $ForkManager->start;
 
                 if (!$pid) {
@@ -1025,15 +1086,22 @@ request:
 
                 $RunTestHelper->($block, $dry_run);
             }
+
         } elsif ($should_todo) {
             TODO: {
                 local $TODO = "$name - $todo_reason";
 
                 $RunTestHelper->($block, $dry_run);
             }
+
         } else {
             $RunTestHelper->($block, $dry_run);
         }
+    }
+
+    if ($StapOutFileHandle) {
+        close $StapOutFileHandle;
+        undef $StapOutFileHandle;
     }
 
     if (my $total_errlog = $ENV{TEST_NGINX_ERROR_LOG}) {
@@ -1048,7 +1116,7 @@ request:
         }
     }
 
-    if (($Profiling || $UseValgrind) && !$UseHup) {
+    if (($Profiling || $UseValgrind || $UseStap) && !$UseHup) {
         #warn "Found quit...";
         if (-f $PidFile) {
             #warn "found pid file...";
@@ -1103,7 +1171,7 @@ retry:
 }
 
 END {
-    if ($UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
+    if ($UseStap || $UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         local $?; # to avoid confusing Test::Builder::_ending
         if (-f $PidFile) {
             my $pid = get_pid_from_pidfile('');

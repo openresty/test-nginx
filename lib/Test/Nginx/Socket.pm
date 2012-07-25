@@ -11,7 +11,7 @@ use POSIX qw( SIGQUIT SIGKILL SIGTERM SIGHUP );
 use Encode;
 #use Data::Dumper;
 use Time::HiRes qw(sleep time);
-use Test::LongString;
+use Test::LongString qw( is_string );
 use List::MoreUtils qw( any );
 use List::Util qw( sum );
 use IO::Select ();
@@ -20,6 +20,10 @@ use File::Temp qw( tempfile );
 our $ServerAddr = 'localhost';
 
 use Test::Nginx::Util qw(
+  $UseStap
+  sleep_time
+  stap_out_fh
+  stap_out_fname
   setup_server_root
   write_config_file
   get_canon_version
@@ -77,6 +81,7 @@ our @EXPORT = qw( plan run_tests run_test
 sub send_request ($$$$@);
 
 sub run_test_helper ($$);
+sub test_stap ($$);
 
 sub error_event_handler ($);
 sub read_event_handler ($);
@@ -553,6 +558,7 @@ sub run_test_helper ($$) {
 
 again:
         #warn "!!! resp: [$raw_resp]";
+
         if (!defined $raw_resp) {
             $raw_resp = '';
         }
@@ -560,6 +566,11 @@ again:
         my ( $res, $raw_headers, $left );
 
         if (!defined $block->ignore_response) {
+
+            if ($Test::Nginx::Util::Verbose) {
+                warn "parse response\n";
+            }
+
             ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
         }
 
@@ -591,7 +602,79 @@ again:
             goto again;
         }
     }
+
+    #warn "Testing stap...\n";
+
+    test_stap($block, $dry_run);
 }
+
+
+sub test_stap ($$) {
+    my ($block, $dry_run) = @_;
+    return if !$block->{stap};
+
+    my $name = $block->name;
+
+    my $reason;
+
+    if ($dry_run) {
+        $reason = "the lack of directive $dry_run";
+    }
+
+    if (!$UseStap) {
+        $dry_run = 1;
+        $reason ||= "env TEST_NGINX_USE_STAP is not set";
+    }
+
+    my $fname = stap_out_fname();
+
+    if ($fname && ($fname eq '/dev/stdout' || $fname eq '/dev/stderr')) {
+        $dry_run = 1;
+        $reason ||= "TEST_NGINX_TAP_OUT is set to $fname";
+    }
+
+    my $stap_out = $block->stap_out;
+    my $stap_out_like = $block->stap_out_like;
+
+    SKIP: {
+        skip "$name - tests skipped due to $reason", 1 if $dry_run;
+
+        my $fh = stap_out_fh();
+        if (!$fh) {
+            bail_out("no stap output file handle found");
+        }
+
+        if (sleep_time() < 0.2) {
+            sleep 0.2;
+
+        } else {
+            sleep sleep_time();
+        }
+
+        my $out;
+        while (<$fh>) {
+            $out .= $_;
+        }
+
+        #warn "out: $out\n";
+
+        if (defined $stap_out) {
+
+            if ($NoLongString) {
+                is($out, $block->stap_out, "$name - stap output expected");
+            } else {
+                is_string($out, $block->stap_out, "$name - stap output expected");
+            }
+
+        } elsif (defined $stap_out_like) {
+            like($out, qr/$stap_out_like/sm, "$name - stap output matched pattern");
+
+        } else {
+            fail("$name - neither --- stap_out nor --- stap_out_like is specified");
+        }
+    }
+}
+
 
 #  Helper function to retrieve a "check" (e.g. error_code) section. This also
 # checks that tests with arrays of requests are arrays themselves.
@@ -618,12 +701,15 @@ sub get_indexed_value($$$$) {
     }
 }
 
-sub check_error_code($$$$$) {
+sub check_error_code ($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+
     my $name = $block->name;
     SKIP: {
         skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+
         if ( defined $block->error_code_like ) {
+
             my $val = get_indexed_value($name, $block->error_code_like, $req_idx, $need_array);
             like( ($res && $res->code) || '',
                 qr/$val/sm,
@@ -633,6 +719,7 @@ sub check_error_code($$$$$) {
             is( ($res && $res->code) || '',
                 get_indexed_value($name, $block->error_code, $req_idx, $need_array),
                 "$name - status code ok" );
+
         } else {
             is( ($res && $res->code) || '', 200, "$name - status code ok" );
         }
@@ -1987,6 +2074,86 @@ For example:
     --- response_body
     --- skip_nginx2
     2: < 0.8.53 and >= 0.8.41
+
+=head2 stap
+
+This section is used to specify user systemtap script file (.stp file)
+
+Here's an example:
+
+    === TEST 1: stap sample
+    --- config
+        location /t { echo hello; }
+    --- stap
+    probe process("nginx").function("ngx_http_finalize_request")
+    {
+        printf("finalize %s?%s\n", ngx_http_req_uri($r),
+               ngx_http_req_args($r))
+    }
+    --- stap_out
+    finalize /test?a=3&b=4
+    --- request
+    GET /test?a=3&b=4
+    --- response_body
+    hello
+
+There's some macros that can be used in the "--- stap" section value. These macros
+will be expanded by the test scaffold automatically.
+
+=over
+
+=item C<F(function_name)>
+
+This expands to C<probe process("nginx").function("function_name")>. For example,
+ the sample above can be rewritten as
+
+    === TEST 1: stap sample
+    --- config
+        location /t { echo hello; }
+    --- stap
+    F(ngx_http_finalize_request)
+    {
+        printf("finalize %s?%s\n", ngx_http_req_uri($r),
+               ngx_http_req_args($r))
+    }
+    --- stap_out
+    finalize /test?a=3&b=4
+    --- request
+    GET /test?a=3&b=4
+    --- response_body
+    hello
+
+=item C<T()>
+
+This macro will be expanded to C<println("Fire ", pp())>.
+
+=item C<M(static-probe-name)>
+
+This macro will be expanded to C<probe process("nginx").mark("static-probe-name")>.
+
+For example,
+
+    M(http-subrequest-start)
+    {
+        ...
+    }
+
+will be expanded to
+
+    probe process("nginx").mark("http-subrequest-start")
+    {
+        ...
+    }
+
+=back
+
+=head2 stap_out
+
+This seciton specifies the expected literal output of the systemtap script specified by C<stap>.
+
+=head2 stap_out_like
+
+Just like C<stap_out>, but specify a Perl regex pattern instead.
 
 Both string scalar and string arrays are supported as values.
 
