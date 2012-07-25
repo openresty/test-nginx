@@ -2282,6 +2282,13 @@ You can specify the stap script in the C<stap> section.
 
 Note that you need to use the C<stap-nginx> script from the C<nginx-dtrace> project.
 
+=head2 TEST_NGINX_STAP_OUT
+
+You can specify the output file for the systemtap tool. By default, a random file name
+under the system temporary directory is generated.
+
+It's common to specify C<TEST_NGINX_STAP_OUT=/dev/stderr> when debugging.
+
 =head2 TEST_NGINX_BINARY
 
 The command to start nginx. Defaults to C<nginx>. Can be used as an alternative
