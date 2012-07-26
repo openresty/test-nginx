@@ -667,7 +667,7 @@ sub test_stap ($$) {
             }
 
         } elsif (defined $stap_out_like) {
-            like($out, qr/$stap_out_like/sm, "$name - stap output matched pattern");
+            like($out || '', qr/$stap_out_like/sm, "$name - stap output matched pattern");
 
         } else {
             fail("$name - neither --- stap_out nor --- stap_out_like is specified");

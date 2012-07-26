@@ -682,6 +682,8 @@ sub run_test ($) {
     my $should_restart = 1;
     my $should_reconfig = 1;
 
+    local $StapOutFile = $StapOutFile;
+
     #warn "run test\n";
     local $LogLevel = $LogLevel;
     if ($block->log_level) {
@@ -1002,6 +1004,10 @@ start_nginx:
                     close $stap_fh;
 
                     my ($out, $outfile);
+
+                    if (!defined $block->stap_out && !defined $block->stap_out_like) {
+                        $StapOutFile = "/dev/stderr";
+                    }
 
                     if (!$StapOutFile) {
                         ($out, $outfile) = tempfile("XXXXXXXX", SUFFIX => '.stp-out', TMPDIR => 1);
