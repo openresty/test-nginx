@@ -1023,7 +1023,7 @@ start_nginx:
                         bail_out("Cannot open $outfile for reading: $!\n");
 
                     $StapOutFileHandle = $out;
-                    $cmd = "stap-nginx -c '$cmd' -o $outfile $stap_fname";
+                    $cmd = "stap-nginx -c 'exec $cmd' -o $outfile $stap_fname";
                     #warn "CMD: $cmd\n";
                 }
             }
