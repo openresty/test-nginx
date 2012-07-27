@@ -1025,6 +1025,8 @@ start_nginx:
                     $StapOutFileHandle = $out;
                     $cmd = "stap-nginx -c 'exec $cmd' -o $outfile $stap_fname";
                     #warn "CMD: $cmd\n";
+
+                    warn "$name\n";
                 }
             }
 
