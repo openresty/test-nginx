@@ -21,6 +21,7 @@ our $ServerAddr = 'localhost';
 
 use Test::Nginx::Util qw(
   $UseStap
+  verbose
   sleep_time
   stap_out_fh
   stap_out_fname
@@ -1090,7 +1091,17 @@ sub send_request ($$$$@) {
         $tries ||= 0;
         if ($tries < 20) {
             warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
-            sleep 1;
+            my $wait = sleep_time() * (2 ** $tries);
+            if ($wait > 1) {
+                $wait = 1;
+            }
+
+            if (verbose()) {
+                warn "\tRetry connecting after $wait\n";
+            }
+
+            sleep $wait;
+
             #warn "sending request";
             return send_request($req, $middle_delay, $timeout, $name, $tries + 1);
 

@@ -105,6 +105,10 @@ sub sleep_time {
     return $TestNginxSleep;
 }
 
+sub verbose {
+    return $Verbose;
+}
+
 sub server_port (@) {
     if (@_) {
         $ServerPort = shift;
@@ -178,6 +182,7 @@ sub master_process_enabled (@) {
 
 our @EXPORT_OK = qw(
     $UseStap
+    verbose
     sleep_time
     stap_out_fh
     stap_out_fname
@@ -1037,6 +1042,10 @@ start_nginx:
                     # child process
                     #my $rc = system($cmd);
                     #$ForkManager->finish($rc);
+                    if ($Verbose) {
+                        warn "command: $cmd\n";
+                    }
+
                     exec "exec $cmd";
 
                 } else {
