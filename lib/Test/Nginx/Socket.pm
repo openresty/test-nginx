@@ -1096,7 +1096,7 @@ sub send_request ($$$$@) {
                 $wait = 1;
             }
 
-            if ($wait >= 0.5) {
+            if ($wait >= 0.6) {
                 warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
                 if ($tries + 1 <= $total_tries) {
                     warn "\tRetry connecting after $wait sec\n";
