@@ -1088,16 +1088,19 @@ sub send_request ($$$$@) {
     );
 
     if (! defined $sock) {
-        $tries ||= 0;
-        if ($tries < 20) {
-            warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
-            my $wait = sleep_time() * (2 ** $tries);
-            if ($wait > 1) {
+        $tries ||= 1;
+        my $total_tries = 30;
+        if ($tries <= $total_tries) {
+            my $wait = (sleep_time() + sleep_time() * $tries) * $tries / 2;
+            if ($wait >= 1) {
                 $wait = 1;
             }
 
-            if (verbose()) {
-                warn "\tRetry connecting after $wait\n";
+            if ($wait >= 0.5) {
+                warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+                if ($tries + 1 <= $total_tries) {
+                    warn "\tRetry connecting after $wait sec\n";
+                }
             }
 
             sleep $wait;
