@@ -349,7 +349,7 @@ sub cleanup () {
 
 sub error_log_data () {
     # this is for logging in the log-phase which is after the serser closes the connection:
-    sleep $TestNginxSleep * 2;
+    sleep $TestNginxSleep * 3;
 
     open my $in, $ErrLogFile or
         return undef;
