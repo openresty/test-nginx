@@ -18,6 +18,8 @@ use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile );
 
+our $ConfigVersion;
+
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
 our $Verbose = $ENV{TEST_NGINX_VERBOSE};
@@ -46,7 +48,36 @@ our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 3;
 
 our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
 
+our $ServerAddr = 'localhost';
+
 our $StapOutFileHandle;
+
+our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
+    '#', '@', '-', '_', '^');
+
+sub gen_rand_str {
+    my $len = shift;
+
+    my $s = '';
+    for (my $i = 0; $i < $len; $i++) {
+        my $j = int rand scalar @RandStrAlphabet;
+        my $c = $RandStrAlphabet[$j];
+        $s .= $c;
+    }
+
+    return $s;
+}
+
+sub server_addr (@) {
+    if (@_) {
+
+        #warn "setting server addr to $_[0]\n";
+        $ServerAddr = shift;
+    }
+    else {
+        return $ServerAddr;
+    }
+}
 
 sub stap_out_fh {
     return $StapOutFileHandle;
@@ -181,6 +212,8 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    $ServerAddr
+    server_addr
     $UseStap
     verbose
     sleep_time
@@ -519,6 +552,8 @@ env MOCKEAGAIN;
 env MOCKEAGAIN_WRITE_TIMEOUT_PATTERN;
 env LD_PRELOAD;
 env DYLD_INSERT_LIBRARIES;
+env LUA_PATH;
+env LUA_CPATH;
 
 $main_config
 
@@ -556,8 +591,22 @@ _EOC_
 _EOC_
     }
 
-    print $out <<_EOC_;
+    print $out "    }\n";
+
+    if ($UseHup) {
+        print $out <<_EOC_;
+    server {
+        listen          $ServerPort;
+        server_name     'Test-Nginx';
+
+        location = /ver {
+            echo -- '$ConfigVersion';
+        }
     }
+_EOC_
+    }
+
+    print $out <<_EOC_;
 }
 
 events {
@@ -619,6 +668,63 @@ sub show_all_chars ($) {
     $s =~ s/\r/\\r/gs;
     $s =~ s/\t/\\t/gs;
     $s;
+}
+
+sub test_config_version ($) {
+    my $name = shift;
+    my $total = 30;
+    my $sleep = sleep_time();
+    my $nsucc = 0;
+
+    #$ConfigVersion = '322';
+
+    for (my $tries = 1; $tries <= $total; $tries++) {
+
+        my $ver = `curl -s -S -H 'Host: Test-Nginx' --connect-timeout 2 'http://$ServerAddr:$ServerPort/ver'`;
+        chop $ver;
+
+        if ($Verbose) {
+            warn "$name - ConfigVersion: $ver == $ConfigVersion\n";
+        }
+
+        if ($ver eq $ConfigVersion) {
+            $nsucc++;
+
+            if ($nsucc == 5) {
+                sleep $sleep;
+            }
+
+            if ($nsucc >= 10) {
+                #warn "MATCHED!!!\n";
+                return;
+            }
+
+            #sleep $sleep;
+            next;
+
+        } else {
+            if ($nsucc) {
+                if ($Verbose) {
+                    warn "$name - reset nsucc $nsucc\n";
+                }
+
+                $nsucc = 0;
+            }
+        }
+
+        my $wait = ($sleep + $sleep * $tries) * $tries / 2;
+        if ($wait > 1) {
+            $wait = 1;
+        }
+
+        if ($wait > 0.5) {
+            warn "$name - waiting $wait sec for nginx to reload the configuration\n";
+        }
+
+        sleep $wait;
+    }
+
+    Test::More::fail("$name - failed to reload configuration");
 }
 
 sub parse_headers ($) {
@@ -848,6 +954,10 @@ sub run_test ($) {
     if (!$NoNginxManager && !$should_skip && $should_restart) {
         #warn "HERE";
 
+        if ($UseHup) {
+            $ConfigVersion = gen_rand_str(10);
+        }
+
         if ($should_reconfig) {
             $PrevConfig = $config;
         }
@@ -900,6 +1010,8 @@ sub run_test ($) {
                             if ($UseValgrind) {
                                 warn "$name\n";
                             }
+
+                            test_config_version($name);
 
                             goto request;
 

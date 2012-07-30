@@ -17,9 +17,9 @@ use List::Util qw( sum );
 use IO::Select ();
 use File::Temp qw( tempfile );
 
-our $ServerAddr = 'localhost';
-
 use Test::Nginx::Util qw(
+  $ServerAddr
+  server_addr
   $UseStap
   verbose
   sleep_time
@@ -94,17 +94,6 @@ sub get_linear_regression_slope ($);
 
 sub no_long_string () {
     $NoLongString = 1;
-}
-
-sub server_addr (@) {
-    if (@_) {
-
-        #warn "setting server addr to $_[0]\n";
-        $ServerAddr = shift;
-    }
-    else {
-        return $ServerAddr;
-    }
 }
 
 $RunTestHelper = \&run_test_helper;
