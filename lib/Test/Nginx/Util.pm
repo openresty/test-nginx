@@ -600,7 +600,7 @@ _EOC_
         server_name     'Test-Nginx';
 
         location = /ver {
-            echo -- '$ConfigVersion';
+            return 200 '$ConfigVersion';
         }
     }
 _EOC_
@@ -681,7 +681,7 @@ sub test_config_version ($) {
     for (my $tries = 1; $tries <= $total; $tries++) {
 
         my $ver = `curl -s -S -H 'Host: Test-Nginx' --connect-timeout 2 'http://$ServerAddr:$ServerPort/ver'`;
-        chop $ver;
+        #chop $ver;
 
         if ($Verbose) {
             warn "$name - ConfigVersion: $ver == $ConfigVersion\n";
