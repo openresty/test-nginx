@@ -17,6 +17,7 @@ use ExtUtils::MakeMaker ();
 use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile );
+use IO::Socket::INET;
 
 our $ConfigVersion;
 
@@ -29,6 +30,7 @@ our $LatestNginxVersion = 0.008039;
 our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
 our $Profiling = 0;
 
+our $InSubprocess;
 our $RepeatEach = 1;
 our $MAX_PROCESSES = 10;
 
@@ -113,7 +115,7 @@ if ($Profiling || $UseValgrind || $CheckLeak || $UseStap) {
     if ($@) {
         bail_out "Failed to load Parallel::ForkManager: $@\n";
     }
-    $ForkManager = new Parallel::ForkManager($MAX_PROCESSES);
+    $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
 }
 
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
@@ -131,6 +133,7 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
 
 our $ChildPid;
+our $UdpServerPid;
 
 sub sleep_time {
     return $TestNginxSleep;
@@ -300,15 +303,16 @@ sub bail_out (@) {
     Test::More::BAIL_OUT(@_);
 }
 
-sub cleanup () {
-    if (!defined $ForkManager) {
-        return;
-    }
+sub kill_process ($$) {
+    my ($pid, $wait) = @_;
 
-    if ($Profiling || $UseValgrind || $UseStap) {
-        my $pid = $ChildPid;
+    if ($wait) {
         eval {
             if (defined $pid) {
+                if ($Verbose) {
+                    warn "sending QUIT signal to $pid";
+                }
+
                 kill(SIGQUIT, $pid);
             }
 
@@ -318,31 +322,52 @@ sub cleanup () {
             alarm 0;
         };
 
-        if ($@) {
-            warn "WARNING: nginx/valgrind child process $pid timed out.\n";
-            my $i = 1;
-            while ($i <= 10) {
-                warn "Killing the child process $pid.\n";
-                if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-                    warn("Failed to send quit signal to the child process with PID $pid.\n");
-                }
-
-                sleep $TestNginxSleep;
-
-                if (system("ps $pid > /dev/null") == 0) {
-                    if ($i < 10) {
-                        next;
-                    }
-
-                    warn "Killing the child process $pid with force.\n";
-                    kill(SIGKILL, $pid);
-                }
-
-            } continue {
-                $i++;
-            }
+        if (!$@) {
+            return;
         }
 
+        warn "WARNING: nginx/valgrind child process $pid timed out.\n";
+    }
+
+    my $i = 1;
+    while ($i <= 10) {
+        if (system("ps $pid > /dev/null") != 0) {
+            return;
+        }
+
+        if ($Verbose) {
+            warn "Killing the child process $pid.\n";
+        }
+
+        if (kill(SIGQUIT, $pid) == 0) { # send quit signal
+            warn("Failed to send quit signal to the child process with PID $pid.\n");
+        }
+
+        sleep $TestNginxSleep;
+
+    } continue {
+        $i++;
+    }
+
+    if ($Verbose) {
+        warn "Killing the child process $pid with force.\n";
+    }
+
+    kill(SIGKILL, $pid);
+}
+
+sub cleanup () {
+    if (!defined $ForkManager) {
+        return;
+    }
+
+    if (defined $UdpServerPid) {
+        kill_process($UdpServerPid, 0);
+        undef $UdpServerPid;
+    }
+
+    if (defined $ChildPid) {
+        kill_process($ChildPid, 1);
         undef $ChildPid;
     }
 }
@@ -1026,6 +1051,10 @@ sub run_test ($) {
                     }
                 }
 
+                if ($Verbose) {
+                    warn "sending QUIT signal to $pid\n";
+                }
+
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
@@ -1154,6 +1183,9 @@ start_nginx:
                     # child process
                     #my $rc = system($cmd);
                     #$ForkManager->finish($rc);
+
+                    $InSubprocess = 1;
+
                     if ($Verbose) {
                         warn "command: $cmd\n";
                     }
@@ -1205,6 +1237,74 @@ request:
             warn "Run the test block...\n";
         }
 
+        my $udp_socket;
+        if (defined $block->udp_server) {
+            my $port = $block->udp_server;
+            if ($port !~ /^\d+$/) {
+                bail_out("$name - bad udp_server port number: $port");
+            }
+
+            my $reply = $block->udp_reply;
+            if (!defined $reply) {
+                bail_out("no --- udp_reply specified but --- udp_server is specified");
+            }
+
+            $udp_socket = IO::Socket::INET->new(
+                LocalPort => $port,
+                Proto => 'udp',
+                SO_REUSEADDR => 1,
+            ) or bail_out("$name - failed to create the udp listening socket: $!");
+
+            if (!defined $ForkManager) {
+                eval "use Parallel::ForkManager";
+                if ($@) {
+                    bail_out "Failed to load Parallel::ForkManager: $@\n";
+                }
+
+                $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
+            }
+
+            my $pid = $ForkManager->start;
+
+            if (!$pid) {
+                # child process
+                #my $rc = system($cmd);
+                #$ForkManager->finish($rc);
+
+                $InSubprocess = 1;
+
+                if ($Verbose) {
+                    warn "UDP server is listening on $port ...\n";
+                }
+
+                local $| = 1;
+
+                my $buf;
+                $udp_socket->recv($buf, 4096);
+
+                if ($Verbose) {
+                    warn "udp server received $buf\n";
+                }
+
+                $udp_socket->send($reply) or warn "udp server failed to send reply\n";
+
+                if ($Verbose) {
+                    warn "UDP server is shutting down...\n";
+                }
+
+                $ForkManager->finish;
+                exit;
+
+            } else {
+                # main process
+                if ($Verbose) {
+                    warn "started sub-process $pid for the UDP server\n";
+                }
+
+                $UdpServerPid = $pid;
+            }
+        }
+
         if ($i > 1) {
             write_user_files($block);
         }
@@ -1225,6 +1325,13 @@ request:
 
         } else {
             $RunTestHelper->($block, $dry_run);
+        }
+
+        if (defined $udp_socket) {
+            if (defined $UdpServerPid) {
+                kill_process($UdpServerPid, 0);
+                undef $UdpServerPid;
+            }
         }
     }
 
@@ -1256,7 +1363,7 @@ retry:
                 write_config_file($config, $block->http_config, $block->main_config);
 
                 if ($Verbose) {
-                    warn "sending QUIT signal to $pid\n";
+                    warn "sending QUIT signal to $pid";
                 }
 
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
@@ -1275,7 +1382,7 @@ retry:
                     }
 
                     if ($Verbose) {
-                        warn "sending KILL signal to $pid\n";
+                        warn "sending KILL signal to $pid";
                     }
 
                     kill(SIGKILL, $pid);
@@ -1300,6 +1407,8 @@ retry:
 }
 
 END {
+    return if $InSubprocess;
+
     if ($UseStap || $UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         local $?; # to avoid confusing Test::Builder::_ending
         if (-f $PidFile) {
@@ -1308,6 +1417,10 @@ END {
                 bail_out "No pid found.";
             }
             if (system("ps $pid > /dev/null") == 0) {
+                if ($Verbose) {
+                    warn "sending QUIT signal to $pid";
+                }
+
                 if (kill(SIGQUIT, $pid) == 0) { # send quit signal
                     #warn("Failed to send quit signal to the nginx process with PID $pid");
                 }
