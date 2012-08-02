@@ -1070,10 +1070,14 @@ sub run_test ($) {
                 undef $nginx_is_running;
 
             } else {
-                unlink $PidFile or
-                    bail_out "Failed to remove pid file $PidFile\n";
+                if (-f $PidFile) {
+                    unlink $PidFile or
+                        warn "WARNING: failed to remove pid file $PidFile\n";
+                }
+
                 undef $nginx_is_running;
             }
+
         } else {
             undef $nginx_is_running;
         }
