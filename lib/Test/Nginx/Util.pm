@@ -1250,8 +1250,10 @@ request:
 
             my $reply = $block->udp_reply;
             if (!defined $reply) {
-                bail_out("no --- udp_reply specified but --- udp_listen is specified");
+                bail_out("$name - no --- udp_reply specified but --- udp_listen is specified");
             }
+
+            #warn "Reply: ", $reply;
 
             $udp_socket = IO::Socket::INET->new(
                 LocalPort => $port,
@@ -1290,7 +1292,12 @@ request:
                     warn "udp server received $buf\n";
                 }
 
-                $udp_socket->send($reply) or warn "udp server failed to send reply\n";
+                if (defined $reply) {
+                    my $bytes = $udp_socket->send($reply);
+                    if (!defined $bytes) {
+                        warn "WARNING: udp server failed to send reply: $!\n";
+                    }
+                }
 
                 if ($Verbose) {
                     warn "UDP server is shutting down...\n";
