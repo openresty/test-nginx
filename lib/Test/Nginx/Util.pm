@@ -217,6 +217,7 @@ sub master_process_enabled (@) {
 our @EXPORT_OK = qw(
     $ServerAddr
     server_addr
+    parse_time
     $UseStap
     verbose
     sleep_time
@@ -289,6 +290,22 @@ our $HtmlDir    = File::Spec->catfile($ServRoot, 'html');
 our $ConfDir    = File::Spec->catfile($ServRoot, 'conf');
 our $ConfFile   = File::Spec->catfile($ConfDir, 'nginx.conf');
 our $PidFile    = File::Spec->catfile($LogDir, 'nginx.pid');
+
+sub parse_time ($) {
+    my $tm = shift;
+
+    if (defined $tm) {
+        if ($tm =~ s/([^_a-zA-Z])ms$/$1/) {
+            $tm = $tm / 1000;
+        } elsif ($tm =~ s/([^_a-zA-Z])s$/$1/) {
+            # do nothing
+        } else {
+            # do nothing
+        }
+    }
+
+    return $tm;
+}
 
 sub html_dir () {
     return $HtmlDir;
@@ -1290,6 +1307,11 @@ request:
 
                 if ($Verbose) {
                     warn "udp server received $buf\n";
+                }
+
+                my $delay = parse_time($block->udp_reply_delay);
+                if ($delay) {
+                    sleep $delay;
                 }
 
                 if (defined $reply) {

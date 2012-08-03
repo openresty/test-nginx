@@ -20,6 +20,7 @@ use File::Temp qw( tempfile );
 use Test::Nginx::Util qw(
   $ServerAddr
   server_addr
+  parse_time
   $UseStap
   verbose
   sleep_time
@@ -517,7 +518,7 @@ sub run_test_helper ($$) {
 
     #warn "request: $req\n";
 
-    my $timeout = $block->timeout;
+    my $timeout = parse_time($block->timeout);
     if ( !defined $timeout ) {
         $timeout = timeout();
     }
@@ -1918,6 +1919,12 @@ Here is an example:
     ok
     --- timeout: 1.5
 
+An optional time unit can be specified, for example,
+
+    --- timeout: 50ms
+
+Acceptable time units are C<s> (seconds) and C<ms> (milliseconds). If no time unit is specified, then default to seconds.
+
 =head2 error_log
 
 Checks if the pattern or multiple patterns all appear in lines of the F<error.log> file.
@@ -2191,7 +2198,21 @@ Here is an example:
 
 This section specifies the datagram reply content for the UDP server created by the C<udp_listen> section.
 
+You can also specify a delay time before sending out the reply via the C<udp_reply_delay> section. By default, there is no delay.
+
 See the C<udp_listen> section for more details.
+
+=head2 udp_reply_delay
+
+This section specifies the delay time before sending out the reply specified by the C<udp_reply> section.
+
+It is C<0> delay by default.
+
+An optional time unit can be specified, for example,
+
+    --- udp_reply_delay: 50ms
+
+Acceptable time units are C<s> (seconds) and C<ms> (milliseconds). If no time unit is specified, then default to seconds.
 
 =head2 raw_request_middle_delay
 
