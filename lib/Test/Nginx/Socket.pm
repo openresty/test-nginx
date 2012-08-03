@@ -2174,13 +2174,16 @@ Here is an example:
         location = /t {
             content_by_lua '
                 local udp = ngx.socket.udp()
+                udp:setpeername("127.0.0.1", 19232)
                 udp:send("blah")
-                local data = udp:receive()
+                local data, err = udp:receive()
                 ngx.say("received: ", data)
             ';
         }
     --- udp_listen: 19232
     --- udp_reply: hello world
+    --- request
+    GET /t
     --- response_body
     received: hello world
 
