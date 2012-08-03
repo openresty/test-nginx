@@ -2158,7 +2158,37 @@ This seciton specifies the expected literal output of the systemtap script speci
 
 Just like C<stap_out>, but specify a Perl regex pattern instead.
 
-Both string scalar and string arrays are supported as values.
+=head2 udp_listen
+
+Instantiates a UDP server listening on the port specified in the background for the test
+case to access. The server will be started and shut down at each iteration of the test case
+(if repeat_each is set to 3, then there are 3 iterations).
+
+The UDP server will first read and discard a datagram and then send back a datagram with the content
+specified by the C<udp_reply> section value.
+
+Here is an example:
+
+    === TEST 1: udp access
+    --- config
+        location = /t {
+            content_by_lua '
+                local udp = ngx.socket.udp()
+                udp:send("blah")
+                local data = udp:receive()
+                ngx.say("received: ", data)
+            ';
+        }
+    --- udp_listen: 19232
+    --- udp_reply: hello world
+    --- response_body
+    received: hello world
+
+=head2 udp_reply
+
+This section specifies the datagram reply content for the UDP server created by the C<udp_listen> section.
+
+See the C<udp_listen> section for more details.
 
 =head2 raw_request_middle_delay
 

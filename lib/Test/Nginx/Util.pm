@@ -1242,15 +1242,15 @@ request:
         }
 
         my $udp_socket;
-        if (defined $block->udp_server) {
-            my $port = $block->udp_server;
+        if (defined $block->udp_listen) {
+            my $port = $block->udp_listen;
             if ($port !~ /^\d+$/) {
-                bail_out("$name - bad udp_server port number: $port");
+                bail_out("$name - bad udp_listen port number: $port");
             }
 
             my $reply = $block->udp_reply;
             if (!defined $reply) {
-                bail_out("no --- udp_reply specified but --- udp_server is specified");
+                bail_out("no --- udp_reply specified but --- udp_listen is specified");
             }
 
             $udp_socket = IO::Socket::INET->new(
