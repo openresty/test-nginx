@@ -371,13 +371,11 @@ sub kill_process ($$) {
     }
 
     kill(SIGKILL, $pid);
+
+    sleep $TestNginxSleep;
 }
 
 sub cleanup () {
-    if (!defined $ForkManager) {
-        return;
-    }
-
     if (defined $UdpServerPid) {
         kill_process($UdpServerPid, 0);
         undef $UdpServerPid;
@@ -1276,12 +1274,13 @@ request:
                 LocalPort => $port,
                 Proto => 'udp',
                 SO_REUSEADDR => 1,
+                Timeout => timeout(),
             ) or bail_out("$name - failed to create the udp listening socket: $!");
 
             if (!defined $ForkManager) {
                 eval "use Parallel::ForkManager";
                 if ($@) {
-                    bail_out "Failed to load Parallel::ForkManager: $@\n";
+                    bail_out "$name - failed to load Parallel::ForkManager: $@\n";
                 }
 
                 $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
@@ -1311,6 +1310,9 @@ request:
 
                 my $delay = parse_time($block->udp_reply_delay);
                 if ($delay) {
+                    if ($Verbose) {
+                        warn "sleep $delay before sending UDP reply\n";
+                    }
                     sleep $delay;
                 }
 
@@ -1441,6 +1443,8 @@ retry:
 
 END {
     return if $InSubprocess;
+
+    cleanup();
 
     if ($UseStap || $UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         local $?; # to avoid confusing Test::Builder::_ending

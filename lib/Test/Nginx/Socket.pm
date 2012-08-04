@@ -11,7 +11,7 @@ use POSIX qw( SIGQUIT SIGKILL SIGTERM SIGHUP );
 use Encode;
 #use Data::Dumper;
 use Time::HiRes qw(sleep time);
-use Test::LongString qw( is_string );
+use Test::LongString;
 use List::MoreUtils qw( any );
 use List::Util qw( sum );
 use IO::Select ();
