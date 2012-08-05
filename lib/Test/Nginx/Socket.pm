@@ -18,6 +18,8 @@ use IO::Select ();
 use File::Temp qw( tempfile );
 
 use Test::Nginx::Util qw(
+  $NoLongString
+  no_long_string
   $ServerAddr
   server_addr
   parse_time
@@ -69,8 +71,6 @@ use IO::Socket;
 
 #our ($PrevRequest, $PrevConfig);
 
-our $NoLongString = undef;
-
 our @EXPORT = qw( plan run_tests run_test
   repeat_each config_preamble worker_connections
   master_process_enabled
@@ -92,10 +92,6 @@ sub check_response_body ($$$$$);
 sub fmt_str ($);
 sub gen_cmd_from_req ($);
 sub get_linear_regression_slope ($);
-
-sub no_long_string () {
-    $NoLongString = 1;
-}
 
 $RunTestHelper = \&run_test_helper;
 
@@ -2213,6 +2209,31 @@ An optional time unit can be specified, for example,
     --- udp_reply_delay: 50ms
 
 Acceptable time units are C<s> (seconds) and C<ms> (milliseconds). If no time unit is specified, then default to seconds.
+
+=head2 udp_query
+
+Tests whether the UDP query sent to the embeded UDP server is equal to what is specified by this directive.
+
+For example,
+
+    === TEST 1: udp access
+    --- config
+        location = /t {
+            content_by_lua '
+                local udp = ngx.socket.udp()
+                udp:setpeername("127.0.0.1", 19232)
+                udp:send("blah")
+                local data, err = udp:receive()
+                ngx.say("received: ", data)
+            ';
+        }
+    --- udp_listen: 19232
+    --- udp_reply: hello world
+    --- request
+    GET /t
+    --- udp_query: hello world
+    --- response_body
+    received: hello world
 
 =head2 raw_request_middle_delay
 

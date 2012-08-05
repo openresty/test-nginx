@@ -18,8 +18,11 @@ use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile );
 use IO::Socket::INET;
+use Test::LongString;
 
 our $ConfigVersion;
+
+our $NoLongString = undef;
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
@@ -68,6 +71,10 @@ sub gen_rand_str {
     }
 
     return $s;
+}
+
+sub no_long_string () {
+    $NoLongString = 1;
 }
 
 sub server_addr (@) {
@@ -215,6 +222,8 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    $NoLongString
+    no_long_string
     $ServerAddr
     server_addr
     parse_time
@@ -1286,6 +1295,12 @@ request:
                 $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
             }
 
+            if (defined $block->udp_query) {
+                my $tb = Test::More->builder;
+                $tb->use_numbers(0);
+                $tb->no_ending(1);
+            }
+
             my $pid = $ForkManager->start;
 
             if (!$pid) {
@@ -1303,6 +1318,14 @@ request:
 
                 my $buf;
                 $udp_socket->recv($buf, 4096);
+
+                if (defined $block->udp_query) {
+                    if ($NoLongString) {
+                        Test::More::is($buf, $block->udp_query, "$name - udp_query ok");
+                    } else {
+                        is_string $buf, $block->udp_query, "$name - udp_query ok";
+                    }
+                }
 
                 if ($Verbose) {
                     warn "udp server received $buf\n";
@@ -1478,19 +1501,19 @@ END {
 
 # check if we can run some command
 sub can_run {
-	my ($cmd) = @_;
+    my ($cmd) = @_;
 
-        #warn "can run: @_\n";
-	my $_cmd = $cmd;
-	return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));
+    #warn "can run: @_\n";
+    my $_cmd = $cmd;
+    return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));
 
-	for my $dir ((split /$Config::Config{path_sep}/, $ENV{PATH}), '.') {
-		next if $dir eq '';
-		my $abs = File::Spec->catfile($dir, $_[0]);
-		return $abs if (-x $abs or $abs = MM->maybe_command($abs));
-	}
+    for my $dir ((split /$Config::Config{path_sep}/, $ENV{PATH}), '.') {
+        next if $dir eq '';
+        my $abs = File::Spec->catfile($dir, $_[0]);
+        return $abs if (-x $abs or $abs = MM->maybe_command($abs));
+    }
 
-	return;
+    return;
 }
 
 1;
