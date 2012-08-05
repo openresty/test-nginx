@@ -29,6 +29,7 @@ requires:
   HTTP::Response: 0
   IO::Select: 0
   IO::Socket: 0
+  IO::Socket::INET: 0
   LWP::UserAgent: 0
   List::MoreUtils: 0
   List::Util: 0

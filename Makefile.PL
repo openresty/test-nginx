@@ -26,6 +26,7 @@ requires        ('List::Util');
 requires        ('Encode');
 requires        ('ExtUtils::MakeMaker');
 requires        ('File::Find');
+requires        ('IO::Socket::INET');
 
 requires        ('Parallel::ForkManager');
 
