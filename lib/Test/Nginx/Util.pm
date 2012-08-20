@@ -1197,7 +1197,15 @@ start_nginx:
                         bail_out("Cannot open $outfile for reading: $!\n");
 
                     $StapOutFileHandle = $out;
-                    $cmd = "stap-nginx -c 'exec $cmd' -o $outfile $stap_fname";
+                    if (defined $ENV{LD_PRELOAD}) {
+                        $cmd = "LD_PRELOAD=$ENV{LD_PRELOAD} exec $cmd";
+
+                    } else {
+                        $cmd = "exec $cmd";
+                    }
+
+                    $cmd = "stap-nginx -c '$cmd' -o $outfile $stap_fname";
+
                     #warn "CMD: $cmd\n";
 
                     warn "$name\n";
