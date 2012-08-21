@@ -1259,6 +1259,10 @@ sub send_request ($$$$@) {
 
 sub timeout_event_handler ($) {
     my $ctx = shift;
+
+    my $tb = Test::More->builder;
+    $tb->no_ending(1);
+
     fail("ERROR: client socket timed out - $ctx->{name}\n");
 }
 
