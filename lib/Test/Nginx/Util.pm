@@ -1198,7 +1198,7 @@ start_nginx:
 
                     $StapOutFileHandle = $out;
                     if (defined $ENV{LD_PRELOAD}) {
-                        $cmd = "LD_PRELOAD=$ENV{LD_PRELOAD} exec $cmd";
+                        $cmd = qq!LD_PRELOAD="$ENV{LD_PRELOAD}" exec $cmd!;
 
                     } else {
                         $cmd = "exec $cmd";
