@@ -141,6 +141,7 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
 
 our $ChildPid;
 our $UdpServerPid;
+our $TcpServerPid;
 
 sub sleep_time {
     return $TestNginxSleep;
@@ -388,6 +389,11 @@ sub cleanup () {
     if (defined $UdpServerPid) {
         kill_process($UdpServerPid, 0);
         undef $UdpServerPid;
+    }
+
+    if (defined $TcpServerPid) {
+        kill_process($TcpServerPid, 0);
+        undef $TcpServerPid;
     }
 
     if (defined $ChildPid) {
@@ -1273,6 +1279,123 @@ request:
             warn "Run the test block...\n";
         }
 
+        my $tcp_socket;
+        if (defined $block->tcp_listen) {
+            my $port = $block->tcp_listen;
+            if ($port !~ /^\d+$/) {
+                bail_out("$name - bad tcp_listen port number: $port");
+            }
+
+            my $reply = $block->tcp_reply;
+            if (!defined $reply) {
+                bail_out("$name - no --- tcp_reply specified but --- tcp_listen is specified");
+            }
+
+            #warn "Reply: ", $reply;
+
+            $tcp_socket = IO::Socket::INET->new(
+                LocalHost => '127.0.0.1',
+                LocalPort => $port,
+                Proto => 'tcp',
+                Reuse => 1,
+                Listen => 5,
+                Timeout => timeout(),
+            ) or bail_out("$name - failed to create the tcp listening socket: $!");
+
+            if (!defined $ForkManager) {
+                eval "use Parallel::ForkManager";
+                if ($@) {
+                    bail_out "$name - failed to load Parallel::ForkManager: $@\n";
+                }
+
+                $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
+            }
+
+            if (defined $block->tcp_query) {
+                my $tb = Test::More->builder;
+                $tb->use_numbers(0);
+                $tb->no_ending(1);
+            }
+
+            my $pid = $ForkManager->start;
+
+            if (!$pid) {
+                # child process
+                #my $rc = system($cmd);
+                #$ForkManager->finish($rc);
+
+                $InSubprocess = 1;
+
+                if ($Verbose) {
+                    warn "TCP server is listening on $port ...\n";
+                }
+
+                local $| = 1;
+
+                my $client = $tcp_socket->accept() or
+                    die "Cannot accept: $!\n";
+
+                my $buf;
+                $client->recv($buf, 4096);
+
+                if (defined $block->tcp_query) {
+                    if ($NoLongString) {
+                        Test::More::is($buf, $block->tcp_query, "$name - tcp_query ok");
+                    } else {
+                        is_string $buf, $block->tcp_query, "$name - tcp_query ok";
+                    }
+                }
+
+                if ($Verbose) {
+                    warn "tcp server received $buf\n";
+                }
+
+                my $delay = parse_time($block->tcp_reply_delay);
+                if ($delay) {
+                    if ($Verbose) {
+                        warn "sleep $delay before sending TCP reply\n";
+                    }
+                    sleep $delay;
+                }
+
+                if (defined $reply) {
+                    if (ref $reply) {
+                        for my $r (@$reply) {
+                            #warn "sending reply $r";
+                            my $bytes = $client->send($r);
+                            if (!defined $bytes) {
+                                warn "WARNING: tcp server failed to send reply: $!\n";
+                            }
+                        }
+
+                    } else {
+                        my $bytes = $client->send($reply);
+                        if (!defined $bytes) {
+                            warn "WARNING: tcp server failed to send reply: $!\n";
+                        }
+                    }
+                }
+
+                if ($Verbose) {
+                    warn "TCP server is shutting down...\n";
+                }
+
+                $client->close();
+                $tcp_socket->close();
+
+                $ForkManager->finish;
+                exit;
+
+            } else {
+                # main process
+                if ($Verbose) {
+                    warn "started sub-process $pid for the TCP server\n";
+                }
+
+                $TcpServerPid = $pid;
+            }
+        }
+
         my $udp_socket;
         if (defined $block->udp_listen) {
             my $port = $block->udp_listen;
@@ -1290,7 +1413,7 @@ request:
             $udp_socket = IO::Socket::INET->new(
                 LocalPort => $port,
                 Proto => 'udp',
-                SO_REUSEADDR => 1,
+                Reuse => 1,
                 Timeout => timeout(),
             ) or bail_out("$name - failed to create the udp listening socket: $!");
 
@@ -1408,6 +1531,13 @@ request:
             if (defined $UdpServerPid) {
                 kill_process($UdpServerPid, 0);
                 undef $UdpServerPid;
+            }
+        }
+
+        if (defined $tcp_socket) {
+            if (defined $TcpServerPid) {
+                kill_process($TcpServerPid, 0);
+                undef $TcpServerPid;
             }
         }
     }

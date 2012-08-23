@@ -2062,8 +2062,7 @@ An example is
 That is, skipping 2 subtests in this test block for nginx versions older than 0.8.54.
 
 This C<skip_nginx> section only allows you to specify one boolean expression as
-the skip condition. If you want to use two boolean expressions, you should
-use the C<skip_nginx2> section instead.
+the skip condition. If you want to use two boolean expressions, you should use the C<skip_nginx2> section instead.
 
 =head2 skip_nginx2
 
@@ -2243,6 +2242,22 @@ For example,
     --- udp_query: hello world
     --- response_body
     received: hello world
+
+=head2 tcp_listen
+
+Just like C<udp_listen>, but starts an embeded TCP server listening on the port specified.
+
+=head2 tcp_reply_delay
+
+Just like C<udp_reply_delay>, but for the embeded TCP server.
+
+=head2 tcp_reply
+
+Just like C<tcp_reply>, but for the embeded TCP server.
+
+=head2 tcp_query
+
+Just like C<udp_query>, but for the embeded TCP server.
 
 =head2 raw_request_middle_delay
 
