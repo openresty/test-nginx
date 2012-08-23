@@ -1348,9 +1348,20 @@ request:
                 }
 
                 if (defined $reply) {
-                    my $bytes = $udp_socket->send($reply);
-                    if (!defined $bytes) {
-                        warn "WARNING: udp server failed to send reply: $!\n";
+                    if (ref $reply) {
+                        for my $r (@$reply) {
+                            #warn "sending reply $r";
+                            my $bytes = $udp_socket->send($r);
+                            if (!defined $bytes) {
+                                warn "WARNING: udp server failed to send reply: $!\n";
+                            }
+                        }
+
+                    } else {
+                        my $bytes = $udp_socket->send($reply);
+                        if (!defined $bytes) {
+                            warn "WARNING: udp server failed to send reply: $!\n";
+                        }
                     }
                 }
 

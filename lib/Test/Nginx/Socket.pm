@@ -2200,6 +2200,11 @@ This section specifies the datagram reply content for the UDP server created by 
 
 You can also specify a delay time before sending out the reply via the C<udp_reply_delay> section. By default, there is no delay.
 
+An array value can be specified to make the embeded UDP server to send mulitple replies as specified, for example:
+
+    --- udp_reply eval
+    [ "hello", "world" ]
+
 See the C<udp_listen> section for more details.
 
 =head2 udp_reply_delay
