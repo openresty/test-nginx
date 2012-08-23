@@ -1334,8 +1334,14 @@ request:
 
                 local $| = 1;
 
-                my $client = $tcp_socket->accept() or
-                    bail_out("Cannot accept: $!\n");
+                my $client;
+
+                while (1) {
+                    $client = $tcp_socket->accept();
+                    last if $client;
+                    warn("WARNING: $name - TCP server: failed to accept: $!\n");
+                    sleep $TestNginxSleep;
+                }
 
                 my $buf;
 
