@@ -60,6 +60,13 @@ our $StapOutFileHandle;
 our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
     '#', '@', '-', '_', '^');
 
+#$SIG{CHLD} = 'IGNORE';
+
+sub is_running ($) {
+    my $pid = shift;
+    return kill 0, $pid;
+}
+
 sub gen_rand_str {
     my $len = shift;
 
@@ -353,32 +360,35 @@ sub kill_process ($$) {
             return;
         }
 
-        warn "WARNING: nginx/valgrind child process $pid timed out.\n";
+        if ($Verbose) {
+            warn "WARNING: child process $pid timed out.\n";
+        }
     }
 
     my $i = 1;
     while ($i <= 10) {
-        if (system("ps $pid > /dev/null") != 0) {
+        #warn "ps returns: ", system("ps -p $pid > /dev/stderr"), "\n";
+        #warn "$pid is running? ", is_running($pid) ? "Y" : "N", "\n";
+
+        if (!is_running($pid)) {
             return;
         }
 
         if ($Verbose) {
-            warn "Killing the child process $pid.\n";
+            warn "WARNING: killing the child process $pid.\n";
         }
 
         if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-            warn("Failed to send quit signal to the child process with PID $pid.\n");
+            warn "WARNING: failed to send quit signal to the child process with PID $pid.\n";
         }
 
-        sleep $TestNginxSleep;
+        sleep $TestNginxSleep * $i;
 
     } continue {
         $i++;
     }
 
-    if ($Verbose) {
-        warn "Killing the child process $pid with force.\n";
-    }
+    warn "WARNING: killing the child process $pid with force.\n";
 
     kill(SIGKILL, $pid);
 
@@ -387,12 +397,12 @@ sub kill_process ($$) {
 
 sub cleanup () {
     if (defined $UdpServerPid) {
-        kill_process($UdpServerPid, 0);
+        kill_process($UdpServerPid, 1);
         undef $UdpServerPid;
     }
 
     if (defined $TcpServerPid) {
-        kill_process($TcpServerPid, 0);
+        kill_process($TcpServerPid, 1);
         undef $TcpServerPid;
     }
 
@@ -452,8 +462,16 @@ sub setup_server_root () {
 
             # Take special care, so we won't accidentally remove
             # real user data when TEST_NGINX_SERVROOT is mis-used.
-            system("rm -rf $ConfDir > /dev/null") == 0 or
-                bail_out "Can't remove $ConfDir";
+            my $rc = system("rm -rf $ConfDir > /dev/null");
+            if ($rc != 0) {
+                if ($rc == -1) {
+                    bail_out "Cannot remove $ConfDir: $rc: $!\n";
+
+                } else {
+                    bail_out "Can't remove $ConfDir: $rc";
+                }
+            }
+
             system("rm -rf $HtmlDir > /dev/null") == 0 or
                 bail_out "Can't remove $HtmlDir";
             system("rm -rf $LogDir > /dev/null") == 0 or
@@ -1035,7 +1053,7 @@ sub run_test ($) {
 
             #warn "HERE";
 
-            if (system("ps $pid > /dev/null") == 0) {
+            if (is_running($pid)) {
                 #warn "found running nginx...";
 
                 if ($UseHup) {
@@ -1091,7 +1109,7 @@ sub run_test ($) {
 
                 sleep $TestNginxSleep;
 
-                if (system("ps $pid > /dev/null") == 0) {
+                if (is_running($pid)) {
                     #warn "killing with force...\n";
                     kill(SIGKILL, $pid);
                     sleep $TestNginxSleep;
@@ -1406,6 +1424,7 @@ request:
                 }
 
                 $client->close();
+                $tcp_socket->close();
 
                 $ForkManager->finish;
                 exit;
@@ -1553,7 +1572,7 @@ request:
 
         if (defined $udp_socket) {
             if (defined $UdpServerPid) {
-                kill_process($UdpServerPid, 0);
+                kill_process($UdpServerPid, 1);
                 undef $UdpServerPid;
             }
 
@@ -1563,8 +1582,15 @@ request:
 
         if (defined $tcp_socket) {
             if (defined $TcpServerPid) {
-                kill_process($TcpServerPid, 0);
+                if ($Verbose) {
+                    warn "killing TCP server, pid $TcpServerPid\n";
+                }
+                kill_process($TcpServerPid, 1);
                 undef $TcpServerPid;
+            }
+
+            if ($Verbose) {
+                warn "closing the TCP socket\n";
             }
 
             $tcp_socket->close();
@@ -1596,7 +1622,7 @@ request:
             my $pid = get_pid_from_pidfile($name);
             my $i = 0;
 retry:
-            if (system("ps $pid > /dev/null") == 0) {
+            if (is_running($pid)) {
                 write_config_file($config, $block->http_config, $block->main_config);
 
                 if ($Verbose) {
@@ -1655,7 +1681,7 @@ END {
             if (!$pid) {
                 bail_out "No pid found.";
             }
-            if (system("ps $pid > /dev/null") == 0) {
+            if (is_running($pid)) {
                 if ($Verbose) {
                     warn "sending QUIT signal to $pid";
                 }
@@ -1666,7 +1692,7 @@ END {
 
                 sleep $TestNginxSleep;
 
-                if (system("ps $pid > /dev/null") == 0) {
+                if (is_running($pid)) {
                     #warn "killing with force...\n";
                     kill(SIGKILL, $pid);
                     sleep $TestNginxSleep;
