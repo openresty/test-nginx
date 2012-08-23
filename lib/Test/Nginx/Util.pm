@@ -1291,6 +1291,8 @@ request:
                 bail_out("$name - no --- tcp_reply specified but --- tcp_listen is specified");
             }
 
+            my $req_len = $block->tcp_query_len;
+
             #warn "Reply: ", $reply;
 
             $tcp_socket = IO::Socket::INET->new(
@@ -1311,7 +1313,7 @@ request:
                 $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
             }
 
-            if (defined $block->tcp_query) {
+            if (defined $block->tcp_query || defined $req_len) {
                 my $tb = Test::More->builder;
                 $tb->use_numbers(0);
                 $tb->no_ending(1);
@@ -1336,7 +1338,24 @@ request:
                     die "Cannot accept: $!\n";
 
                 my $buf;
-                $client->recv($buf, 4096);
+
+                while (1) {
+                    my $b;
+                    my $ret = $client->recv($b, 4096);
+                    if (!defined $ret) {
+                        die "failed to receive: $!\n";
+                    }
+
+                    $buf .= $b;
+
+                    if (!$req_len || length($buf) >= $req_len) {
+                        last;
+                    }
+                }
+
+                if (defined $req_len) {
+                    Test::More::is(length($buf), $req_len, "$name - req len ok");
+                }
 
                 if (defined $block->tcp_query) {
                     if ($NoLongString) {

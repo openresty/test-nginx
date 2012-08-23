@@ -1895,7 +1895,7 @@ of each request in the test.
 
 =head2 timeout
 
-Specify the timeout value (in seconds) for the HTTP client embeded into the test scaffold. This has nothing
+Specify the timeout value (in seconds) for the HTTP client embedded into the test scaffold. This has nothing
 to do with the server side configuration.
 
 Note that, just as almost all the timeout settings in the nginx world, this timeout
@@ -2199,7 +2199,7 @@ This section specifies the datagram reply content for the UDP server created by 
 
 You can also specify a delay time before sending out the reply via the C<udp_reply_delay> section. By default, there is no delay.
 
-An array value can be specified to make the embeded UDP server to send mulitple replies as specified, for example:
+An array value can be specified to make the embedded UDP server to send mulitple replies as specified, for example:
 
     --- udp_reply eval
     [ "hello", "world" ]
@@ -2220,7 +2220,7 @@ Acceptable time units are C<s> (seconds) and C<ms> (milliseconds). If no time un
 
 =head2 udp_query
 
-Tests whether the UDP query sent to the embeded UDP server is equal to what is specified by this directive.
+Tests whether the UDP query sent to the embedded UDP server is equal to what is specified by this directive.
 
 For example,
 
@@ -2245,19 +2245,23 @@ For example,
 
 =head2 tcp_listen
 
-Just like C<udp_listen>, but starts an embeded TCP server listening on the port specified.
+Just like C<udp_listen>, but starts an embedded TCP server listening on the port specified.
 
 =head2 tcp_reply_delay
 
-Just like C<udp_reply_delay>, but for the embeded TCP server.
+Just like C<udp_reply_delay>, but for the embedded TCP server.
 
 =head2 tcp_reply
 
-Just like C<tcp_reply>, but for the embeded TCP server.
+Just like C<tcp_reply>, but for the embedded TCP server.
 
 =head2 tcp_query
 
-Just like C<udp_query>, but for the embeded TCP server.
+Just like C<udp_query>, but for the embedded TCP server.
+
+=head2 tcp_query_len
+
+Specifies the expected TCP query received by the embedded TCP server.
 
 =head2 raw_request_middle_delay
 
