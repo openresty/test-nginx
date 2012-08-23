@@ -1556,6 +1556,9 @@ request:
                 kill_process($UdpServerPid, 0);
                 undef $UdpServerPid;
             }
+
+            $udp_socket->close();
+            undef $udp_socket;
         }
 
         if (defined $tcp_socket) {
@@ -1563,6 +1566,9 @@ request:
                 kill_process($TcpServerPid, 0);
                 undef $TcpServerPid;
             }
+
+            $tcp_socket->close();
+            undef $tcp_socket;
         }
     }
 
