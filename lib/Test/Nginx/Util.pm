@@ -1335,7 +1335,7 @@ request:
                 local $| = 1;
 
                 my $client = $tcp_socket->accept() or
-                    die "Cannot accept: $!\n";
+                    bail_out("Cannot accept: $!\n");
 
                 my $buf;
 
@@ -1400,7 +1400,6 @@ request:
                 }
 
                 $client->close();
-                $tcp_socket->close();
 
                 $ForkManager->finish;
                 exit;
