@@ -120,17 +120,7 @@ sub no_nginx_manager () {
     $NoNginxManager = 1;
 }
 
-our $ForkManager;
-
 sub bail_out (@);
-
-if ($Profiling || $UseValgrind || $CheckLeak || $UseStap) {
-    eval "use Parallel::ForkManager";
-    if ($@) {
-        bail_out "Failed to load Parallel::ForkManager: $@\n";
-    }
-    $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
-}
 
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
 our $Workers                = 1;
@@ -1243,12 +1233,14 @@ start_nginx:
             }
 
             if ($Profiling || $UseValgrind || $UseStap) {
-                my $pid = $ForkManager->start;
+                my $pid = fork();
 
-                if (!$pid) {
+                if (!defined $pid) {
+                    bail_out("$name - fork() failed: $!");
+
+                } elsif ($pid == 0) {
                     # child process
                     #my $rc = system($cmd);
-                    #$ForkManager->finish($rc);
 
                     $InSubprocess = 1;
 
@@ -1341,27 +1333,20 @@ request:
                 Timeout => timeout(),
             ) or bail_out("$name - failed to create the tcp listening socket: $!");
 
-            if (!defined $ForkManager) {
-                eval "use Parallel::ForkManager";
-                if ($@) {
-                    bail_out "$name - failed to load Parallel::ForkManager: $@\n";
-                }
-
-                $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
-            }
-
             if (defined $block->tcp_query || defined $req_len) {
                 my $tb = Test::More->builder;
                 $tb->use_numbers(0);
                 $tb->no_ending(1);
             }
 
-            my $pid = $ForkManager->start;
+            my $pid = fork();
 
-            if (!$pid) {
+            if (!defined $pid) {
+                bail_out("$name - fork() failed: $!");
+
+            } elsif ($pid == 0) {
                 # child process
                 #my $rc = system($cmd);
-                #$ForkManager->finish($rc);
 
                 $InSubprocess = 1;
 
@@ -1445,7 +1430,6 @@ request:
                 $client->close();
                 $tcp_socket->close();
 
-                $ForkManager->finish;
                 exit;
 
             } else {
@@ -1491,27 +1475,20 @@ request:
                 Timeout => timeout(),
             ) or bail_out("$name - failed to create the udp listening socket: $!");
 
-            if (!defined $ForkManager) {
-                eval "use Parallel::ForkManager";
-                if ($@) {
-                    bail_out "$name - failed to load Parallel::ForkManager: $@\n";
-                }
-
-                $ForkManager = Parallel::ForkManager->new($MAX_PROCESSES);
-            }
-
             if (defined $block->udp_query) {
                 my $tb = Test::More->builder;
                 $tb->use_numbers(0);
                 $tb->no_ending(1);
             }
 
-            my $pid = $ForkManager->start;
+            my $pid = fork();
 
-            if (!$pid) {
+            if (!defined $pid) {
+                bail_out("$name - fork() failed: $!");
+
+            } elsif ($pid == 0) {
                 # child process
                 #my $rc = system($cmd);
-                #$ForkManager->finish($rc);
 
                 $InSubprocess = 1;
 
@@ -1566,7 +1543,6 @@ request:
                     warn "UDP server is shutting down...\n";
                 }
 
-                $ForkManager->finish;
                 exit;
 
             } else {

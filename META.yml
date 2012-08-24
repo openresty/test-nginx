@@ -34,7 +34,6 @@ requires:
   List::MoreUtils: 0
   List::Util: 0
   POSIX: 0
-  Parallel::ForkManager: 0
   Test::Base: 0
   Test::LongString: 0
   Text::Diff: 0

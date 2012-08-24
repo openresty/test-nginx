@@ -461,8 +461,11 @@ sub run_test_helper ($$) {
         my $cmd = gen_cmd_from_req($req);
 
         # start a sub-process to run ab or weighttp
-        my $pid = $Test::Nginx::Util::ForkManager->start;
-        if (!$pid) {
+        my $pid = fork();
+        if (!defined $pid) {
+            bail_out("$name - fork() failed: $!");
+
+        } elsif ($pid == 0) {
             # child process
             exec @$cmd;
 

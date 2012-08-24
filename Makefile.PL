@@ -28,8 +28,6 @@ requires        ('ExtUtils::MakeMaker');
 requires        ('File::Find');
 requires        ('IO::Socket::INET');
 
-requires        ('Parallel::ForkManager');
-
 use_test_base();
 auto_install();
 
