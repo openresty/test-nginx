@@ -351,9 +351,13 @@ sub kill_process ($$) {
                 kill(SIGQUIT, $pid);
             }
 
+            if ($Verbose) {
+                warn "waitpid timeout: ", timeout();
+            }
+
             local $SIG{ALRM} = sub { die "alarm\n" };
             alarm timeout();
-            $ForkManager->wait_all_children;
+            waitpid($pid, 0);
             alarm 0;
         };
 
@@ -392,6 +396,7 @@ sub kill_process ($$) {
     warn "WARNING: killing the child process $pid with force.\n";
 
     kill(SIGKILL, $pid);
+    waitpid($pid, 0);
 
     sleep $TestNginxSleep;
 }
@@ -1111,9 +1116,9 @@ sub run_test ($) {
                 sleep $TestNginxSleep;
 
                 if (is_running($pid)) {
-                    #warn "killing with force...\n";
+                    warn "WARNING: killing nginx $pid with force...\n";
                     kill(SIGKILL, $pid);
-                    sleep $TestNginxSleep;
+                    waitpid($pid, 0);
                 }
 
                 undef $nginx_is_running;
@@ -1675,8 +1680,7 @@ retry:
                     }
 
                     kill(SIGKILL, $pid);
-
-                    sleep $TestNginxSleep;
+                    waitpid($pid, 0);
 
                     unlink $PidFile or
                         bail_out "Failed to remove pid file $PidFile\n";
@@ -1721,8 +1725,9 @@ END {
                 if (is_running($pid)) {
                     #warn "killing with force...\n";
                     kill(SIGKILL, $pid);
-                    sleep $TestNginxSleep;
+                    waitpid($pid, 0);
                 }
+
             } else {
                 unlink $PidFile;
             }

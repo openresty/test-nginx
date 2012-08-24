@@ -509,6 +509,7 @@ sub run_test_helper ($$) {
 
             if (is_running($pid)) {
                 kill(SIGKILL, $pid);
+                waitpid($pid, 0);
             }
         }
     }
