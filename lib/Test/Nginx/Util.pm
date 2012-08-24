@@ -230,6 +230,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    is_running
     $NoLongString
     no_long_string
     $ServerAddr
@@ -1298,7 +1299,7 @@ request:
         }
 
         my $tcp_socket;
-        if (defined $block->tcp_listen) {
+        if (!$CheckLeak && defined $block->tcp_listen) {
             my $port = $block->tcp_listen;
             if ($port !~ /^\d+$/) {
                 bail_out("$name - bad tcp_listen port number: $port");
@@ -1440,7 +1441,7 @@ request:
         }
 
         my $udp_socket;
-        if (defined $block->udp_listen) {
+        if (!$CheckLeak && defined $block->udp_listen) {
             my $port = $block->udp_listen;
             if ($port !~ /^\d+$/) {
                 bail_out("$name - bad udp_listen port number: $port");

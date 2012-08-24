@@ -18,6 +18,7 @@ use IO::Select ();
 use File::Temp qw( tempfile );
 
 use Test::Nginx::Util qw(
+  is_running
   $NoLongString
   no_long_string
   $ServerAddr
@@ -506,7 +507,7 @@ sub run_test_helper ($$) {
                 #warn "K = $k (2 expected)\n";
             }
 
-            if (system("ps $pid > /dev/null") == 0) {
+            if (is_running($pid)) {
                 kill(SIGKILL, $pid);
             }
         }
