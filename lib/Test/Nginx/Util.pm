@@ -1298,6 +1298,19 @@ request:
             warn "Run the test block...\n";
         }
 
+        if ($CheckLeak && defined $block->tcp_listen) {
+
+            my $n = defined($block->tcp_query_len) ? 1 : 0;
+            $n += defined($block->tcp_query) ? 1 : 0;
+
+            if ($n) {
+                SKIP: {
+                    Test::More::skip(qq{$name -- tests skipped because embedded TCP }
+                        .qq{server does not work with the "check leak" mode}, $n);
+                }
+            }
+        }
+
         my $tcp_socket;
         if (!$CheckLeak && defined $block->tcp_listen) {
             my $port = $block->tcp_listen;
@@ -1437,6 +1450,18 @@ request:
                 }
 
                 $TcpServerPid = $pid;
+            }
+        }
+
+        if ($CheckLeak && defined $block->udp_listen) {
+
+            my $n = defined($block->udp_query) ? 1 : 0;
+
+            if ($n) {
+                SKIP: {
+                    Test::More::skip(qq{$name -- tests skipped because embedded UDP }
+                        .qq{server does not work with the "check leak" mode}, $n);
+                }
             }
         }
 
