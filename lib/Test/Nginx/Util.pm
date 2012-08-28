@@ -361,7 +361,7 @@ sub kill_process ($$) {
     }
 
     my $i = 1;
-    while ($i <= 10) {
+    while ($i <= 20) {
         #warn "ps returns: ", system("ps -p $pid > /dev/stderr"), "\n";
         #warn "$pid is running? ", is_running($pid) ? "Y" : "N", "\n";
 
@@ -383,7 +383,7 @@ sub kill_process ($$) {
         $i++;
     }
 
-    warn "WARNING: killing the child process $pid with force.\n";
+    warn "WARNING: killing the child process $pid with force...";
 
     kill(SIGKILL, $pid);
     waitpid($pid, 0);
@@ -1106,7 +1106,7 @@ sub run_test ($) {
                 sleep $TestNginxSleep;
 
                 if (is_running($pid)) {
-                    warn "WARNING: killing nginx $pid with force...\n";
+                    warn "WARNING: killing nginx $pid with force...";
                     kill(SIGKILL, $pid);
                     waitpid($pid, 0);
                 }
@@ -1699,7 +1699,7 @@ END {
                 sleep $TestNginxSleep;
 
                 if (is_running($pid)) {
-                    #warn "killing with force...\n";
+                    warn "WARNING: killing nginx $pid with force...";
                     kill(SIGKILL, $pid);
                     waitpid($pid, 0);
                 }
