@@ -1328,14 +1328,36 @@ request:
 
             #warn "Reply: ", $reply;
 
-            $tcp_socket = IO::Socket::INET->new(
-                LocalHost => '127.0.0.1',
-                LocalPort => $port,
-                Proto => 'tcp',
-                Reuse => 1,
-                Listen => 5,
-                Timeout => timeout(),
-            ) or bail_out("$name - failed to create the tcp listening socket: $!");
+            my $err;
+            for (my $i = 0; $i < 30; $i++) {
+                $tcp_socket = IO::Socket::INET->new(
+                    LocalHost => '127.0.0.1',
+                    LocalPort => $port,
+                    Proto => 'tcp',
+                    Reuse => 1,
+                    Listen => 5,
+                    Timeout => timeout(),
+                );
+
+                if ($tcp_socket) {
+                    last;
+                }
+
+                if ($!) {
+                    $err = $!;
+                    if ($err =~ /address already in use/i) {
+                        warn "WARNING: failed to create the tcp listening socket: $err\n";
+                        sleep 1;
+                        next;
+                    }
+                }
+
+                last;
+            }
+
+            if (!$tcp_socket && $err) {
+                bail_out("$name - failed to create the tcp listening socket: $err");
+            }
 
             if (defined $block->tcp_query || defined $req_len) {
                 my $tb = Test::More->builder;
