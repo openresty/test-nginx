@@ -678,7 +678,11 @@ _EOC_
     print $out <<_EOC_;
 }
 
+#timer_resolution 100ms;
+
 events {
+    #accept_mutex off;
+
     worker_connections  $WorkerConnections;
 _EOC_
 
@@ -1425,6 +1429,12 @@ request:
 
                 if ($Verbose) {
                     warn "TCP server is shutting down...\n";
+                }
+
+                if (defined $block->tcp_no_close) {
+                    while (1) {
+                        sleep 1;
+                    }
                 }
 
                 $client->close();

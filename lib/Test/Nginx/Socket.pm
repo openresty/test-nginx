@@ -2252,6 +2252,11 @@ For example,
 
 Just like C<udp_listen>, but starts an embedded TCP server listening on the port specified.
 
+=head2 tcp_no_close
+
+When this section is present, the embedded TCP server (if any) will not close
+the current TCP connection.
+
 =head2 tcp_reply_delay
 
 Just like C<udp_reply_delay>, but for the embedded TCP server.
