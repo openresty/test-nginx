@@ -1,5 +1,72 @@
 Changes for Test::Nginx
 
+0.21 - 2012-09-27
+ *   feature: added support for SystemTap: the SystemTap white-box
+     testing mode is enabled by setting TEST_NGINX_USE_STAP=1 and by
+     using new test sections "--- stap", "--- stap_out", and "---
+     stap_out_like".
+
+ *   feature: added support for new sections "--- udp_listen" and
+     "--- udp_reply" for mocking an internal UDP server.
+
+ *   feature: added new section "--- udp_reply_delay" and also make
+     "--- udp_reply_delay" and "--- timeout" sections accept time
+     values with a time unit which can be either "s" or "ms".
+
+ *   feature: added new section "--- udp_query" to test if the UDP
+     query sent to the embeded UDP server is expected.
+
+ *   feature: added new section "--- tcp_query_len" to work with
+     mockeagain testing modes.
+
+ *   feature: added support for embedded TCP server by introducing
+     new sections "--- tcp_listen", "--- tcp_query", "--- tcp_reply",
+     and "--- tcp_reply_delay".
+
+ *   feature: added new section "--- tcp_no_close" to tell the
+     embedded TCP server (if any) never close the connection
+     actively. this is feature is mainly for mocking upstream reply
+     read time out in the middle.
+
+ *   feature: added new section "--- log_level" to specify the error
+     log level on a test-by-test basis.
+
+ *   bugfix: we might lose logs at config-time when
+     TEST_NGINX_USE_HUP=1 because we sent HUP before USR1.
+
+ *   bugfix: be more tolarent when removing the nginx pid file while
+     the nginx process is not running.
+
+ *   optimize: now we can automatically check the version of the
+     current nginx configuration and retry dozens of times when
+     TEST_NGINX_USE_HUP=1. this speed up the test suite in this mode
+     a lot and also avoid accidental failures due to slow nginx
+     reloads.
+
+ *   bugfix: try harder when failing to connect to the Nginx server.
+
+ *   refactor: now we use the standard "return" directive instead of
+     "echo" for detecting nginx config reload completion for the "HUP
+     reload" testing mode.
+
+ *   refactor: use waitpid() wherever possible.
+
+ *   bugfix: Parallel::ForkManager does not allow the user calling
+     waitpid directly, or inifinite looping might happen when calling
+     its start() method. now we no longer use this module any more
+     and use the fork() builtin function exclusively.
+
+ *   bugfix: disabled the ending output "Looks like you ..." when the
+     client socket timed out.
+
+ *   refactor: now we disabled the access log by default.
+
+ *   updated the bundled versions of Test::Builder and Test::More
+     modules.
+
+ *   docs: documented the "--- skip_nginx" and "--- skip_nginx2"
+     sections. thanks Weibin Yao for requesting it.
+
 0.20 - 2012-06-25
 * feature: now "--- error_log" allows a single regexp object as its value.
 

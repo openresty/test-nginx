@@ -3,7 +3,7 @@ package Test::Nginx::Util;
 use strict;
 use warnings;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 use base 'Exporter';
 
@@ -1196,6 +1196,7 @@ start_nginx:
                 if ($block->stap) {
                     my ($stap_fh, $stap_fname) = tempfile("XXXXXXX", SUFFIX => '.stp', TMPDIR => 1);
                     my $stap = $block->stap;
+                    $stap =~ s/^\bS\(([^)]+)\)/probe process("nginx").statement("*\@$1")/smg;
                     $stap =~ s/^\bF\((\w+)\)/probe process("nginx").function("$1")/smg;
                     $stap =~ s/^\bM\(([-\w]+)\)/probe process("nginx").mark("$1")/smg;
                     $stap =~ s/\bT\(\)/println("Fire ", pp())/smg;
