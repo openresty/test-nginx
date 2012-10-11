@@ -2365,6 +2365,12 @@ For example, setting TEST_NGINX_POSTPONE_OUTPUT to 1 will have the following lin
 
 and it will effectively disable the write buffering in nginx's ngx_http_write_module.
 
+=head2 TEST_NGINX_NO_CLEAN
+
+When this environment is set to 1, it will prevent the test scaffold from quitting the Nginx server
+at the end of the run. This is very useful when you want to use other tools like gdb or curl
+inspect the Nginx server manually afterwards.
+
 =head2 TEST_NGINX_NO_NGINX_MANAGER
 
 Defaults to 0. If set to 1, Test::Nginx module will not manage
