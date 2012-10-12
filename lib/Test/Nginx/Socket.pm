@@ -475,6 +475,9 @@ sub run_test_helper ($$) {
 
         } else {
             # main process
+
+            $Test::Nginx::Util::ChildPid = $pid;
+
             my $ngx_pid = get_pid_from_pidfile($name);
             sleep 1;
             my @rss_list;
