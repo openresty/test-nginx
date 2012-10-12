@@ -467,6 +467,10 @@ sub run_test_helper ($$) {
 
         } elsif ($pid == 0) {
             # child process
+
+            close STDERR;
+            close STDOUT;
+
             exec @$cmd;
 
         } else {

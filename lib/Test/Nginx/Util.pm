@@ -1254,6 +1254,9 @@ start_nginx:
                         warn "command: $cmd\n";
                     }
 
+                    close STDERR;
+                    close STDOUT;
+
                     exec "exec $cmd";
 
                 } else {
