@@ -1083,7 +1083,7 @@ sub send_request ($$$$@) {
 
     if (! defined $sock) {
         $tries ||= 1;
-        my $total_tries = 30;
+        my $total_tries = 50;
         if ($tries <= $total_tries) {
             my $wait = (sleep_time() + sleep_time() * $tries) * $tries / 2;
             if ($wait >= 1) {
@@ -1091,7 +1091,7 @@ sub send_request ($$$$@) {
             }
 
             if ($wait >= 0.6) {
-                warn "Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+                warn "$name - Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
                 if ($tries + 1 <= $total_tries) {
                     warn "\tRetry connecting after $wait sec\n";
                 }
@@ -1104,7 +1104,7 @@ sub send_request ($$$$@) {
 
         }
 
-        bail_out("Can't connect to $ServerAddr:$ServerPortForClient: $! (Aborted)\n");
+        bail_out("$name - Can't connect to $ServerAddr:$ServerPortForClient: $! (aborted)\n");
     }
 
     #warn "connected";
