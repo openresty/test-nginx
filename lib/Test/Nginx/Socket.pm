@@ -527,7 +527,10 @@ sub run_test_helper ($$) {
         $timeout = timeout();
     }
 
+    my $res;
     my $req_idx = 0;
+    my ($n, $need_array);
+
     for my $one_req (@$r_req_list) {
         my ($raw_resp, $head_req);
 
@@ -536,12 +539,10 @@ sub run_test_helper ($$) {
 
         } else {
             ($raw_resp, $head_req) = send_request( $one_req, $block->raw_request_middle_delay,
-                $timeout, $block->name );
+                $timeout, $block );
         }
 
         #warn "raw resonse: [$raw_resp]\n";
-
-        my ($n, $need_array);
 
         if ($block->pipelined_requests) {
             $n = @{ $block->pipelined_requests };
@@ -558,7 +559,7 @@ again:
             $raw_resp = '';
         }
 
-        my ( $res, $raw_headers, $left );
+        my ( $raw_headers, $left );
 
         if (!defined $block->ignore_response) {
 
@@ -589,7 +590,9 @@ again:
             check_response_body($block, $res, $dry_run, $req_idx, $need_array);
         }
 
-        check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+        if ($n || $req_idx < @$r_req_list - 1) {
+            check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+        }
 
         $req_idx++;
 
@@ -598,9 +601,13 @@ again:
         }
     }
 
-    #warn "Testing stap...\n";
+    if ($Test::Nginx::Util::Verbose) {
+        warn "Testing stap...\n";
+    }
 
     test_stap($block, $dry_run);
+
+    check_error_log($block, $res, $dry_run, $req_idx, $need_array);
 }
 
 
@@ -639,19 +646,31 @@ sub test_stap ($$) {
             bail_out("no stap output file handle found");
         }
 
-        if (sleep_time() < 0.2) {
-            sleep 0.2;
-
-        } else {
-            sleep sleep_time();
+        if ($block->stap_wait) {
+            sleep($block->stap_wait);
         }
 
         my $out;
-        while (<$fh>) {
-            $out .= $_;
+        for (1..2) {
+            if (sleep_time() < 0.2) {
+                sleep 0.2;
+
+            } else {
+                sleep sleep_time();
+            }
+
+            while (<$fh>) {
+                $out .= $_;
+            }
+
+            if ($out || $block->stap_wait) {
+                last;
+            }
         }
 
-        #warn "out: $out\n";
+        if ($Test::Nginx::Util::Verbose) {
+            warn "stap out: $out\n";
+        }
 
         if (defined $stap_out) {
 
@@ -1067,7 +1086,9 @@ sub parse_response($$$) {
 }
 
 sub send_request ($$$$@) {
-    my ( $req, $middle_delay, $timeout, $name, $tries ) = @_;
+    my ( $req, $middle_delay, $timeout, $block, $tries ) = @_;
+
+    my $name = $block->name;
 
     #warn "connecting...\n";
 
@@ -1081,7 +1102,7 @@ sub send_request ($$$$@) {
         Timeout   => $timeout,
     );
 
-    if (! defined $sock) {
+    if (!defined $sock) {
         $tries ||= 1;
         my $total_tries = 50;
         if ($tries <= $total_tries) {
@@ -1100,7 +1121,7 @@ sub send_request ($$$$@) {
             sleep $wait;
 
             #warn "sending request";
-            return send_request($req, $middle_delay, $timeout, $name, $tries + 1);
+            return send_request($req, $middle_delay, $timeout, $block, $tries + 1);
 
         }
 
@@ -1136,6 +1157,7 @@ sub send_request ($$$$@) {
         middle_delay => $middle_delay,
         sock         => $sock,
         name         => $name,
+        block        => $block,
     };
 
     my $readable_hdls = IO::Select->new($sock);
@@ -1255,6 +1277,18 @@ sub send_request ($$$$@) {
                 close $hdl;
 
             } elsif ( $res == 2 ) {
+                # all data has been written
+
+                my $shutdown = $block->shutdown;
+                if (defined $shutdown) {
+                    if ($shutdown =~ /^$/s) {
+                        $shutdown = 1;
+                    }
+
+                    #warn "shutting down with $shutdown";
+                    shutdown($sock, $shutdown);
+                }
+
                 if ( $writable_hdls->exists($hdl) ) {
                     $writable_hdls->remove($hdl);
                 }
@@ -1268,10 +1302,17 @@ sub send_request ($$$$@) {
 sub timeout_event_handler ($) {
     my $ctx = shift;
 
-    my $tb = Test::More->builder;
-    $tb->no_ending(1);
+    close($ctx->{sock});
 
-    fail("ERROR: client socket timed out - $ctx->{name}\n");
+    if ($ctx->{block}->abort) {
+        my $tb = Test::More->builder;
+        $tb->no_ending(1);
+
+        fail("ERROR: client socket timed out - $ctx->{name}\n");
+
+    } else {
+        sleep 0.005;
+    }
 }
 
 sub error_event_handler ($) {
@@ -1322,19 +1363,30 @@ sub write_event_handler ($) {
 
             #warn "wrote $bytes bytes.\n";
             $ctx->{write_offset} += $bytes;
-        }
-        else {
-            my $next_send = shift @{ $ctx->{req_bits} } or return 2;
+
+        } else {
+            # $rest == 0
+
+            my $next_send = shift @{ $ctx->{req_bits} };
+
+            if (!defined $next_send) {
+                return 2;
+            }
+
             $ctx->{write_buf} = $next_send->{'value'};
             $ctx->{write_offset} = 0;
+
             my $wait_time;
+
             if (!defined $next_send->{'delay_before'}) {
                 if (defined $ctx->{middle_delay}) {
                     $wait_time = $ctx->{middle_delay};
                 }
+
             } else {
                 $wait_time = $next_send->{'delay_before'};
             }
+
             if ($wait_time) {
                 #warn "sleeping..";
                 sleep $wait_time;
@@ -1904,14 +1956,16 @@ of each request in the test.
 =head2 timeout
 
 Specify the timeout value (in seconds) for the HTTP client embedded into the test scaffold. This has nothing
-to do with the server side configuration.
+to do with the server side configuration. When the timeout expires, the test scaffold will immediately
+close the socket for connecting to the Nginx server being tested.
 
-Note that, just as almost all the timeout settings in the nginx world, this timeout
+Note that, just as almost all the timeout settings in the Nginx world, this timeout
 also specifies the maximum waiting time between two successive I/O events on the same socket handle,
 rather than the total waiting time for the current socket operation.
 
 When the timeout setting expires, a test failure will be
-triggered with the message "ERROR: client socket timed out - TEST NAME".
+triggered with the message "ERROR: client socket timed out - TEST NAME", unless you have specified
+C<--- abort> at the same time.
 
 Here is an example:
 
@@ -1966,6 +2020,20 @@ Multiple patterns are also supported, for example:
 
 then the substring "abc" must appear literally in a line of F<error.log>, and the regex C<qr/blah>
 must also match a line in F<error.log>.
+
+=head2 abort
+
+Makes the test scaffold not to treat C<--- timeout> expiration as a test failure.
+
+=head2 shutdown
+
+Perform a C<shutdown>() operaton on the client socket connecting to Nginx as soon as sending out
+all the request data. This section takes an (optional) integer value for the argument to the
+C<shutdown> function call. For example,
+
+    --- shutdown: 1
+
+will make the connection stop sending data, which is the default.
 
 =head2 no_error_log
 
@@ -2171,6 +2239,11 @@ This seciton specifies the expected literal output of the systemtap script speci
 =head2 stap_out_like
 
 Just like C<stap_out>, but specify a Perl regex pattern instead.
+
+=head2 stap_wait
+
+Takes an integer value for the seconds of time to wait before trying to compare the systemtap script's output
+in C<--- stap_out> or C<--- stap_out_like>.
 
 =head2 udp_listen
 
@@ -2572,7 +2645,7 @@ in his Debian repository: http://debian.perusio.net
 
 =head1 AUTHORS
 
-agentzh (章亦春) C<< <agentzh@gmail.com> >>
+Yichun "agentzh" Zhang (章亦春) C<< <agentzh@gmail.com> >>
 
 Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
