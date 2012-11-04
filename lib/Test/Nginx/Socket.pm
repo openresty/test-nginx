@@ -601,6 +601,10 @@ again:
         }
     }
 
+    if ($block->wait) {
+        sleep($block->wait);
+    }
+
     if ($Test::Nginx::Util::Verbose) {
         warn "Testing stap...\n";
     }
@@ -646,10 +650,6 @@ sub test_stap ($$) {
             bail_out("no stap output file handle found");
         }
 
-        if ($block->stap_wait) {
-            sleep($block->stap_wait);
-        }
-
         my $out;
         for (1..2) {
             if (sleep_time() < 0.2) {
@@ -663,7 +663,7 @@ sub test_stap ($$) {
                 $out .= $_;
             }
 
-            if ($out || $block->stap_wait) {
+            if ($out) {
                 last;
             }
         }
@@ -2240,10 +2240,10 @@ This seciton specifies the expected literal output of the systemtap script speci
 
 Just like C<stap_out>, but specify a Perl regex pattern instead.
 
-=head2 stap_wait
+=head2 wait
 
-Takes an integer value for the seconds of time to wait before trying to compare the systemtap script's output
-in C<--- stap_out> or C<--- stap_out_like>.
+Takes an integer value for the seconds of time to wait right after processing the Nginx response and
+before performing the error log and systemtap output checks.
 
 =head2 udp_listen
 
