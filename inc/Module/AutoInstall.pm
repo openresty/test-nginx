@@ -3,11 +3,12 @@ package Module::AutoInstall;
 
 use strict;
 use Cwd                 ();
+use File::Spec          ();
 use ExtUtils::MakeMaker ();
 
 use vars qw{$VERSION};
 BEGIN {
-	$VERSION = '1.04';
+	$VERSION = '1.06';
 }
 
 # special map on pre-defined feature sets
@@ -187,7 +188,7 @@ sub import {
             }
 
             # XXX: check for conflicts and uninstalls(!) them.
-            my $cur = _load($mod);
+            my $cur = _version_of($mod);
             if (_version_cmp ($cur, $arg) >= 0)
             {
                 print "loaded. ($cur" . ( $arg ? " >= $arg" : '' ) . ")\n";
@@ -348,7 +349,7 @@ sub install {
     while ( my ( $pkg, $ver ) = splice( @_, 0, 2 ) ) {
 
         # grep out those already installed
-        if ( _version_cmp( _load($pkg), $ver ) >= 0 ) {
+        if ( _version_cmp( _version_of($pkg), $ver ) >= 0 ) {
             push @installed, $pkg;
         }
         else {
@@ -357,8 +358,8 @@ sub install {
     }
 
     if ($UpgradeDeps) {
-	push @modules, @installed;
-	@installed = ();
+        push @modules, @installed;
+        @installed = ();
     }
 
     return @installed unless @modules;  # nothing to do
@@ -392,7 +393,7 @@ sub install {
 
     # see if we have successfully installed them
     while ( my ( $pkg, $ver ) = splice( @modules, 0, 2 ) ) {
-        if ( _version_cmp( _load($pkg), $ver ) >= 0 ) {
+        if ( _version_cmp( _version_of($pkg), $ver ) >= 0 ) {
             push @installed, $pkg;
         }
         elsif ( $args{do_once} and open( FAILED, '>> .#autoinstall.failed' ) ) {
@@ -621,7 +622,7 @@ sub _update_to {
     my $ver   = shift;
 
     return
-      if _version_cmp( _load($class), $ver ) >= 0;  # no need to upgrade
+      if _version_cmp( _version_of($class), $ver ) >= 0;  # no need to upgrade
 
     if (
         _prompt( "==> A newer version of $class ($ver) is required. Install?",
@@ -706,14 +707,28 @@ sub _can_write {
 
 # load a module and return the version it reports
 sub _load {
-    my $mod  = pop;    # class/instance doesn't matter
+    my $mod  = pop; # method/function doesn't matter
     my $file = $mod;
-
     $file =~ s|::|/|g;
     $file .= '.pm';
-
     local $@;
     return eval { require $file; $mod->VERSION } || ( $@ ? undef: 0 );
+}
+
+# report version without loading a module
+sub _version_of {
+    my $mod = pop; # method/function doesn't matter
+    my $file = $mod;
+    $file =~ s|::|/|g;
+    $file .= '.pm';
+    foreach my $dir ( @INC ) {
+        next if ref $dir;
+        my $path = File::Spec->catfile($dir, $file);
+        next unless -e $path;
+        require ExtUtils::MM_Unix;
+        return ExtUtils::MM_Unix->parse_version($path);
+    }
+    return undef;
 }
 
 # Load CPAN.pm and it's configuration
@@ -912,4 +927,4 @@ END_MAKE
 
 __END__
 
-#line 1178
+#line 1193
