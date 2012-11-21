@@ -111,6 +111,7 @@ Then we tell our t/foo.t test script to connect to 11984 rather than 11211:
   --- request
       GET /foo
   --- response_body_like: STORED
+  --- error_code: 201
 
 The Test::Nginx library will automatically expand the special macro
 C<$TEST_NGINX_MEMCACHED_PORT> to the environment with the same name.

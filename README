@@ -90,6 +90,7 @@ DESCRIPTION
       --- request
           GET /foo
       --- response_body_like: STORED
+      --- error_code: 201
 
     The Test::Nginx library will automatically expand the special macro
     $TEST_NGINX_MEMCACHED_PORT to the environment with the same name. You
