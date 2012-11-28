@@ -627,8 +627,8 @@ env LUA_CPATH;
 $main_config
 
 http {
-    #access_log $AccLogFile;
-    access_log off;
+    access_log $AccLogFile;
+    #access_log off;
 
     default_type text/plain;
     keepalive_timeout  68;
