@@ -1304,7 +1304,7 @@ sub timeout_event_handler ($) {
 
     close($ctx->{sock});
 
-    if ($ctx->{block}->abort) {
+    if (!defined $ctx->{block}->abort) {
         my $tb = Test::More->builder;
         $tb->no_ending(1);
 
