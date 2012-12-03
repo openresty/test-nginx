@@ -606,6 +606,7 @@ sub write_config_file ($$$) {
 
     if ($CheckLeak) {
         $LogLevel = 'warn';
+        $AccLogFile = 'off';
     }
 
     open my $out, ">$ConfFile" or
