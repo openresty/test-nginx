@@ -863,6 +863,11 @@ sub run_test ($) {
     my $block = shift;
     my $name = $block->name;
 
+    if ($CheckLeak && $UseStap) {
+        bail_out("TEST_NGINX_CHEKC_LEAK does not work with "
+                 . "TEST_NGINX_USE_STAP");
+    }
+
     my $config = $block->config;
 
     $config = expand_env_in_config($config);
