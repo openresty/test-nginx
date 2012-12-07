@@ -747,7 +747,7 @@ sub show_all_chars ($) {
 
 sub test_config_version ($) {
     my $name = shift;
-    my $total = 30;
+    my $total = 35;
     my $sleep = sleep_time();
     my $nsucc = 0;
 
@@ -798,6 +798,9 @@ sub test_config_version ($) {
 
         sleep $wait;
     }
+
+    my $tb = Test::More->builder;
+    $tb->no_ending(1);
 
     Test::More::fail("$name - failed to reload configuration");
 }
