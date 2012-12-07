@@ -868,6 +868,10 @@ sub run_test ($) {
                  . "TEST_NGINX_USE_STAP");
     }
 
+    if (!defined $ENV{TEST_NGINX_SERVER_PORT}) {
+        $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
+    }
+
     my $config = $block->config;
 
     $config = expand_env_in_config($config);
