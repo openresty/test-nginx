@@ -1181,7 +1181,7 @@ start_nginx:
                 my $opts;
 
                 if ($UseValgrind =~ /^\d+$/) {
-                    $opts = "--tool=memcheck --leak-check=full";
+                    $opts = "--tool=memcheck --leak-check=full --show-possibly-lost=no";
 
                     if (-f 'valgrind.suppress') {
                         $cmd = "valgrind -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
