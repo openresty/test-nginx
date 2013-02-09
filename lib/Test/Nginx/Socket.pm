@@ -16,6 +16,7 @@ use List::MoreUtils qw( any );
 use List::Util qw( sum );
 use IO::Select ();
 use File::Temp qw( tempfile );
+use POSIX ":sys_wait_h";
 
 use Test::Nginx::Util qw(
   is_running
@@ -80,6 +81,8 @@ our @EXPORT = qw( plan run_tests run_test
   server_addr server_root html_dir server_port
   timeout no_nginx_manager
 );
+
+our $TotalConnectingTimeouts = 0;
 
 sub send_request ($$$$@);
 
@@ -1104,11 +1107,24 @@ sub send_request ($$$$@) {
 
     if (!defined $sock) {
         $tries ||= 1;
-        my $total_tries = 50;
+        my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
         if ($tries <= $total_tries) {
             my $wait = (sleep_time() + sleep_time() * $tries) * $tries / 2;
             if ($wait >= 1) {
                 $wait = 1;
+            }
+
+            if (defined $Test::Nginx::Util::ChildPid) {
+                my $errcode = $!;
+                if (waitpid($Test::Nginx::Util::ChildPid, WNOHANG) == -1) {
+                    warn "WARNING: Child process $Test::Nginx::Util::ChildPid is already gone.\n";
+
+                    my $tb = Test::More->builder;
+                    $tb->no_ending(1);
+
+                    fail("$name - Can't connect to $ServerAddr:$ServerPortForClient: $errcode (aborted)\n");
+                    return;
+                }
             }
 
             if ($wait >= 0.6) {
@@ -1125,7 +1141,17 @@ sub send_request ($$$$@) {
 
         }
 
-        bail_out("$name - Can't connect to $ServerAddr:$ServerPortForClient: $! (aborted)\n");
+        my $msg = "$name - Can't connect to $ServerAddr:$ServerPortForClient: $! (aborted)\n";
+        if (++$TotalConnectingTimeouts < 3) {
+            my $tb = Test::More->builder;
+            $tb->no_ending(1);
+            fail($msg);
+
+        } else {
+            bail_out($msg);
+        }
+
+        return;
     }
 
     #warn "connected";
