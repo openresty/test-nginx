@@ -1210,7 +1210,7 @@ start_nginx:
                     my ($stap_fh, $stap_fname) = tempfile("XXXXXXX", SUFFIX => '.stp', TMPDIR => 1);
                     my $stap = $block->stap;
                     $stap =~ s/^\bS\(([^)]+)\)/probe process("nginx").statement("*\@$1")/smg;
-                    $stap =~ s/^\bF\((\w+)\)/probe process("nginx").function("$1")/smg;
+                    $stap =~ s/^\bF\(([^\)]+)\)/probe process("nginx").function("$1")/smg;
                     $stap =~ s/^\bM\(([-\w]+)\)/probe process("nginx").mark("$1")/smg;
                     $stap =~ s/\bT\(\)/println("Fire ", pp())/smg;
                     print $stap_fh $stap;
