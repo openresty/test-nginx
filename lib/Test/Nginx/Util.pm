@@ -930,8 +930,26 @@ sub run_test ($) {
 
     my $skip_nginx = $block->skip_nginx;
     my $skip_nginx2 = $block->skip_nginx2;
+    my $skip_eval = $block->skip_eval;
     my $skip_slave = $block->skip_slave;
     my ($tests_to_skip, $should_skip, $skip_reason);
+
+    if (defined $skip_eval) {
+        if ($skip_eval =~ m{
+                ^ \s* (\d+) \s* : \s* (.*)
+            }xs)
+        {
+            $tests_to_skip = $1;
+            $skip_reason = "skip_eval";
+            my $code = $2;
+            $should_skip = eval $code;
+            if ($@) {
+                bail_out("$name - skip_eval - failed to eval the Perl code "
+                         . "\"$code\": $@");
+            }
+        }
+    }
+
     if (defined $skip_nginx) {
         if ($skip_nginx =~ m{
                 ^ \s* (\d+) \s* : \s*

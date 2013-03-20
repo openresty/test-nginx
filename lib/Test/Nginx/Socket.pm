@@ -2137,6 +2137,24 @@ html directory of the nginx server under test. For example:
 will create a file named C<blah.txt> in the html directory of the nginx
 server tested. The file will contain the text "Hello, world".
 
+=head2 skip_eval
+
+Skip the specified number of subtests (in the current test block) if the result of running a piece of Perl code is true.
+
+The format for this section is
+
+    --- skip_eval
+    <subtest-count>: <perl-code>
+
+For example, to skip 3 subtests when the current operating system is not Linux:
+
+    --- skip_eval
+    3: $^O ne 'linux'
+
+or equivalently,
+
+    --- skip_eval: 3: $^O ne 'linux'
+
 =head2 skip_nginx
 
 Skip the specified number of subtests (in the current test block)
