@@ -2300,6 +2300,26 @@ Here is an example:
     --- response_body
     received: hello world
 
+Datagram UNIX domain socket is also supported if a path name ending with ".sock" is given to this directive. For instance,
+
+    === TEST 2: datagram unix domain socket access
+    --- config
+        location = /t {
+            content_by_lua '
+                local udp = ngx.socket.udp()
+                udp:setpeername("unix:a.sock")
+                udp:send("blah")
+                local data, err = udp:receive()
+                ngx.say("received: ", data)
+            ';
+        }
+    --- udp_listen: a.sock
+    --- udp_reply: hello world
+    --- request
+    GET /t
+    --- response_body
+    received: hello world
+
 =head2 udp_reply
 
 This section specifies the datagram reply content for the UDP server created by the C<udp_listen> section.

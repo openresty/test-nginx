@@ -18,6 +18,7 @@ use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile );
 use IO::Socket::INET;
+use IO::Socket::UNIX;
 use Test::LongString;
 
 our $ConfigVersion;
@@ -1501,26 +1502,39 @@ request:
             }
         }
 
-        my $udp_socket;
+        my ($udp_socket, $uds_socket_file);
         if (!$CheckLeak && defined $block->udp_listen) {
-            my $port = $block->udp_listen;
-            if ($port !~ /^\d+$/) {
-                bail_out("$name - bad udp_listen port number: $port");
-            }
-
             my $reply = $block->udp_reply;
             if (!defined $reply) {
                 bail_out("$name - no --- udp_reply specified but --- udp_listen is specified");
             }
 
-            #warn "Reply: ", $reply;
+            my $target = $block->udp_listen;
+            if ($target =~ /^\d+$/) {
+                my $port = $target;
 
-            $udp_socket = IO::Socket::INET->new(
-                LocalPort => $port,
-                Proto => 'udp',
-                Reuse => 1,
-                Timeout => timeout(),
-            ) or bail_out("$name - failed to create the udp listening socket: $!");
+                $udp_socket = IO::Socket::INET->new(
+                    LocalPort => $port,
+                    Proto => 'udp',
+                    Reuse => 1,
+                    Timeout => timeout(),
+                ) or bail_out("$name - failed to create the udp listening socket: $!");
+
+            } elsif ($target =~ m{\S+\.sock$}) {
+                $udp_socket = IO::Socket::UNIX->new(
+                    Local => $target,
+                    Type  => SOCK_DGRAM,
+                    Reuse => 1,
+                    Timeout => timeout(),
+                ) or die "$!";
+
+                $uds_socket_file = $target;
+
+            } else {
+                bail_out("$name - bad udp_listen target: $target");
+            }
+
+            #warn "Reply: ", $reply;
 
             if (defined $block->udp_query) {
                 my $tb = Test::More->builder;
@@ -1540,7 +1554,7 @@ request:
                 $InSubprocess = 1;
 
                 if ($Verbose) {
-                    warn "UDP server is listening on $port ...\n";
+                    warn "UDP server is listening on $target ...\n";
                 }
 
                 local $| = 1;
@@ -1632,6 +1646,11 @@ request:
 
             $udp_socket->close();
             undef $udp_socket;
+        }
+
+        if (defined $uds_socket_file) {
+            unlink($uds_socket_file)
+                or warn "failed to unlink $uds_socket_file";
         }
 
         if (defined $tcp_socket) {
