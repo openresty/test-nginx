@@ -1539,6 +1539,10 @@ request:
                 ) or bail_out("$name - failed to create the udp listening socket: $!");
 
             } elsif ($target =~ m{\S+\.sock$}) {
+                if (-e $target) {
+                    unlink $target or die "cannot remove $target: $!";
+                }
+
                 $udp_socket = IO::Socket::UNIX->new(
                     Local => $target,
                     Type  => SOCK_DGRAM,
