@@ -869,6 +869,11 @@ sub run_test ($) {
                  . "TEST_NGINX_USE_STAP");
     }
 
+    if ($UseHup && $UseStap) {
+        bail_out("TEST_NGINX_USE_HUP does not work with "
+                 . "TEST_NGINX_USE_STAP");
+    }
+
     if (!defined $ENV{TEST_NGINX_SERVER_PORT}) {
         $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
     }
