@@ -83,6 +83,7 @@ our @EXPORT = qw( plan run_tests run_test
 );
 
 our $TotalConnectingTimeouts = 0;
+our $PrevNginxPid;
 
 sub send_request ($$$$@);
 
@@ -477,12 +478,36 @@ sub run_test_helper ($$) {
 
             $Test::Nginx::Util::ChildPid = $pid;
 
+            sleep(1);
             my $ngx_pid = get_pid_from_pidfile($name);
-            sleep 1;
+            if ($PrevNginxPid && $ngx_pid) {
+                my $i = 0;
+                while ($ngx_pid == $PrevNginxPid) {
+                    sleep 0.01;
+                    $ngx_pid = get_pid_from_pidfile($name);
+                    if (++$i > 1000) {
+                        bail_out("nginx cannot be started");
+                    }
+                }
+            }
+            $PrevNginxPid = $ngx_pid;
             my @rss_list;
             for (my $i = 0; $i < 100; $i++) {
                 sleep 0.02;
                 my $out = `ps -eo pid,rss|grep $ngx_pid`;
+                if ($? != 0 && !is_running($ngx_pid)) {
+                    if (is_running($pid)) {
+                        kill(SIGKILL, $pid);
+                        waitpid($pid, 0);
+                    }
+
+                    my $tb = Test::More->builder;
+                    $tb->no_ending(1);
+
+                    Test::More::fail("$name - the nginx process $ngx_pid is gone");
+                    last;
+                }
+
                 my @lines = grep { $_->[0] eq $ngx_pid }
                                  map { s/^\s+|\s+$//g; [ split /\s+/, $_ ] }
                                  split /\n/, $out;
