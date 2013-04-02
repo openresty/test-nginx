@@ -61,6 +61,42 @@ our $StapOutFileHandle;
 our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
     '#', '@', '-', '_', '^');
 
+if ($CheckLeak) {
+    if ($UseStap) {
+        warn "WARNING: TEST_NGINX_CHECK_LEAK and TEST_NGINX_USE_STAP "
+             ."are both set and the former wins.\n";
+        undef $UseStap;
+    }
+
+    if ($UseValgrind) {
+        warn "WARNING: TEST_NGINX_CHECK_LEAK and TEST_NGINX_USE_VALGRIND "
+             ."are both set and the former wins.\n";
+        undef $UseValgrind;
+    }
+
+    if ($UseHup) {
+        warn "WARNING: TEST_NGINX_CHECK_LEAK and TEST_NGINX_USE_HUP "
+             ."are both set and the former wins.\n";
+        undef $UseHup;
+    }
+}
+
+if ($UseHup) {
+    if ($UseStap) {
+        warn "WARNING: TEST_NGINX_USE_HUP and TEST_NGINX_USE_STAP "
+             ."are both set and the former wins.\n";
+        undef $UseStap;
+    }
+}
+
+if ($UseValgrind) {
+    if ($UseStap) {
+        warn "WARNING: TEST_NGINX_USE_VALGRIND and TEST_NGINX_USE_STAP "
+             ."are both set and the former wins.\n";
+        undef $UseStap;
+    }
+}
+
 #$SIG{CHLD} = 'IGNORE';
 
 sub is_running ($) {
@@ -425,6 +461,10 @@ sub run_tests () {
 
     if (defined $NginxVersion) {
         #warn "[INFO] Using nginx version $NginxVersion ($NginxRawVersion)\n";
+    }
+
+    if (!defined $ENV{TEST_NGINX_SERVER_PORT}) {
+        $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
     }
 
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
@@ -863,15 +903,6 @@ sub check_if_missing_directives () {
 sub run_test ($) {
     my $block = shift;
     my $name = $block->name;
-
-    if ($CheckLeak && $UseStap) {
-        bail_out("TEST_NGINX_CHEKC_LEAK does not work with "
-                 . "TEST_NGINX_USE_STAP");
-    }
-
-    if (!defined $ENV{TEST_NGINX_SERVER_PORT}) {
-        $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
-    }
 
     my $config = $block->config;
 
