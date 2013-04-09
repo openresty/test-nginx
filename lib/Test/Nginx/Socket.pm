@@ -1051,6 +1051,7 @@ sub parse_response($$$) {
 
                 last;
             }
+
             if ( $raw =~ m{ \G [\ \t]* ( [A-Fa-f0-9]+ ) [\ \t]* \r\n }gcsx ) {
                 my $rest = hex($1);
 
@@ -1064,28 +1065,41 @@ sub parse_response($$$) {
                         $decoded .= $1;
 
                         #warn "decoded: [$1]\n";
-                    }
-                    else {
-                        fail(
-"$name - invalid chunked data received (not enought octets for the data section)"
+
+                    } else {
+                        my $tb = Test::More->builder;
+                        $tb->no_ending(1);
+
+                        fail("$name - invalid chunked data received "
+                                ."(not enought octets for the data section)"
                         );
                         return;
                     }
 
                     $rest -= $bit;
                 }
+
                 if ( $raw !~ /\G\r\n/gcs ) {
+                    my $tb = Test::More->builder;
+                    $tb->no_ending(1);
+
                     fail(
                         "$name - invalid chunked data received (expected CRLF)."
                     );
                     return;
                 }
-            }
-            elsif ( $raw =~ /\G.+/gcs ) {
+
+            } elsif ( $raw =~ /\G.+/gcs ) {
+                my $tb = Test::More->builder;
+                $tb->no_ending(1);
+
                 fail "$name - invalid chunked body received: $&";
                 return;
-            }
-            else {
+
+            } else {
+                my $tb = Test::More->builder;
+                $tb->no_ending(1);
+
                 fail "$name - no last chunk found - $raw";
                 return;
             }
