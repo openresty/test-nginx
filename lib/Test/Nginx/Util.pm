@@ -24,6 +24,7 @@ use Test::LongString;
 our $ConfigVersion;
 
 our $NoLongString = undef;
+our $FirstTime = 1;
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
@@ -1121,6 +1122,29 @@ sub run_test ($) {
                 #warn "found running nginx...";
 
                 if ($UseHup) {
+                    if ($FirstTime) {
+                        undef $FirstTime;
+
+                        if ($Verbose) {
+                            warn "sending QUIT signal to $pid\n";
+                        }
+
+                        if (kill(SIGQUIT, $pid) == 0) { # send quit signal
+                            #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
+                        }
+
+                        sleep $TestNginxSleep;
+
+                        if (is_running($pid)) {
+                            warn "WARNING: killing nginx $pid with force...";
+                            kill(SIGKILL, $pid);
+                            waitpid($pid, 0);
+                        }
+
+                        undef $nginx_is_running;
+                        goto start_nginx;
+                    }
+
                     setup_server_root();
                     write_user_files($block);
                     write_config_file($config, $block->http_config, $block->main_config);
