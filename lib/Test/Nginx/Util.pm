@@ -905,6 +905,12 @@ sub run_test ($) {
     my $block = shift;
     my $name = $block->name;
 
+    my $first_time;
+    if ($FirstTime) {
+        $first_time = 1;
+        undef $FirstTime;
+    }
+
     my $config = $block->config;
 
     $config = expand_env_in_config($config);
@@ -1122,9 +1128,7 @@ sub run_test ($) {
                 #warn "found running nginx...";
 
                 if ($UseHup) {
-                    if ($FirstTime) {
-                        undef $FirstTime;
-
+                    if ($first_time) {
                         if ($Verbose) {
                             warn "sending QUIT signal to $pid\n";
                         }
