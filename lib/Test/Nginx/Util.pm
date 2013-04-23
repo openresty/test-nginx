@@ -1236,7 +1236,7 @@ start_nginx:
             write_user_files($block);
             write_config_file($config, $block->http_config, $block->main_config);
             #warn "nginx binary: $NginxBinary";
-            if ( ! can_run($NginxBinary) ) {
+            if (!can_run($NginxBinary)) {
                 bail_out("$name - Cannot find the nginx executable in the PATH environment");
                 die;
             }
