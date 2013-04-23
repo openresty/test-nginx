@@ -13,7 +13,6 @@ use HTTP::Response;
 use Cwd qw( cwd );
 use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
-use ExtUtils::MakeMaker ();
 use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile );
@@ -1863,13 +1862,13 @@ sub can_run {
     my ($cmd) = @_;
 
     #warn "can run: @_\n";
-    my $_cmd = $cmd;
-    return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));
+    #my $_cmd = $cmd;
+    #return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));
 
     for my $dir ((split /$Config::Config{path_sep}/, $ENV{PATH}), '.') {
         next if $dir eq '';
         my $abs = File::Spec->catfile($dir, $_[0]);
-        return $abs if (-x $abs or $abs = MM->maybe_command($abs));
+        return $abs if -f $abs && -x $abs;
     }
 
     return;
