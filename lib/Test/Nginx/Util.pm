@@ -1286,6 +1286,23 @@ start_nginx:
                 if ($block->stap) {
                     my ($stap_fh, $stap_fname) = tempfile("XXXXXXX", SUFFIX => '.stp', TMPDIR => 1);
                     my $stap = $block->stap;
+
+                    if ($stap =~ /\$LIBPCRE_PATH\b/) {
+                        my $nginx_path = can_run($NginxBinary);
+                        #warn "nginx path: ", $nginx_path;
+                        my $line = `ldd $nginx_path|grep libpcre.so`;
+                        my $libpcre_path;
+                        if ($line =~ m{\S+/libpcre\.so(?:\.\d+)*}) {
+                            $libpcre_path = $&;
+
+                        } else {
+                            # static linking is used?
+                            $libpcre_path = $nginx_path;
+                        }
+
+                        $stap =~ s/\$LIBPCRE_PATH\b/$libpcre_path/g;
+                    }
+
                     $stap =~ s/^\bS\(([^)]+)\)/probe process("nginx").statement("*\@$1")/smg;
                     $stap =~ s/^\bF\(([^\)]+)\)/probe process("nginx").function("$1")/smg;
                     $stap =~ s/^\bM\(([-\w]+)\)/probe process("nginx").mark("$1")/smg;
