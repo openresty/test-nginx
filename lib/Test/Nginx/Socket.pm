@@ -678,7 +678,7 @@ sub test_stap ($$) {
             bail_out("no stap output file handle found");
         }
 
-        my $out;
+        my $out = '';
         for (1..2) {
             if (sleep_time() < 0.2) {
                 sleep 0.2;
