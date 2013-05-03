@@ -23,7 +23,7 @@ requires:
   ExtUtils::MakeMaker: 0
   Fcntl: 0
   File::Find: 0
-  File::Path: 0
+  File::Path: 2.06_05
   File::Temp: 0
   Filter::Util::Call: 0
   HTTP::Response: 0
