@@ -669,6 +669,7 @@ sub test_stap ($$) {
 
     my $stap_out = $block->stap_out;
     my $stap_out_like = $block->stap_out_like;
+    my $stap_out_unlike = $block->stap_out_unlike;
 
     SKIP: {
         skip "$name - tests skipped due to $reason", 1 if $dry_run;
@@ -701,18 +702,21 @@ sub test_stap ($$) {
         }
 
         if (defined $stap_out) {
-
             if ($NoLongString) {
                 is($out, $block->stap_out, "$name - stap output expected");
             } else {
                 is_string($out, $block->stap_out, "$name - stap output expected");
             }
+        }
 
-        } elsif (defined $stap_out_like) {
-            like($out || '', qr/$stap_out_like/sm, "$name - stap output matched pattern");
+        if (defined $stap_out_like) {
+            like($out || '', qr/$stap_out_like/sm,
+                 "$name - stap output should match the pattern");
+        }
 
-        } else {
-            fail("$name - neither --- stap_out nor --- stap_out_like is specified");
+        if (defined $stap_out_unlike) {
+            unlike($out || '', qr/$stap_out_unlike/sm,
+                   "$name - stap output should not match the pattern");
         }
     }
 }
@@ -2322,6 +2326,10 @@ This seciton specifies the expected literal output of the systemtap script speci
 =head2 stap_out_like
 
 Just like C<stap_out>, but specify a Perl regex pattern instead.
+
+=head2 stap_out_unlike
+
+Just like C<stap_like>, but the subtest only passes when the specified pattern does I<not> match the output of the systemtap script.
 
 =head2 wait
 

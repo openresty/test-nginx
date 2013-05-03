@@ -1312,7 +1312,10 @@ start_nginx:
 
                     my ($out, $outfile);
 
-                    if (!defined $block->stap_out && !defined $block->stap_out_like) {
+                    if (!defined $block->stap_out
+                        && !defined $block->stap_out_like
+                        && !defined $block->stap_out_unlike)
+                    {
                         $StapOutFile = "/dev/stderr";
                     }
 
