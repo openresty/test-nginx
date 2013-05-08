@@ -97,6 +97,7 @@ sub check_response_body ($$$$$);
 sub fmt_str ($);
 sub gen_cmd_from_req ($);
 sub get_linear_regression_slope ($);
+sub value_contains ($$);
 
 $RunTestHelper = \&run_test_helper;
 
@@ -836,13 +837,43 @@ sub check_response_headers($$$$$) {
     }
 }
 
+sub value_contains ($$) {
+    my ($val, $pat) = @_;
+
+    if (!ref $val || ref $val eq 'Regexp') {
+        return $val =~ /\Q$pat\E/;
+    }
+
+    if (ref $val eq 'ARRAY') {
+        for my $v (@$val) {
+            if (value_contains($v, $pat)) {
+                return 1;
+            }
+        }
+    }
+
+    return undef;
+}
+
 sub check_error_log ($$$$$) {
     my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
     my $lines;
 
+    my $check_alert_message = 1;
+    my $check_crit_message = 1;
+
     if (defined $block->error_log) {
         my $pats = $block->error_log;
+
+        if (value_contains($pats, "[alert")) {
+            undef $check_alert_message;
+        }
+
+        if (value_contains($pats, "[crit")) {
+            undef $check_crit_message;
+        }
+
         if (!ref $pats) {
             chomp $pats;
             my @lines = split /\n+/, $pats;
@@ -884,6 +915,15 @@ sub check_error_log ($$$$$) {
     if (defined $block->no_error_log) {
         #warn "HERE";
         my $pats = $block->no_error_log;
+
+        if (value_contains($pats, "[alert")) {
+            undef $check_alert_message;
+        }
+
+        if (value_contains($pats, "[crit")) {
+            undef $check_crit_message;
+        }
+
         if (!ref $pats) {
             chomp $pats;
             my @lines = split /\n+/, $pats;
@@ -922,6 +962,39 @@ sub check_error_log ($$$$$) {
         }
     }
 
+    if ($check_alert_message) {
+        $lines ||= error_log_data();
+        for my $line (@$lines) {
+            #warn "test $pat\n";
+            if ($line =~ /\[alert\]/) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    my $ln = fmt_str($line);
+
+                    my $tb = Test::More->builder;
+                    $tb->no_ending(1);
+                    warn("WARNING: $name - $ln");
+                }
+            }
+        }
+    }
+
+    if ($check_crit_message) {
+        $lines ||= error_log_data();
+        for my $line (@$lines) {
+            #warn "test $pat\n";
+            if ($line =~ /\[crit\]/) {
+                SKIP: {
+                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    my $ln = fmt_str($line);
+
+                    my $tb = Test::More->builder;
+                    $tb->no_ending(1);
+                    warn("WARNING: $name - $ln");
+                }
+            }
+        }
+    }
 }
 
 sub fmt_str ($) {
