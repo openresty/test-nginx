@@ -21,6 +21,7 @@ use IO::Socket::UNIX;
 use Test::LongString;
 
 our $ConfigVersion;
+our $FilterHttpConfig;
 
 our $NoLongString = undef;
 our $FirstTime = 1;
@@ -286,6 +287,7 @@ our @EXPORT_OK = qw(
     $ServRoot
     $ConfFile
     $RunTestHelper
+    $FilterHttpConfig
     $NoNginxManager
     $RepeatEach
     $CheckLeak
@@ -628,6 +630,10 @@ sub write_config_file ($$$) {
 
     if (!defined $http_config) {
         $http_config = '';
+    }
+
+    if ($FilterHttpConfig) {
+        $http_config = $FilterHttpConfig->($http_config)
     }
 
     if ($http_config =~ /\bpostpone_output\b/) {

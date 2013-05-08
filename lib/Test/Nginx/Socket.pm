@@ -46,6 +46,7 @@ use Test::Nginx::Util qw(
   $ServRoot
   $ConfFile
   $RunTestHelper
+  $FilterHttpConfig
   $RepeatEach
   $CheckLeak
   timeout
@@ -100,6 +101,10 @@ sub get_linear_regression_slope ($);
 sub value_contains ($$);
 
 $RunTestHelper = \&run_test_helper;
+
+sub set_http_config_filter ($) {
+    $FilterHttpConfig = shift;
+}
 
 #  This will parse a "request"" string. The expected format is:
 # - One line for the HTTP verb (POST, GET, etc.) plus optional relative URL
