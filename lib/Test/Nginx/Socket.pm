@@ -1687,7 +1687,11 @@ sub get_linear_regression_slope ($) {
     my $x = 0;
     my $avg_xy = sum(map { $x++; $x * $_ } @$list) / $n;
     my $avg_x2 = sum(map { $_ * $_ } 1 .. $n) / $n;
-    my $k = ($avg_xy - $avg_x * $avg_y) / ($avg_x2 - $avg_x * $avg_x);
+    my $denom = $avg_x2 - $avg_x * $avg_x;
+    if ($denom == 0) {
+        return 'Inf';
+    }
+    my $k = ($avg_xy - $avg_x * $avg_y) / $denom;
     return sprintf("%.01f", $k);
 }
 
