@@ -678,7 +678,7 @@ sub test_stap ($$) {
     my $stap_out_unlike = $block->stap_out_unlike;
 
     SKIP: {
-        skip "$name - tests skipped due to $reason", 1 if $dry_run;
+        skip "$name - stap_out - tests skipped due to $reason", 1 if $dry_run;
 
         my $fh = stap_out_fh();
         if (!$fh) {
@@ -783,7 +783,7 @@ sub check_raw_response_headers($$$$$) {
     my $name = $block->name;
     if (defined $block->raw_response_headers_like) {
         SKIP: {
-            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+            skip "$name - raw_response_headers_like - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             my $expected = get_indexed_value($name,
                                              $block->raw_response_headers_like,
                                              $req_idx,
@@ -794,7 +794,7 @@ sub check_raw_response_headers($$$$$) {
 
     if (defined $block->raw_response_headers_unlike) {
         SKIP: {
-            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+            skip "$name - raw_response_headers_unlike - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             my $expected = get_indexed_value($name,
                                              $block->raw_response_headers_unlike,
                                              $req_idx,
@@ -817,7 +817,7 @@ sub check_response_headers($$$$$) {
 
                 #warn "HIT";
                 SKIP: {
-                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    skip "$name - response_headers - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                     unlike $raw_headers, qr/^\s*\Q$key\E\s*:/ms,
                       "$name - header $key not present in the raw headers";
                 }
@@ -830,7 +830,7 @@ sub check_response_headers($$$$$) {
             }
 
             SKIP: {
-                skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                skip "$name - response_headers - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                 is $actual_val, $val, "$name - header $key ok";
             }
         }
@@ -846,7 +846,7 @@ sub check_response_headers($$$$$) {
                 $expected_val = '';
             }
             SKIP: {
-                skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                skip "$name - response_headers_like - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                 like $expected_val, qr/^$val$/, "$name - header $key like ok";
             }
         }
@@ -909,7 +909,7 @@ sub check_error_log ($$$$$) {
                 next if !defined $pat;
                 if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
                     SKIP: {
-                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                         pass("$name - pattern \"$pat\" matches a line in error.log");
                     }
                     undef $pat;
@@ -920,7 +920,7 @@ sub check_error_log ($$$$$) {
         for my $pat (@$pats) {
             if (defined $pat) {
                 SKIP: {
-                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                     fail("$name - pattern \"$pat\" matches a line in error.log");
                     #die join("", @$lines);
                 }
@@ -957,7 +957,7 @@ sub check_error_log ($$$$$) {
                 #warn "test $pat\n";
                 if ((ref $pat && $line =~ /$pat/) || $line =~ /\Q$pat\E/) {
                     SKIP: {
-                        skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                        skip "$name - no_error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                         my $ln = fmt_str($line);
                         my $p = fmt_str($pat);
                         fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\"");
@@ -970,7 +970,7 @@ sub check_error_log ($$$$$) {
         for my $pat (@$pats) {
             if (defined $pat) {
                 SKIP: {
-                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    skip "$name - no_error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                     my $p = fmt_str($pat);
                     pass("$name - pattern \"$p\" does not match a line in error.log");
                 }
@@ -978,36 +978,24 @@ sub check_error_log ($$$$$) {
         }
     }
 
-    if ($check_alert_message) {
+    if ($check_alert_message && !$dry_run) {
         $lines ||= error_log_data();
         for my $line (@$lines) {
             #warn "test $pat\n";
             if ($line =~ /\[alert\]/) {
-                SKIP: {
-                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                    my $ln = fmt_str($line);
-
-                    my $tb = Test::More->builder;
-                    $tb->no_ending(1);
-                    warn("WARNING: $name - $ln");
-                }
+                my $ln = fmt_str($line);
+                warn("WARNING: $name - $ln");
             }
         }
     }
 
-    if ($check_crit_message) {
+    if ($check_crit_message && !$dry_run) {
         $lines ||= error_log_data();
         for my $line (@$lines) {
             #warn "test $pat\n";
             if ($line =~ /\[crit\]/) {
-                SKIP: {
-                    skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                    my $ln = fmt_str($line);
-
-                    my $tb = Test::More->builder;
-                    $tb->no_ending(1);
-                    warn("WARNING: $name - $ln");
-                }
+                my $ln = fmt_str($line);
+                warn("WARNING: $name - $ln");
             }
         }
     }
@@ -1065,7 +1053,7 @@ sub check_response_body ($$$$$) {
 
         #warn "no long string: $NoLongString";
         SKIP: {
-            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+            skip "$name - response_body - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             if (ref $expected) {
                 like $content, $expected, "$name - response_body - like";
 
@@ -1100,7 +1088,7 @@ sub check_response_body ($$$$$) {
         }
 
         SKIP: {
-            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+            skip "$name - response_body_like - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             like( $content, qr/$expected_pat/s,
                 "$name - response_body_like - response is expected ($summary)"
             );
