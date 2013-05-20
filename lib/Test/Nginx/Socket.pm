@@ -781,7 +781,7 @@ sub check_error_code ($$$$$) {
 sub check_raw_response_headers($$$$$) {
     my ($block, $raw_headers, $dry_run, $req_idx, $need_array) = @_;
     my $name = $block->name;
-    if ( defined $block->raw_response_headers_like ) {
+    if (defined $block->raw_response_headers_like) {
         SKIP: {
             skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
             my $expected = get_indexed_value($name,
@@ -789,6 +789,17 @@ sub check_raw_response_headers($$$$$) {
                                              $req_idx,
                                              $need_array);
             like $raw_headers, qr/$expected/s, "$name - raw resp headers like";
+        }
+    }
+
+    if (defined $block->raw_response_headers_unlike) {
+        SKIP: {
+            skip "$name - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+            my $expected = get_indexed_value($name,
+                                             $block->raw_response_headers_unlike,
+                                             $req_idx,
+                                             $need_array);
+            unlike $raw_headers, qr/$expected/s, "$name - raw resp headers unlike";
         }
     }
 }
@@ -2082,6 +2093,11 @@ test) is listening to:
 
 As usual, if the test is made of multiple requests, then
 raw_response_headers_like B<MUST> be an array.
+
+=head2 raw_response_headers_unlike
+
+Just like C<raw_response_headers_like> but the subtest only passes when
+the regex does I<not> match the raw response headers string.
 
 =head2 error_code
 
