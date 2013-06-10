@@ -1,5 +1,95 @@
 Changes for Test::Nginx
 
+0.22 - 2013-06-10
+ *   feature: added new sections --- abort and --- shutdown to test
+     premature client abortions.
+
+ *   feature: implemented new section "---
+     raw_response_headers_unlike".
+
+ *   feature: added support for custom http_config filters for
+     subclasses.
+
+ *   feature: now we automatically check [alert] and [crit] messages
+     in the nginx error logs and print them as warnings if they do
+     not appear in either --- error_log or --- no_error_log.
+
+ *   feature: added new section "--- stap_out_unlike" for testing
+     patterns which should not appear in the output systemtap.
+
+ *   feature: added support for the special notation "$LIBPCRE_PATH"
+     within --- stap, which is always substituted by the absolute
+     path to libpcre used by the current nginx.
+
+ *   feature: now we check if the nginx process is gone in the "check
+     leak" testing mode (i.e., when TEST_NGINX_CHECK_LEAK=1).
+
+ *   feature: added new section "--- skip_eval: <subtest-count>
+     <perl-code>" for skipping tests according to the running result
+     of a piece of Perl code.
+
+ *   feature: now we allow a (unix domain) socket file path specified
+     in the "--- udp_listen" directive value.
+
+ *   feature: in --- stap values, now we support the notation
+     "F(func@file)".
+
+ *   feature: made the environment TEST_NGINX_SERVER_PORT always take
+     the value so that the test cases can always reference it.
+
+ *   feature: added new section "--- wait" to always wait a specified
+     amount of time before checking the systemtap outputs and/or
+     error logs (if any).
+
+ *   bugfix: no longer retry connecting to the nginx server when the
+     child process running nginx is already gone.
+
+ *   bugfix: no longer bail out the up to 3 test cases fail all their
+     connecting attempts.
+
+ *   bugfix: TEST_NGINX_USE_HUP=1 could not work with
+     TEST_NGINX_NO_CLEAN=1.
+
+ *   bugfix: the output of systemtap took the value undef when it was
+     in fact empty.
+
+ *   bugfix: protect against division by zero in the "check leak"
+     testing mode.
+
+ *   bugfix: disabled the test report ending when failing to parse
+     chunked response body because the test count is surely out of
+     sync.
+
+ *   bugfix: the code that searches executables in the PATH
+     environment would always look up the current working directory
+     first and might pick up an executable directory with the same
+     name.
+
+ *   bugfix: conflicting testing modes may conflict together.
+
+ *   bugfix: added File::Path 2.06_05 as a minimum requirement.
+     thanks Andreas J. KÃ¶nig for reporting this issue.
+
+ *   bugfix: pass --show-possibly-lost=no to valgrind by default
+     because nginx makes clever use of pointers almost everywhere.
+
+ *   bugfix: when --- abort was not specified, http client timeout
+     was not treated as a subtest failure as specified.
+
+ *   bugfix: the child process running ab or weighttp might not be
+     reaped in extreme conditions.
+
+ *   bugfix: we did not close STDOUT and STDERR in the child
+     processes forked, which could confuse the "prove" harness and
+     lead to hang.
+
+ *   optimize: disabled the access log altogether in the "check leak"
+     testing mode.
+
+ *   docs: documented the TEST_NGINX_NO_CLEAN environment.
+
+ *   docs: fixed a small issue in the code sample. thanks smallfish.
+
 0.21 - 2012-09-27
  *   feature: added support for SystemTap: the SystemTap white-box
      testing mode is enabled by setting TEST_NGINX_USE_STAP=1 and by
