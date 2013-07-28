@@ -1142,10 +1142,14 @@ sub run_test ($) {
                             #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                         }
 
-                        sleep $TestNginxSleep;
+                        my $max_i = 10;
+                        for (my $i = 1; $i <= $max_i; $i++) {
+                            last unless is_running($pid);
 
-                        if (is_running($pid)) {
-                            warn "WARNING: killing nginx $pid with force...";
+                            sleep $TestNginxSleep;
+                            next if $i < $max_i;
+
+                            warn "WARNING: $name - killing nginx $pid with force...";
                             kill(SIGKILL, $pid);
                             waitpid($pid, 0);
                         }
@@ -1204,10 +1208,14 @@ sub run_test ($) {
                     #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
 
-                sleep $TestNginxSleep;
+                my $max_i = 10;
+                for (my $i = 1; $i <= $max_i; $i++) {
+                    last unless is_running($pid);
 
-                if (is_running($pid)) {
-                    warn "WARNING: killing nginx $pid with force...";
+                    sleep $TestNginxSleep;
+                    next if $i < $max_i;
+
+                    warn "WARNING: $name - killing nginx $pid with force...";
                     kill(SIGKILL, $pid);
                     waitpid($pid, 0);
                 }
