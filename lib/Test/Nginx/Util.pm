@@ -1142,7 +1142,7 @@ sub run_test ($) {
                             #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                         }
 
-                        my $max_i = 10;
+                        my $max_i = 15;
                         for (my $i = 1; $i <= $max_i; $i++) {
                             last unless is_running($pid);
 
@@ -1208,7 +1208,7 @@ sub run_test ($) {
                     #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
                 }
 
-                my $max_i = 10;
+                my $max_i = 15;
                 for (my $i = 1; $i <= $max_i; $i++) {
                     last unless is_running($pid);
 
