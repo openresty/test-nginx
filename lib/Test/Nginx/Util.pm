@@ -1876,9 +1876,13 @@ END {
                     #warn("Failed to send quit signal to the nginx process with PID $pid");
                 }
 
-                sleep $TestNginxSleep;
+                my $max_i = 15;
+                for (my $i = 1; $i <= $max_i; $i++) {
+                    last unless is_running($pid);
 
-                if (is_running($pid)) {
+                    sleep $TestNginxSleep;
+                    next if $i < $max_i;
+
                     warn "WARNING: killing nginx $pid with force...";
                     kill(SIGKILL, $pid);
                     waitpid($pid, 0);
