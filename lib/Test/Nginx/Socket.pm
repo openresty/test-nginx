@@ -1094,6 +1094,30 @@ sub check_response_body ($$$$$) {
             );
         }
     }
+    elsif ( defined $block->response_body_unlike ) {
+        my $content = $res ? $res->content : undef;
+        if ( defined $content ) {
+            $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
+            $content =~ s/^Connection: TE, close\r\n//gms;
+        }
+        my $expected_pat = get_indexed_value($name,
+                                             $block->response_body_unlike,
+                                             $req_idx,
+                                             $need_array);
+        $expected_pat =~ s/\$ServerPort\b/$ServerPort/g;
+        $expected_pat =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+        my $summary = trim($content);
+        if (!defined $summary) {
+            $summary = "";
+        }
+
+        SKIP: {
+            skip "$name - response_body_unlike - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+            unlike( $content, qr/$expected_pat/s,
+                "$name - response_body_unlike - response is expected ($summary)"
+            );
+        }
+    }
 }
 
 sub parse_response($$$) {
