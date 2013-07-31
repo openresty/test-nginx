@@ -1069,15 +1069,30 @@ sub check_response_body ($$$$$) {
             }
         }
 
-    }
-    elsif ( defined $block->response_body_like ) {
+    } elsif (defined $block->response_body_like
+             || defined $block->response_body_unlike)
+    {
+        my $patterns;
+        my $type;
+        my $cmp;
+        if (defined $block->response_body_like) {
+            $patterns = $block->response_body_like;
+            $type = "like";
+            $cmp = \&like;
+
+        } else {
+            $patterns = $block->response_body_unlike;
+            $type = "unlike";
+            $cmp = \&unlike;
+        }
+
         my $content = $res ? $res->content : undef;
         if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
             $content =~ s/^Connection: TE, close\r\n//gms;
         }
         my $expected_pat = get_indexed_value($name,
-                                             $block->response_body_like,
+                                             $patterns,
                                              $req_idx,
                                              $need_array);
         $expected_pat =~ s/\$ServerPort\b/$ServerPort/g;
@@ -1088,9 +1103,9 @@ sub check_response_body ($$$$$) {
         }
 
         SKIP: {
-            skip "$name - response_body_like - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-            like( $content, qr/$expected_pat/s,
-                "$name - response_body_like - response is expected ($summary)"
+            skip "$name - response_body_$type - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+            $cmp->( $content, qr/$expected_pat/s,
+                "$name - response_body_$type - response is expected ($summary)"
             );
         }
     }
@@ -2030,6 +2045,11 @@ section. Example:
 
 If the test is made of multiple requests, then response_body_like B<MUST>
 be an array and each request B<MUST> match the corresponding pattern.
+
+=head2 response_body_unlike
+
+Just like `response_body_like` but this test only pass when the specified pattern
+does I<not> match the actual response body data.
 
 =head2 response_headers
 
