@@ -1473,6 +1473,22 @@ request:
                     $err = $!;
                     if ($err =~ /address already in use/i) {
                         warn "WARNING: failed to create the tcp listening socket: $err\n";
+                        if ($i >= 20) {
+                            my $pids = `fuser -n tcp $port`;
+                            if ($pids) {
+                                $pids =~ s/^\s+|\s+$//g;
+                                my @pids = split /\s+/, $pids;
+                                for my $pid (@pids) {
+                                    if ($pid == $$) {
+                                        warn "WARNING: Test::Nginx leaks mocked TCP sockets on port $port\n";
+                                        next;
+                                    }
+
+                                    warn "WARNING: killing process $pid listening on port $port.\n";
+                                    kill_process($pid, 1);
+                                }
+                            }
+                        }
                         sleep 1;
                         next;
                     }
