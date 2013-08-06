@@ -601,7 +601,13 @@ again:
                 warn "parse response\n";
             }
 
-            ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
+            if (defined $block->http09) {
+                $res = HTTP::Response->new(200, "OK", [], $raw_resp);
+                $raw_headers = '';
+
+            } else {
+                ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
+            }
         }
 
         if (!$n) {
