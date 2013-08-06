@@ -2279,6 +2279,27 @@ This can also be useful to tests "invalid" request lines:
     --- raw_request
     GET /foo HTTP/2.0 THE_FUTURE_IS_NOW
 
+=head2 http09
+
+Specifies that the HTTP 0.9 protocol is used. This affects how C<Test::Nginx::Socket>
+parses the response.
+
+Below is an example from ngx_headers_more module's test suite:
+
+    === TEST 38: HTTP 0.9 (set)
+    --- config
+        location /foo {
+            more_set_input_headers 'X-Foo: howdy';
+            echo "x-foo: $http_x_foo";
+        }
+    --- raw_request eval
+    "GET /foo\r\n"
+    --- response_headers
+    ! X-Foo
+    --- response_body
+    x-foo: 
+    --- http09
+
 =head2 ignore_response
 
 Do not attempt to parse the response or run the response related subtests.
