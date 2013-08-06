@@ -96,7 +96,7 @@ sub read_event_handler ($);
 sub write_event_handler ($);
 sub check_response_body ($$$$$);
 sub fmt_str ($);
-sub gen_cmd_from_req ($);
+sub gen_cmd_from_req ($$);
 sub get_linear_regression_slope ($);
 sub value_contains ($$);
 
@@ -468,7 +468,7 @@ sub run_test_helper ($$) {
         warn "$name\n";
 
         my $req = $r_req_list->[0];
-        my $cmd = gen_cmd_from_req($req);
+        my $cmd = gen_cmd_from_req($block, $req);
 
         # start a sub-process to run ab or weighttp
         my $pid = fork();
@@ -1598,8 +1598,10 @@ sub read_event_handler ($) {
     return undef;
 }
 
-sub gen_cmd_from_req ($) {
-    my $req = shift;
+sub gen_cmd_from_req ($$) {
+    my ($block, $req) = @_;
+
+    my $name = $block->name;
 
     $req = join '', map { $_->{value} } @$req;
 
@@ -1609,8 +1611,12 @@ sub gen_cmd_from_req ($) {
     if ($req =~ m{^\s*(\w+)\s+(.*\S)\s*HTTP/(\S+)\r\n}gcs) {
         ($meth, $uri, $http_ver) = ($1, $2, $3);
 
+    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r\n}gcs) {
+        ($meth, $uri) = ($1, $2);
+        $http_ver = '0.9';
+
     } else {
-        bail_out "cannot parse the status line in the request: $req";
+        bail_out "$name - cannot parse the status line in the request: $req";
     }
 
     #warn "HTTP version: $http_ver\n";
@@ -1618,26 +1624,28 @@ sub gen_cmd_from_req ($) {
     my @opts = ('-c2', '-k', '-n100000');
 
     my $prog;
-    if ($http_ver eq '1.1' and $meth eq 'GET') {
+    if ($http_ver eq '1.1' && $meth eq 'GET') {
         $prog = 'weighttp';
 
     } else {
-        # HTTP 1.0
+        # HTTP 1.0 or HTTP 0.9
         $prog = 'ab';
         unshift @opts, '-r', '-d', '-S';
     }
 
     my @headers;
-    if ($req =~ m{\G(.*?)\r\n\r\n}gcs) {
-        my $headers = $1;
-        #warn "raw headers: $headers\n";
-        @headers = grep {
-            !/^Connection\s*:/i && !/^Host: localhost$/i
-                && !/^Content-Length\s*:/i
-        } split /\r\n/, $headers;
+    if ($http_ver ge '1.0') {
+        if ($req =~ m{\G(.*?)\r\n\r\n}gcs) {
+            my $headers = $1;
+            #warn "raw headers: $headers\n";
+            @headers = grep {
+                !/^Connection\s*:/i && !/^Host: localhost$/i
+                    && !/^Content-Length\s*:/i
+            } split /\r\n/, $headers;
 
-    } else {
-        bail_out "cannot parse the header entries in the request: $req";
+        } else {
+            bail_out "cannot parse the header entries in the request: $req";
+        }
     }
 
     #warn "headers: @headers ", scalar(@headers), "\n";
