@@ -1301,6 +1301,23 @@ start_nginx:
                     my ($stap_fh, $stap_fname) = tempfile("XXXXXXX", SUFFIX => '.stp', TMPDIR => 1);
                     my $stap = $block->stap;
 
+                    if ($stap =~ /\$LIBLUA_PATH\b/) {
+                        my $nginx_path = can_run($NginxBinary);
+                        #warn "nginx path: ", $nginx_path;
+                        my $line = `ldd $nginx_path|grep -E 'liblua.*?\.so'`;
+                        warn "line: $line";
+                        my $liblua_path;
+                        if ($line =~ m{\S+/liblua.*?\.so(?:\.\d+)*}) {
+                            $liblua_path = $&;
+
+                        } else {
+                            # static linking is used?
+                            $liblua_path = $nginx_path;
+                        }
+
+                        $stap =~ s/\$LIBLUA_PATH\b/$liblua_path/g;
+                    }
+
                     if ($stap =~ /\$LIBPCRE_PATH\b/) {
                         my $nginx_path = can_run($NginxBinary);
                         #warn "nginx path: ", $nginx_path;
