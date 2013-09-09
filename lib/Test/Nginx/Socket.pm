@@ -1135,9 +1135,15 @@ sub parse_response($$$) {
     #warn "raw headers: $raw_headers\n";
 
     my $res = HTTP::Response->parse($raw_resp);
-    my $enc = $res->header('Transfer-Encoding');
 
+    my $code = $res->code;
+
+    my $enc = $res->header('Transfer-Encoding');
     my $len = $res->header('Content-Length');
+
+    if ($code == 304) {
+        return $res, $raw_headers
+    }
 
     if ( defined $enc && $enc eq 'chunked' ) {
 
