@@ -1141,7 +1141,7 @@ sub parse_response($$$) {
     my $enc = $res->header('Transfer-Encoding');
     my $len = $res->header('Content-Length');
 
-    if (defined $code && ($code == 304 || $code == 101)) {
+    if ($code && ($code == 304 || $code == 101)) {
         return $res, $raw_headers
     }
 
