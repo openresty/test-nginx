@@ -587,7 +587,10 @@ sub run_test_helper ($$) {
         }
 
 again:
-        #warn "!!! resp: [$raw_resp]";
+
+        if ($Test::Nginx::Util::Verbose) {
+            warn "!!! resp: [$raw_resp]";
+        }
 
         if (!defined $raw_resp) {
             $raw_resp = '';
@@ -1587,7 +1590,7 @@ sub read_event_handler ($) {
                 #sleep 0.002;
                 return 1;
             }
-            $ctx->{resp} = "500 read failed: $!";
+            warn "WARNING: $ctx->{name} - HTTP response read failure: $!";
             return undef;
         }
 
