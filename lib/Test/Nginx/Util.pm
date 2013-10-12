@@ -612,8 +612,8 @@ sub write_user_files ($) {
     }
 }
 
-sub write_config_file ($$$) {
-    my ($config, $http_config, $main_config) = @_;
+sub write_config_file ($$$$) {
+    my ($config, $http_config, $main_config, $post_main_config) = @_;
 
     if ($UseHup) {
         master_on(); # config reload is buggy when master is off
@@ -649,6 +649,10 @@ sub write_config_file ($$$) {
 
     if (!defined $main_config) {
         $main_config = '';
+    }
+
+    if (!defined $post_main_config) {
+        $post_main_config = '';
     }
 
     if ($CheckLeak) {
@@ -726,6 +730,8 @@ _EOC_
 
     print $out <<_EOC_;
 }
+
+$post_main_config
 
 #timer_resolution 100ms;
 
@@ -1160,7 +1166,9 @@ sub run_test ($) {
 
                     setup_server_root();
                     write_user_files($block);
-                    write_config_file($config, $block->http_config, $block->main_config);
+                    write_config_file($config, $block->http_config,
+                                      $block->main_config,
+                                      $block->post_main_config);
 
                     if ($Verbose) {
                         warn "sending USR1 signal to $pid.\n";
@@ -1247,7 +1255,8 @@ start_nginx:
             #warn "*** Restarting the nginx server...\n";
             setup_server_root();
             write_user_files($block);
-            write_config_file($config, $block->http_config, $block->main_config);
+            write_config_file($config, $block->http_config,
+                              $block->main_config, $block->post_main_config);
             #warn "nginx binary: $NginxBinary";
             if (!can_run($NginxBinary)) {
                 bail_out("$name - Cannot find the nginx executable in the PATH environment");
@@ -1843,7 +1852,9 @@ request:
             my $i = 0;
 retry:
             if (is_running($pid)) {
-                write_config_file($config, $block->http_config, $block->main_config);
+                write_config_file($config, $block->http_config,
+                                  $block->main_config,
+                                  $block->post_main_config);
 
                 if ($Verbose) {
                     warn "sending QUIT signal to $pid";
