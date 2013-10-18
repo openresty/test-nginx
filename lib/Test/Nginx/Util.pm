@@ -1467,7 +1467,7 @@ request:
         my $tcp_socket;
         if (!$CheckLeak && defined $block->tcp_listen) {
 
-            my $port = $block->tcp_listen;
+            my $target = $block->tcp_listen;
 
             my $reply = $block->tcp_reply;
             if (!defined $reply) {
@@ -1480,29 +1480,29 @@ request:
 
             my $err;
             for (my $i = 0; $i < 30; $i++) {
-                if ($port =~ /^\d+$/) {
+                if ($target =~ /^\d+$/) {
                     $tcp_socket = IO::Socket::INET->new(
                         LocalHost => '127.0.0.1',
-                        LocalPort => $port,
+                        LocalPort => $target,
                         Proto => 'tcp',
                         Reuse => 1,
                         Listen => 5,
                         Timeout => timeout(),
                     );
-                } elsif ($port =~ m{\S+\.sock$}) {
-                    if (-e $port) {
-                        unlink $port or die "cannot remove $port: $!";
+                } elsif ($target =~ m{\S+\.sock$}) {
+                    if (-e $target) {
+                        unlink $target or die "cannot remove $target: $!";
                     }
 
                     $tcp_socket = IO::Socket::UNIX->new(
-                        Local => $port,
+                        Local => $target,
                         Proto => 'tcp',
                         Reuse => 1,
                         Listen => 5,
                         Timeout => timeout(),
                     );
                 } else {
-                    bail_out("$name - bad tcp_listen target: $port");
+                    bail_out("$name - bad tcp_listen target: $target");
                 }
 
                 if ($tcp_socket) {
@@ -1514,17 +1514,17 @@ request:
                     if ($err =~ /address already in use/i) {
                         warn "WARNING: failed to create the tcp listening socket: $err\n";
                         if ($i >= 20) {
-                            my $pids = `fuser -n tcp $port`;
+                            my $pids = `fuser -n tcp $target`;
                             if ($pids) {
                                 $pids =~ s/^\s+|\s+$//g;
                                 my @pids = split /\s+/, $pids;
                                 for my $pid (@pids) {
                                     if ($pid == $$) {
-                                        warn "WARNING: Test::Nginx leaks mocked TCP sockets on port $port\n";
+                                        warn "WARNING: Test::Nginx leaks mocked TCP sockets on target $target\n";
                                         next;
                                     }
 
-                                    warn "WARNING: killing process $pid listening on port $port.\n";
+                                    warn "WARNING: killing process $pid listening on target $target.\n";
                                     kill_process($pid, 1);
                                 }
                             }
@@ -1559,7 +1559,7 @@ request:
                 $InSubprocess = 1;
 
                 if ($Verbose) {
-                    warn "TCP server is listening on $port ...\n";
+                    warn "TCP server is listening on $target ...\n";
                 }
 
                 local $| = 1;
