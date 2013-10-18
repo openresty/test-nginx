@@ -1466,10 +1466,8 @@ request:
 
         my $tcp_socket;
         if (!$CheckLeak && defined $block->tcp_listen) {
+
             my $port = $block->tcp_listen;
-            if ($port !~ /^\d+$/) {
-                bail_out("$name - bad tcp_listen port number: $port");
-            }
 
             my $reply = $block->tcp_reply;
             if (!defined $reply) {
@@ -1482,14 +1480,30 @@ request:
 
             my $err;
             for (my $i = 0; $i < 30; $i++) {
-                $tcp_socket = IO::Socket::INET->new(
-                    LocalHost => '127.0.0.1',
-                    LocalPort => $port,
-                    Proto => 'tcp',
-                    Reuse => 1,
-                    Listen => 5,
-                    Timeout => timeout(),
-                );
+                if ($port =~ /^\d+$/) {
+                    $tcp_socket = IO::Socket::INET->new(
+                        LocalHost => '127.0.0.1',
+                        LocalPort => $port,
+                        Proto => 'tcp',
+                        Reuse => 1,
+                        Listen => 5,
+                        Timeout => timeout(),
+                    );
+                } elsif ($port =~ m{\S+\.sock$}) {
+                    if (-e $port) {
+                        unlink $port or die "cannot remove $port: $!";
+                    }
+
+                    $tcp_socket = IO::Socket::UNIX->new(
+                        Local => $port,
+                        Proto => 'tcp',
+                        Reuse => 1,
+                        Listen => 5,
+                        Timeout => timeout(),
+                    );
+                } else {
+                    bail_out("$name - bad tcp_listen target: $port");
+                }
 
                 if ($tcp_socket) {
                     last;
