@@ -2595,7 +2595,13 @@ For example,
 
 =head2 tcp_listen
 
-Just like C<udp_listen>, but starts an embedded TCP server listening on the port specified.
+Just like C<udp_listen>, but starts an embedded TCP server listening on the port specified. For example,
+
+    --- tcp_listen: 12345
+
+Stream-typed unix domain socket is also supported. Just specify the path to the socket file, as in
+
+    --- tcp_listen: /tmp/my-socket.sock
 
 =head2 tcp_no_close
 
