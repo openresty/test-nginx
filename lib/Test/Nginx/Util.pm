@@ -15,7 +15,7 @@ use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
 use File::Path qw(make_path);
 use File::Find qw(find);
-use File::Temp qw( tempfile );
+use File::Temp qw( tempfile :POSIX );
 use IO::Socket::INET;
 use IO::Socket::UNIX;
 use Test::LongString;
@@ -1398,6 +1398,9 @@ start_nginx:
                     # child process
                     #my $rc = system($cmd);
 
+                    my $tb = Test::More->builder;
+                    $tb->no_ending(1);
+
                     $InSubprocess = 1;
 
                     if ($Verbose) {
@@ -1464,7 +1467,7 @@ request:
             }
         }
 
-        my $tcp_socket;
+        my ($tcp_socket, $tcp_query_file);
         if (!$CheckLeak && defined $block->tcp_listen) {
 
             my $target = $block->tcp_listen;
@@ -1475,6 +1478,10 @@ request:
             }
 
             my $req_len = $block->tcp_query_len;
+
+            if (defined $block->tcp_query || defined $req_len) {
+                $tcp_query_file = tmpnam();
+            }
 
             #warn "Reply: ", $reply;
 
@@ -1540,12 +1547,6 @@ request:
                 bail_out("$name - failed to create the tcp listening socket: $err");
             }
 
-            if (defined $block->tcp_query || defined $req_len) {
-                my $tb = Test::More->builder;
-                $tb->use_numbers(0);
-                $tb->no_ending(1);
-            }
-
             my $pid = fork();
 
             if (!defined $pid) {
@@ -1553,6 +1554,10 @@ request:
 
             } elsif ($pid == 0) {
                 # child process
+
+                my $tb = Test::More->builder;
+                $tb->no_ending(1);
+
                 #my $rc = system($cmd);
 
                 $InSubprocess = 1;
@@ -1588,20 +1593,16 @@ request:
                     }
                 }
 
-                if (defined $req_len) {
-                    Test::More::is(length($buf), $req_len, "$name - req len ok");
-                }
+                if ($tcp_query_file) {
+                    open my $out, ">$tcp_query_file"
+                        or die "cannot open $tcp_query_file for writing: $!\n";
 
-                if (defined $block->tcp_query) {
-                    if ($NoLongString) {
-                        Test::More::is($buf, $block->tcp_query, "$name - tcp_query ok");
-                    } else {
-                        is_string $buf, $block->tcp_query, "$name - tcp_query ok";
+                    if ($Verbose) {
+                        warn "writing received data [$buf] to file $tcp_query_file\n";
                     }
-                }
 
-                if ($Verbose) {
-                    warn "tcp server received $buf\n";
+                    print $out $buf;
+                    close $out;
                 }
 
                 my $delay = parse_time($block->tcp_reply_delay);
@@ -1667,11 +1668,15 @@ request:
             }
         }
 
-        my ($udp_socket, $uds_socket_file);
+        my ($udp_socket, $uds_socket_file, $udp_query_file);
         if (!$CheckLeak && defined $block->udp_listen) {
             my $reply = $block->udp_reply;
             if (!defined $reply) {
                 bail_out("$name - no --- udp_reply specified but --- udp_listen is specified");
+            }
+
+            if (defined $block->udp_query) {
+                $udp_query_file = tmpnam();
             }
 
             my $target = $block->udp_listen;
@@ -1705,12 +1710,6 @@ request:
 
             #warn "Reply: ", $reply;
 
-            if (defined $block->udp_query) {
-                my $tb = Test::More->builder;
-                $tb->use_numbers(0);
-                $tb->no_ending(1);
-            }
-
             my $pid = fork();
 
             if (!defined $pid) {
@@ -1718,6 +1717,10 @@ request:
 
             } elsif ($pid == 0) {
                 # child process
+
+                my $tb = Test::More->builder;
+                $tb->no_ending(1);
+
                 #my $rc = system($cmd);
 
                 $InSubprocess = 1;
@@ -1731,16 +1734,16 @@ request:
                 my $buf;
                 $udp_socket->recv($buf, 4096);
 
-                if (defined $block->udp_query) {
-                    if ($NoLongString) {
-                        Test::More::is($buf, $block->udp_query, "$name - udp_query ok");
-                    } else {
-                        is_string $buf, $block->udp_query, "$name - udp_query ok";
-                    }
-                }
+                if ($udp_query_file) {
+                    open my $out, ">$udp_query_file"
+                        or die "cannot open $udp_query_file for writing: $!\n";
 
-                if ($Verbose) {
-                    warn "udp server received $buf\n";
+                    if ($Verbose) {
+                        warn "writing received data [$buf] to file $udp_query_file\n";
+                    }
+
+                    print $out $buf;
+                    close $out;
                 }
 
                 my $delay = parse_time($block->udp_reply_delay);
@@ -1808,6 +1811,25 @@ request:
         }
 
         if (defined $udp_socket) {
+            my $buf = '';
+            if ($udp_query_file) {
+                if (!open my $in, $udp_query_file) {
+                    warn "WARNING: cannot open tcp query file $udp_query_file for reading: $!\n";
+
+                } else {
+                    $buf = do { local $/; <$in> };
+                    close $in;
+                }
+            }
+
+            if (defined $block->udp_query) {
+                if ($NoLongString) {
+                    Test::More::is($buf, $block->udp_query, "$name - udp_query ok");
+                } else {
+                    is_string $buf, $block->udp_query, "$name - udp_query ok";
+                }
+            }
+
             if (defined $UdpServerPid) {
                 kill_process($UdpServerPid, 1);
                 undef $UdpServerPid;
@@ -1823,6 +1845,29 @@ request:
         }
 
         if (defined $tcp_socket) {
+            my $buf = '';
+            if ($tcp_query_file) {
+                if (!open my $in, $tcp_query_file) {
+                    warn "WARNING: cannot open tcp query file $tcp_query_file for reading: $!\n";
+
+                } else {
+                    $buf = do { local $/; <$in> };
+                    close $in;
+                }
+            }
+
+            if (defined $block->tcp_query) {
+                if ($NoLongString) {
+                    Test::More::is($buf, $block->tcp_query, "$name - tcp_query ok");
+                } else {
+                    is_string $buf, $block->tcp_query, "$name - tcp_query ok";
+                }
+            }
+
+            if (defined $block->tcp_query_len) {
+                Test::More::is(length($buf), $block->tcp_query_len, "$name - TCP query length ok");
+            }
+
             if (defined $TcpServerPid) {
                 if ($Verbose) {
                     warn "killing TCP server, pid $TcpServerPid\n";
