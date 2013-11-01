@@ -1496,8 +1496,7 @@ request:
 
                     $tcp_socket = IO::Socket::UNIX->new(
                         Local => $target,
-                        Proto => 'tcp',
-                        Reuse => 1,
+                        Type  => SOCK_STREAM,
                         Listen => 5,
                         Timeout => timeout(),
                     );
