@@ -672,6 +672,7 @@ env MOCKEAGAIN_VERBOSE;
 env MOCKEAGAIN;
 env MOCKEAGAIN_WRITE_TIMEOUT_PATTERN;
 env LD_PRELOAD;
+env LD_LIBRARY_PATH;
 env DYLD_INSERT_LIBRARIES;
 env LUA_PATH;
 env LUA_CPATH;
@@ -1373,11 +1374,14 @@ start_nginx:
                         bail_out("Cannot open $outfile for reading: $!\n");
 
                     $StapOutFileHandle = $out;
-                    if (defined $ENV{LD_PRELOAD}) {
-                        $cmd = qq!LD_PRELOAD="$ENV{LD_PRELOAD}" exec $cmd!;
+                    $cmd = "exec $cmd";
 
-                    } else {
-                        $cmd = "exec $cmd";
+                    if (defined $ENV{LD_PRELOAD}) {
+                        $cmd = qq!LD_PRELOAD="$ENV{LD_PRELOAD}" $cmd!;
+                    }
+
+                    if (defined $ENV{LD_LIBRARY_PATH}) {
+                        $cmd = qq!LD_LIBRARY_PATH="$ENV{LD_LIBRARY_PATH}" $cmd!;
                     }
 
                     $cmd = "stap-nginx -c '$cmd' -o $outfile $stap_fname";
