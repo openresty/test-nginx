@@ -61,6 +61,8 @@ our $StapOutFileHandle;
 
 our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
     '#', '@', '-', '_', '^');
+our $CurErrorLogPos = 0;
+our $ErrorLogPos = 0;
 
 if ($CheckLeak) {
     if ($UseStap) {
@@ -453,7 +455,11 @@ sub error_log_data () {
 
     open my $in, $ErrLogFile or
         return undef;
+
+    seek $in, $ErrorLogPos, 0;
     my @lines = <$in>;
+
+    $CurErrorLogPos = tell($in);
     close $in;
     return \@lines;
 }
@@ -1451,12 +1457,16 @@ request:
     }
 
     my $i = 0;
+    $ErrorLogPos = 0;
+    $CurErrorLogPos = 0;
     while ($i++ < $RepeatEach) {
         #warn "Use hup: $UseHup, i: $i\n";
 
         if ($Verbose) {
             warn "Run the test block...\n";
         }
+
+        $ErrorLogPos = $CurErrorLogPos;
 
         if ($CheckLeak && defined $block->tcp_listen) {
 
