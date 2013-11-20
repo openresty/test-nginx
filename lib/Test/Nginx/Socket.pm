@@ -940,6 +940,57 @@ sub check_error_log ($$$$$) {
         }
     }
 
+    if (defined $block->ordered_error_log) {
+        my $pats = $block->ordered_error_log;
+
+        if (value_contains($pats, "[alert")) {
+            undef $check_alert_message;
+        }
+
+        if (value_contains($pats, "[crit")) {
+            undef $check_crit_message;
+        }
+
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        $lines ||= error_log_data();
+        my $idx = 0;
+        my $pat = @$pats[$idx];
+        for my $line (@$lines) {
+            next if !defined $pat;
+            if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                SKIP: {
+                    skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    pass("$name - pattern \"$pat\" matches a line in error.log");
+                    undef @$pats[$idx];
+                    $idx++;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+                    fail("$name - pattern \"$pat\" matches a line in error.log");
+                    #die join("", @$lines);
+                }
+            }
+        }
+
+    }
+
     if (defined $block->no_error_log) {
         #warn "HERE";
         my $pats = $block->no_error_log;
@@ -2226,6 +2277,10 @@ Multiple patterns are also supported, for example:
 
 then the substring "abc" must appear literally in a line of F<error.log>, and the regex C<qr/blah>
 must also match a line in F<error.log>.
+
+=head2 ordered_error_log
+
+Like F<error_log>, but checks if the pattern or multiple patterns appear in lines or the F<error.log> file as the order in the patterns
 
 =head2 abort
 
