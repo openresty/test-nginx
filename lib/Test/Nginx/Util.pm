@@ -62,6 +62,8 @@ our $StapOutFileHandle;
 our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
     '#', '@', '-', '_', '^');
 
+our $ErrLogFilePos;
+
 if ($CheckLeak) {
     if ($UseStap) {
         warn "WARNING: TEST_NGINX_CHECK_LEAK and TEST_NGINX_USE_STAP "
@@ -453,7 +455,15 @@ sub error_log_data () {
 
     open my $in, $ErrLogFile or
         return undef;
+
+    if ($ErrLogFilePos > 0) {
+        seek $in, $ErrLogFilePos, 0;
+    }
+
     my @lines = <$in>;
+
+    $ErrLogFilePos = tell($in);
+
     close $in;
     return \@lines;
 }
@@ -1451,6 +1461,7 @@ request:
     }
 
     my $i = 0;
+    $ErrLogFilePos = 0;
     while ($i++ < $RepeatEach) {
         #warn "Use hup: $UseHup, i: $i\n";
 
