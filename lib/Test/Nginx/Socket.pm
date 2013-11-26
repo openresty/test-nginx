@@ -452,7 +452,9 @@ sub get_req_from_block ($) {
 }
 
 sub run_test_helper ($$) {
-    my ( $block, $dry_run ) = @_;
+    my ($block, $dry_run, $repeated_req_idx) = @_;
+
+    #warn "repeated req idx: $repeated_req_idx";
 
     my $name = $block->name;
 
@@ -634,7 +636,7 @@ again:
         }
 
         if ($n || $req_idx < @$r_req_list - 1) {
-            check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+            check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
         }
 
         $req_idx++;
@@ -654,7 +656,7 @@ again:
 
     test_stap($block, $dry_run);
 
-    check_error_log($block, $res, $dry_run, $req_idx, $need_array);
+    check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
 }
 
 
@@ -883,13 +885,62 @@ sub value_contains ($$) {
     return undef;
 }
 
-sub check_error_log ($$$$$) {
-    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+sub check_error_log ($$$$) {
+    my ($block, $res, $dry_run, $repeated_req_idx, $need_array) = @_;
     my $name = $block->name;
     my $lines;
 
     my $check_alert_message = 1;
     my $check_crit_message = 1;
+
+    my $grep_pat;
+    my $grep_pats = $block->grep_error_log;
+    if (defined $grep_pats) {
+        if (ref $grep_pats && ref $grep_pats eq 'ARRAY') {
+            $grep_pat = $grep_pats->[$repeated_req_idx];
+
+        } else {
+            $grep_pat = $grep_pats;
+        }
+    }
+
+    if (defined $grep_pat) {
+        my $expected = $block->grep_error_log_out;
+        if (!defined $expected) {
+            bail_out("$name - No --- grep_error_log_out defined but --- grep_error_log is defined");
+        }
+
+        if (ref $expected) {
+            $expected = $expected->[$repeated_req_idx];
+
+        } else {
+            $expected = $expected;
+        }
+
+        SKIP: {
+            skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
+
+            $lines = error_log_data();
+
+            my $matched_lines;
+            for my $line (@$lines) {
+                if (ref $grep_pat && $line =~ /$grep_pat/ || $line =~ /\Q$grep_pat\E/) {
+                    my $matched = $&;
+                    if ($matched !~ /\n/) {
+                        $matched_lines .= $matched . "\n";
+                    }
+                }
+            }
+
+            if ($NoLongString) {
+                is($matched_lines, $expected,
+                   "$name - grep_error_log_out (req $repeated_req_idx)" );
+            } else {
+                is_string($matched_lines, $expected,
+                          "$name - grep_error_log_out (req $repeated_req_idx)");
+            }
+        }
+    }
 
     if (defined $block->error_log) {
         my $pats = $block->error_log;
@@ -922,7 +973,7 @@ sub check_error_log ($$$$$) {
                 if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
                     SKIP: {
                         skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                        pass("$name - pattern \"$pat\" matches a line in error.log");
+                        pass("$name - pattern \"$pat\" matches a line in error.log (req $repeated_req_idx)");
                     }
                     undef $pat;
                 }
@@ -933,7 +984,7 @@ sub check_error_log ($$$$$) {
             if (defined $pat) {
                 SKIP: {
                     skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
-                    fail("$name - pattern \"$pat\" matches a line in error.log");
+                    fail("$name - pattern \"$pat\" matches a line in error.log (req $repeated_req_idx)");
                     #die join("", @$lines);
                 }
             }
@@ -972,7 +1023,7 @@ sub check_error_log ($$$$$) {
                         skip "$name - no_error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                         my $ln = fmt_str($line);
                         my $p = fmt_str($pat);
-                        fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\"");
+                        fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\" (req $repeated_req_idx)");
                     }
                     undef $pat;
                 }
@@ -984,7 +1035,7 @@ sub check_error_log ($$$$$) {
                 SKIP: {
                     skip "$name - no_error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
                     my $p = fmt_str($pat);
-                    pass("$name - pattern \"$p\" does not match a line in error.log");
+                    pass("$name - pattern \"$p\" does not match a line in error.log (req $repeated_req_idx)");
                 }
             }
         }

@@ -1811,18 +1811,18 @@ request:
             SKIP: {
                 Test::More::skip("$name - $skip_reason", $tests_to_skip);
 
-                $RunTestHelper->($block, $dry_run);
+                $RunTestHelper->($block, $dry_run, $i - 1);
             }
 
         } elsif ($should_todo) {
             TODO: {
                 local $TODO = "$name - $todo_reason";
 
-                $RunTestHelper->($block, $dry_run);
+                $RunTestHelper->($block, $dry_run, $i - 1);
             }
 
         } else {
-            $RunTestHelper->($block, $dry_run);
+            $RunTestHelper->($block, $dry_run, $i - 1);
         }
 
         if (defined $udp_socket) {
