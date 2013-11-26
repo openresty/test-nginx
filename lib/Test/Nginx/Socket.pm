@@ -2279,6 +2279,8 @@ Multiple patterns are also supported, for example:
 then the substring "abc" must appear literally in a line of F<error.log>, and the regex C<qr/blah>
 must also match a line in F<error.log>.
 
+By default, only the part of the error logs corresponding to the current request is checked. You can make it check accumulated error logs by calling the C<check_accum_error_log> Perl function before calling C<run_tests> in the boilerplate Perl code above the C<__DATA__> line.
+
 =head2 abort
 
 Makes the test scaffold not to treat C<--- timeout> expiration as a test failure.
