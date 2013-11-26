@@ -923,7 +923,7 @@ sub check_error_log ($$$$) {
 
             $lines = error_log_data();
 
-            my $matched_lines;
+            my $matched_lines = '';
             for my $line (@$lines) {
                 if (ref $grep_pat && $line =~ /$grep_pat/ || $line =~ /\Q$grep_pat\E/) {
                     my $matched = $&;
@@ -2131,7 +2131,7 @@ be an array and each request B<MUST> match the corresponding pattern.
 
 =head2 response_body_unlike
 
-Just like `response_body_like` but this test only pass when the specified pattern
+Just like C<response_body_like> but this test only pass when the specified pattern
 does I<not> match the actual response body data.
 
 =head2 response_headers
@@ -2312,6 +2312,31 @@ Just like the C<--- error_log> section, one can also specify multiple patterns:
 
 Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
 
+=head2 grep_error_log
+
+This section specifies the Perl regex pattern for filtering out the Nginx error logs.
+
+You can specify a verbatim substring being matched in the error log messages, as in
+
+    --- grep_error_log chop
+    some thing we want to see
+
+or specify a Perl regex object to match against the error log message lines, as in
+
+    --- grep_error_log eval
+    qr/something should be: \d+/
+
+All the matched substrings in the error log messages will be concatenated by a newline character as a whole to be compared with the value of the C<--- grep_error_log_out> section.
+
+=head2 grep_error_log_out
+
+This section contains the expected output for the filtering operations specified by the C<--- grep_error_log> section.
+
+If the filtered output varies among the repeated requests (specified by the C<repeat_each> function, then you can specify a Perl array as the value, as in
+
+    --- grep_error_log_out eval
+    ["output for req 0", "output for req 1"]
+
 =head2 log_level
 
 Overrides the default error log level for the current test block.
@@ -2320,7 +2345,7 @@ For example:
 
     --- log_level: debug
 
-The default error log level can be specified in the Perl code by calling the `log_level()` function, as in
+The default error log level can be specified in the Perl code by calling the C<log_level()> function, as in
 
     use Test::Nginx::Socket;
 
