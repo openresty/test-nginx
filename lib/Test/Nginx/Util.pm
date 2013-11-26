@@ -55,6 +55,8 @@ our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 3;
 
 our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
 
+our $CheckAccumErrLog = $ENV{TEST_NGINX_CHECK_ACCUM_ERR_LOG};
+
 our $ServerAddr = 'localhost';
 
 our $StapOutFileHandle;
@@ -236,6 +238,10 @@ sub log_level (@) {
     }
 }
 
+sub check_accum_error_log () {
+    $CheckAccumErrLog = 1;
+}
+
 sub master_on () {
     if ($CheckLeak) {
         return;
@@ -260,6 +266,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    check_accum_error_log
     is_running
     $NoLongString
     no_long_string
@@ -456,13 +463,15 @@ sub error_log_data () {
     open my $in, $ErrLogFile or
         return undef;
 
-    if ($ErrLogFilePos > 0) {
+    if (!$CheckAccumErrLog && $ErrLogFilePos > 0) {
         seek $in, $ErrLogFilePos, 0;
     }
 
     my @lines = <$in>;
 
-    $ErrLogFilePos = tell($in);
+    if (!$CheckAccumErrLog) {
+        $ErrLogFilePos = tell($in);
+    }
 
     close $in;
     return \@lines;

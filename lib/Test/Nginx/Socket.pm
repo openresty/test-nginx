@@ -19,6 +19,7 @@ use File::Temp qw( tempfile );
 use POSIX ":sys_wait_h";
 
 use Test::Nginx::Util qw(
+  check_accum_error_log
   is_running
   $NoLongString
   no_long_string
@@ -80,7 +81,7 @@ our @EXPORT = qw( plan run_tests run_test
   no_long_string workers master_on master_off
   log_level no_shuffle no_root_location
   server_addr server_root html_dir server_port
-  timeout no_nginx_manager
+  timeout no_nginx_manager check_accum_error_log
 );
 
 our $TotalConnectingTimeouts = 0;
