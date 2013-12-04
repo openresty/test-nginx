@@ -65,6 +65,7 @@ use Test::Nginx::Util qw(
   server_root
   html_dir
   server_port
+  server_port_for_client
   no_nginx_manager
 );
 
@@ -80,7 +81,7 @@ our @EXPORT = qw( plan run_tests run_test
   master_process_enabled
   no_long_string workers master_on master_off
   log_level no_shuffle no_root_location
-  server_addr server_root html_dir server_port
+  server_addr server_root html_dir server_port server_port_for_client
   timeout no_nginx_manager check_accum_error_log
 );
 
