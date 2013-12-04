@@ -25,6 +25,8 @@ use Test::Nginx::Util qw(
   no_long_string
   $ServerAddr
   server_addr
+  $ServerName
+  server_name
   parse_time
   $UseStap
   verbose
@@ -81,7 +83,7 @@ our @EXPORT = qw( plan run_tests run_test
   master_process_enabled
   no_long_string workers master_on master_off
   log_level no_shuffle no_root_location
-  server_addr server_root html_dir server_port server_port_for_client
+  server_addr server_root html_dir server_port server_port_for_client server_name
   timeout no_nginx_manager check_accum_error_log
 );
 
@@ -301,7 +303,7 @@ sub build_request_from_packets($$$$$) {
     $parsed_req->{method} .= ' ';
     $parsed_req->{url} .= ' ';
     $parsed_req->{http_ver} .= "\r\n";
-    $parsed_req->{headers} = "Host: $ServerAddr\r\nConnection: $conn_header\r\n$more_headers$len_header\r\n";
+    $parsed_req->{headers} = "Host: $ServerName\r\nConnection: $conn_header\r\n$more_headers$len_header\r\n";
 
     #  Get the moves from parsing
     my @elements_moves = get_moves($parsed_req);
@@ -1701,7 +1703,7 @@ sub gen_cmd_from_req ($$) {
             my $headers = $1;
             #warn "raw headers: $headers\n";
             @headers = grep {
-                !/^Connection\s*:/i && !/^Host: $ServerAddr$/i
+                !/^Connection\s*:/i && !/^Host: $ServerName$/i
                     && !/^Content-Length\s*:/i
             } split /\r\n/, $headers;
 
@@ -1756,7 +1758,7 @@ sub gen_cmd_from_req ($$) {
 
     my $link;
     {
-        my $server = $ServerAddr;
+        my $server = $ServerName;
         my $port = $ServerPortForClient;
         $link = "http://$server:$port$uri";
     }

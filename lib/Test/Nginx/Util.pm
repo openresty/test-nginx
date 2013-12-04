@@ -59,6 +59,8 @@ our $CheckAccumErrLog = $ENV{TEST_NGINX_CHECK_ACCUM_ERR_LOG};
 
 our $ServerAddr = 'localhost';
 
+our $ServerName = 'localhost';
+
 our $StapOutFileHandle;
 
 our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
@@ -134,6 +136,15 @@ sub server_addr (@) {
     }
     else {
         return $ServerAddr;
+    }
+}
+
+sub server_name (@) {
+    if (@_) {
+        $ServerName = shift;
+    }
+    else {
+        return $ServerName;
     }
 }
 
@@ -280,6 +291,8 @@ our @EXPORT_OK = qw(
     no_long_string
     $ServerAddr
     server_addr
+    $ServerName
+    server_name
     parse_time
     $UseStap
     verbose
@@ -718,7 +731,7 @@ $http_config
 
     server {
         listen          $ServerPort;
-        server_name     '$ServerAddr';
+        server_name     '$ServerName';
 
         client_max_body_size 30M;
         #client_body_buffer_size 4k;
@@ -748,7 +761,7 @@ _EOC_
         print $out <<_EOC_;
     server {
         listen          $ServerPort;
-        server_name     'Test-Nginx';
+        server_name     '$ServerName';
 
         location = /ver {
             return 200 '$ConfigVersion';
