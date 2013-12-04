@@ -198,6 +198,14 @@ sub server_port (@) {
     }
 }
 
+sub server_port_for_client (@) {
+    if (@_) {
+        $ServerPortForClient = shift;
+    } else {
+        $ServerPortForClient;
+    }
+}
+
 sub repeat_each (@) {
     if (@_) {
         if ($CheckLeak) {
@@ -314,6 +322,7 @@ our @EXPORT_OK = qw(
     html_dir
     server_root
     server_port
+    server_port_for_client
     no_nginx_manager
 );
 
@@ -709,7 +718,7 @@ $http_config
 
     server {
         listen          $ServerPort;
-        server_name     'localhost';
+        server_name     '$ServerAddr';
 
         client_max_body_size 30M;
         #client_body_buffer_size 4k;
