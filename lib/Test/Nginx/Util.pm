@@ -57,7 +57,7 @@ our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
 
 our $CheckAccumErrLog = $ENV{TEST_NGINX_CHECK_ACCUM_ERR_LOG};
 
-our $ServerAddr = 'localhost';
+our $ServerAddr = '127.0.0.1';
 
 our $ServerName = 'localhost';
 
