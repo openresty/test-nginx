@@ -1805,8 +1805,10 @@ Test::Nginx::Socket - Socket-backed test scaffold for the Nginx C modules
 
     use Test::Nginx::Socket;
 
-    plan tests => $Test::Nginx::Socket::RepeatEach * 2 * blocks();
+    repeat_each(2);
+    plan tests => repeat_each() * 3 * blocks();
 
+    no_shuffle();
     run_tests();
 
     __DATA__
@@ -3004,13 +3006,13 @@ in his Debian repository: http://debian.perusio.net
 
 =head1 AUTHORS
 
-Yichun "agentzh" Zhang (章亦春) C<< <agentzh@gmail.com> >>
+Yichun "agentzh" Zhang (章亦春) C<< <agentzh@gmail.com> >>, CloudFlare Inc.
 
 Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2012, agentzh C<< <agentzh@gmail.com> >>.
+Copyright (c) 2009-2013, Yichun Zhang C<< <agentzh@gmail.com> >>, CloudFlare Inc.
 
 Copyright (c) 2011-2012, Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>.
 
