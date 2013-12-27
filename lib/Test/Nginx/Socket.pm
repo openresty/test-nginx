@@ -1067,6 +1067,17 @@ sub check_error_log ($$$$) {
             }
         }
     }
+
+    for my $line (@$lines) {
+        #warn "test $pat\n";
+        if ($line =~ /\bAssertion .*? failed\.$/) {
+            my $tb = Test::More->builder;
+            $tb->no_ending(1);
+
+            chomp $line;
+            fail("$name - $line");
+        }
+    }
 }
 
 sub fmt_str ($) {
