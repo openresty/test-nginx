@@ -1338,6 +1338,7 @@ sub send_request ($$$$@) {
                 my $errcode = $!;
                 if (waitpid($Test::Nginx::Util::ChildPid, WNOHANG) == -1) {
                     warn "WARNING: Child process $Test::Nginx::Util::ChildPid is already gone.\n";
+                    warn `tail -n20 $Test::Nginx::Util::ErrLogFile`;
 
                     my $tb = Test::More->builder;
                     $tb->no_ending(1);
