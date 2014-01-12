@@ -925,7 +925,7 @@ sub check_error_log ($$$$) {
         SKIP: {
             skip "$name - error_log - tests skipped due to the lack of directive $dry_run", 1 if $dry_run;
 
-            $lines = error_log_data();
+            $lines ||= error_log_data();
 
             my $matched_lines = '';
             for my $line (@$lines) {
@@ -971,7 +971,7 @@ sub check_error_log ($$$$) {
             $pats = \@clone;
         }
 
-        $lines = error_log_data();
+        $lines ||= error_log_data();
         for my $line (@$lines) {
             for my $pat (@$pats) {
                 next if !defined $pat;
