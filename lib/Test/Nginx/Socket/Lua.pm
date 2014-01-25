@@ -1,3 +1,5 @@
+package Test::Nginx::Socket::Lua;
+
 use Test::Nginx::Socket -Base;
 
 my $code = $ENV{TEST_NGINX_INIT_BY_LUA};
