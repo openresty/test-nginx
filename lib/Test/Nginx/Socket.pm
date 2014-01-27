@@ -471,7 +471,9 @@ sub run_test_helper ($$) {
 
     if ($CheckLeak) {
         $dry_run = 1;
+    }
 
+    if ($CheckLeak && !defined $block->no_check_leak) {
         warn "$name\n";
 
         my $req = $r_req_list->[0];
@@ -2803,6 +2805,11 @@ Specifies the expected TCP query received by the embedded TCP server.
 Delay in sec between sending successive packets in the "raw_request" array
 value. Also used when a request is split in packets.
 
+=head2 no_check_leak
+
+Skip the tests in the current test block in the "check leak" testing mode
+(i.e, with C<TEST_NGINX_CHECK_LEAK>=1).
+
 =head1 Environment variables
 
 All environment variables starting with C<TEST_NGINX_> are expanded in the
@@ -2869,6 +2876,8 @@ Other methods specified in the test cases will turn to C<GET> with force.
 
 The tests in this mode will always succeed because this mode also
 enforces the "dry-run" mode.
+
+Test blocks carrying the "--- no_check_leak" directive will be skipped in this testing mode.
 
 =head2 TEST_NGINX_USE_HUP
 
