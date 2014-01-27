@@ -915,7 +915,10 @@ sub check_error_log ($$$$) {
             bail_out("$name - No --- grep_error_log_out defined but --- grep_error_log is defined");
         }
 
-        if (ref $expected && ref $grep_pats eq 'ARRAY') {
+        #warn "ref grep error log: ", ref $expected;
+
+        if (ref $expected && ref $expected eq 'ARRAY') {
+            #warn "grep error log out is an ARRAY";
             $expected = $expected->[$repeated_req_idx];
         }
 
