@@ -915,11 +915,8 @@ sub check_error_log ($$$$) {
             bail_out("$name - No --- grep_error_log_out defined but --- grep_error_log is defined");
         }
 
-        if (ref $expected) {
+        if (ref $expected && ref $grep_pats eq 'ARRAY') {
             $expected = $expected->[$repeated_req_idx];
-
-        } else {
-            $expected = $expected;
         }
 
         SKIP: {
@@ -937,12 +934,17 @@ sub check_error_log ($$$$) {
                 }
             }
 
-            if ($NoLongString) {
-                is($matched_lines, $expected,
-                   "$name - grep_error_log_out (req $repeated_req_idx)" );
+            if (ref $expected eq 'Regexp') {
+                like($matched_lines, $expected, "$name - grep_error_log_out (req $repeated_req_idx)");
+
             } else {
-                is_string($matched_lines, $expected,
-                          "$name - grep_error_log_out (req $repeated_req_idx)");
+                if ($NoLongString) {
+                    is($matched_lines, $expected,
+                       "$name - grep_error_log_out (req $repeated_req_idx)" );
+                } else {
+                    is_string($matched_lines, $expected,
+                              "$name - grep_error_log_out (req $repeated_req_idx)");
+                }
             }
         }
     }
