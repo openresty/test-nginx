@@ -174,7 +174,7 @@ sub run_test_helper ($$) {
 
     if ($dry_run) {
         SKIP: {
-            Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+            Test::More::skip("$name - tests skipped due to $dry_run", 1);
         }
     } else {
         if (defined $block->error_code) {
@@ -193,7 +193,7 @@ sub run_test_helper ($$) {
             }
             if ($dry_run) {
                 SKIP: {
-                    Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+                    Test::More::skip("$name - tests skipped due to $dry_run", 1);
                 }
             } else {
                 is $expected_val, $val,
@@ -209,7 +209,7 @@ sub run_test_helper ($$) {
             }
             if ($dry_run) {
                 SKIP: {
-                    Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+                    Test::More::skip("$name - tests skipped due to $dry_run", 1);
                 }
             } else {
                 like $expected_val, qr/^$val$/,
@@ -232,7 +232,7 @@ sub run_test_helper ($$) {
 
         if ($dry_run) {
             SKIP: {
-                Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+                Test::More::skip("$name - tests skipped due to $dry_run", 1);
             }
         } else {
             if ($NoLongString) {
@@ -256,7 +256,7 @@ sub run_test_helper ($$) {
 
         if ($dry_run) {
             SKIP: {
-                Test::More::skip("$name - tests skipped due to the lack of directive $dry_run", 1);
+                Test::More::skip("$name - tests skipped due to $dry_run", 1);
             }
         } else {
             like($content, qr/$expected_pat/s, "$name - response_body_like - response is expected ($summary)");

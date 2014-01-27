@@ -1466,7 +1466,7 @@ start_nginx:
                     if ($ENV{TEST_NGINX_IGNORE_MISSING_DIRECTIVES} and
                             my $directive = check_if_missing_directives())
                     {
-                        $dry_run = $directive;
+                        $dry_run = "the lack of directive $directive";
 
                     } else {
                         bail_out("$name - Cannot start nginx using command \"$cmd\".");
