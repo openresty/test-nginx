@@ -1025,6 +1025,10 @@ sub run_test ($) {
     my $skip_slave = $block->skip_slave;
     my ($tests_to_skip, $should_skip, $skip_reason);
 
+    if ($CheckLeak && defined $block->no_check_leak) {
+        $should_skip = 1;
+    }
+
     if (defined $skip_eval) {
         if ($skip_eval =~ m{
                 ^ \s* (\d+) \s* : \s* (.*)
@@ -1838,7 +1842,7 @@ request:
             write_user_files($block);
         }
 
-        if ($should_skip) {
+        if ($should_skip && defined $tests_to_skip) {
             SKIP: {
                 Test::More::skip("$name - $skip_reason", $tests_to_skip);
 
