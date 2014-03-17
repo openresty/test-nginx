@@ -1020,6 +1020,9 @@ sub check_error_log ($$$$) {
             my @lines = split /\n+/, $pats;
             $pats = \@lines;
 
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
+
         } else {
             my @clone = @$pats;
             $pats = \@clone;
