@@ -3112,7 +3112,7 @@ Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2013, Yichun Zhang C<< <agentzh@gmail.com> >>, CloudFlare Inc.
+Copyright (c) 2009-2014, Yichun Zhang C<< <agentzh@gmail.com> >>, CloudFlare Inc.
 
 Copyright (c) 2011-2012, Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>.
 
