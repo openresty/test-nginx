@@ -479,7 +479,7 @@ sub cleanup () {
 }
 
 sub error_log_data () {
-    # this is for logging in the log-phase which is after the serser closes the connection:
+    # this is for logging in the log-phase which is after the server closes the connection:
     sleep $TestNginxSleep * 3;
 
     open my $in, $ErrLogFile or
