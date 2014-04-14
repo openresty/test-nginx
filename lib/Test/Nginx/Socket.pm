@@ -49,6 +49,7 @@ use Test::Nginx::Util qw(
   $ServRoot
   $ConfFile
   $RunTestHelper
+  $CheckErrorLog
   $FilterHttpConfig
   $RepeatEach
   $CheckLeak
@@ -106,6 +107,7 @@ sub get_linear_regression_slope ($);
 sub value_contains ($$);
 
 $RunTestHelper = \&run_test_helper;
+$CheckErrorLog = \&check_error_log;
 
 sub set_http_config_filter ($) {
     $FilterHttpConfig = shift;
@@ -2812,6 +2814,25 @@ value. Also used when a request is split in packets.
 
 Skip the tests in the current test block in the "check leak" testing mode
 (i.e, with C<TEST_NGINX_CHECK_LEAK>=1).
+
+=head2 must_die
+
+Nginx must die right after starting. If value is set, exit value must
+match value.
+
+Normal request and response cycle is not done. But you should use
+C<error_log> to check message is as expected.
+
+This is meant to test bogus configuration is noticed and given proper
+error message. It is normal to see stderr error message when running tests.
+
+This configuration is not compatible with C<TEST_NGINX_USE_VALGRIND>
+C<TEST_NGINX_USE_STAP> or C<TEST_NGINX_CHECK_LEAK>. There is no great
+point of checking memory allocations when you expect nginx to die right
+away.  Add guards to skip these tests at testsuite.
+
+This directive is handled before checking
+C<TEST_NGINX_IGNORE_MISSING_DIRECTIVES>.
 
 =head1 Environment variables
 

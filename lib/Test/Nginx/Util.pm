@@ -284,6 +284,18 @@ sub master_process_enabled (@) {
     }
 }
 
+# undef - not set
+# 0 - do not care what value we get
+# others - exit value must be selected
+our $MustDie;
+
+sub must_die (@) {
+    if (@_) {
+        $MustDie= shift;
+    }
+    $MustDie;
+}
+
 our @EXPORT_OK = qw(
     check_accum_error_log
     is_running
@@ -317,6 +329,7 @@ our @EXPORT_OK = qw(
     $ServRoot
     $ConfFile
     $RunTestHelper
+    $CheckErrorLog
     $FilterHttpConfig
     $NoNginxManager
     $RepeatEach
@@ -337,6 +350,7 @@ our @EXPORT_OK = qw(
     server_port
     server_port_for_client
     no_nginx_manager
+    must_die
 );
 
 
@@ -352,6 +366,7 @@ sub config_preamble ($) {
 }
 
 our $RunTestHelper;
+our $CheckErrorLog;
 
 our $NginxVersion;
 our $NginxRawVersion;
@@ -979,6 +994,9 @@ sub run_test ($) {
     if ($block->log_level) {
         $LogLevel = $block->log_level;
     }
+    if (defined $block->must_die) {
+        must_die($block->must_die);
+    }
 
     if (!defined $config) {
         if (!$NoNginxManager) {
@@ -1466,8 +1484,32 @@ start_nginx:
                 sleep $TestNginxSleep;
 
             } else {
-                if (system($cmd) != 0) {
-                    if ($ENV{TEST_NGINX_IGNORE_MISSING_DIRECTIVES} and
+                system($cmd);
+                my ($failed_to_execute, $exit_signal, $exit_coredump, $exit_value) = (0, 0, 0, 0);
+                if ($? == -1) {
+                    $failed_to_execute = 1;
+                } elsif ($? & 127) {
+                    $exit_signal = $? & 127;
+                    $exit_coredump = $? & 128;
+                } else {
+                    $exit_value = $? >> 8;
+                }
+                if ($? != 0) {
+                    if (defined $MustDie) {
+                        # It is not possible now to use these as they add extra tests and
+                        # it confuses counts.
+                        #Test::More::is($failed_to_execute, 0, "$name - execute ok");
+                        #Test::More::is($exit_signal, 0, "$name - exit without signal");
+                        #Test::More::is($exit_coredump, 0, "$name - exit without coredump");
+                        if ($MustDie) {
+                            Test::More::is($exit_value, $MustDie, "$name - died as expected");
+                        } else {
+                            Test::More::isnt($exit_value, 0, "$name - died as expected");
+                        }
+                        $ErrLogFilePos = 0;
+                        $CheckErrorLog->($block, undef, $dry_run, 0, 0);
+                        return;
+                    } elsif ($ENV{TEST_NGINX_IGNORE_MISSING_DIRECTIVES} and
                             my $directive = check_if_missing_directives())
                     {
                         $dry_run = "the lack of directive $directive";
@@ -1475,6 +1517,15 @@ start_nginx:
                     } else {
                         bail_out("$name - Cannot start nginx using command \"$cmd\".");
                     }
+                } elsif (defined $MustDie) {
+                    if ($MustDie) {
+                        Test::More::is($exit_value, $MustDie, "$name - died as expected");
+                    } else {
+                        Test::More::isnt($exit_value, 0, "$name - died as excpected");
+                    }
+                    $ErrLogFilePos = 0;
+                    $CheckErrorLog->($block, undef, $dry_run, 0, 0);
+                    return;
                 }
             }
 
