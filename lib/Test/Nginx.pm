@@ -153,7 +153,7 @@ stdout/stderr.
 
 Test::Nginx has integrated support for valgrind (L<http://valgrind.org>) even though by
 default it does not bother running it with the tests because valgrind
-will significantly slow down the test sutie.
+will significantly slow down the test suite.
 
 First ensure that your valgrind executable visible in your PATH env.
 And then run your test suite with the C<TEST_NGINX_USE_VALGRIND> env set

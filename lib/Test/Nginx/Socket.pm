@@ -1924,7 +1924,7 @@ Other configuration Perl functions I<must> be called before calling this C<run_t
 =head2 no_shuffle
 
 By default, the test scaffold always shuffles the order of the test blocks automatically. Calling this function before
-calling C<run_tests> will disable the suffling.
+calling C<run_tests> will disable the shuffling.
 
 =head2 no_long_string
 
@@ -2109,7 +2109,7 @@ your request into network packets:
 Here, Test::Nginx will first send the request line, the headers it
 automatically added for you and the first two letters of the body ("na" in
 our example) in ONE network packet. Then, it will send the next packet (here
-it's "me=foo"). When we talk about packets here, this is nto exactly correct
+it's "me=foo"). When we talk about packets here, this is not exactly correct
 as there is no way to guarantee the behavior of the TCP/IP stack. What
 Test::Nginx can guarantee is that this will result in two calls to
 C<syswrite>.
@@ -2387,7 +2387,7 @@ Makes the test scaffold not to treat C<--- timeout> expiration as a test failure
 
 =head2 shutdown
 
-Perform a C<shutdown>() operaton on the client socket connecting to Nginx as soon as sending out
+Perform a C<shutdown>() operation on the client socket connecting to Nginx as soon as sending out
 all the request data. This section takes an (optional) integer value for the argument to the
 C<shutdown> function call. For example,
 
@@ -2464,7 +2464,7 @@ The default error log level can be specified in the Perl code by calling the C<l
 =head2 raw_request
 
 The exact request to send to nginx. This is useful when you want to test
-soem behaviors that are not available with "request" such as an erroneous
+some behaviors that are not available with "request" such as an erroneous
 C<Content-Length> header or splitting packets right in the middle of headers:
 
     --- raw_request eval
@@ -2566,7 +2566,7 @@ the skip condition. If you want to use two boolean expressions, you should use t
 
 =head2 skip_nginx2
 
-This seciton is similar to C<skip_nginx>, but the skip condition consists of two boolean expressions joined by the operator C<and> or C<or>.
+This section is similar to C<skip_nginx>, but the skip condition consists of two boolean expressions joined by the operator C<and> or C<or>.
 
 The format for this section is
 
@@ -2658,7 +2658,7 @@ will be expanded to
 
 =head2 stap_out
 
-This seciton specifies the expected literal output of the systemtap script specified by C<stap>.
+This section specifies the expected literal output of the systemtap script specified by C<stap>.
 
 =head2 stap_out_like
 
@@ -2728,7 +2728,7 @@ This section specifies the datagram reply content for the UDP server created by 
 
 You can also specify a delay time before sending out the reply via the C<udp_reply_delay> section. By default, there is no delay.
 
-An array value can be specified to make the embedded UDP server to send mulitple replies as specified, for example:
+An array value can be specified to make the embedded UDP server to send multiple replies as specified, for example:
 
     --- udp_reply eval
     [ "hello", "world" ]
@@ -2887,8 +2887,8 @@ Test blocks carrying the "--- no_check_leak" directive will be skipped in this t
 When set to 1, the test scaffold will try to send C<HUP> signal to the
 Nginx master process to reload the config file between
 successive test blocks (but not successive C<repeast_each>
-sub-tests within the same test block). When this envirnoment is set
-to 1, it will also enfornce the "master_process on" config line
+sub-tests within the same test block). When this environment is set
+to 1, it will also enforce the "master_process on" config line
 in the F<nginx.conf> file,
 because Nginx is buggy in processing HUP signal when the master process is off.
 
@@ -2916,7 +2916,7 @@ against an already configured (and running) nginx server.
 
 =head2 TEST_NGINX_NO_SHUFFLE
 
-Dafaults to 0. If set to 1, will make sure the tests are run in the order
+Defaults to 0. If set to 1, will make sure the tests are run in the order
 they appear in the test file (and not in random order).
 
 =head2 TEST_NGINX_USE_VALGRIND
@@ -2970,7 +2970,7 @@ then C<1984> is used. See below for typical use.
 
 =head2 TEST_NGINX_CLIENT_PORT
 
-Value of the port Test::Nginx will diirect requests to. If not
+Value of the port Test::Nginx will direct requests to. If not
 set, C<TEST_NGINX_PORT> is used. If C<TEST_NGINX_PORT> is not set,
 then C<1984> is used. A typical use of this feature is to test extreme
 network conditions by adding a "proxy" between Test::Nginx and nginx
