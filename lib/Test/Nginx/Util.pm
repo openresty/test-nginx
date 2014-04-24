@@ -317,6 +317,7 @@ our @EXPORT_OK = qw(
     $ServRoot
     $ConfFile
     $RunTestHelper
+    $CheckErrorLog
     $FilterHttpConfig
     $NoNginxManager
     $RepeatEach
@@ -352,6 +353,7 @@ sub config_preamble ($) {
 }
 
 our $RunTestHelper;
+our $CheckErrorLog;
 
 our $NginxVersion;
 our $NginxRawVersion;
@@ -980,6 +982,11 @@ sub run_test ($) {
         $LogLevel = $block->log_level;
     }
 
+    my $must_die;
+    if (defined $block->must_die) {
+        $must_die = $block->must_die;
+    }
+
     if (!defined $config) {
         if (!$NoNginxManager) {
             # Manager without config.
@@ -1466,7 +1473,44 @@ start_nginx:
                 sleep $TestNginxSleep;
 
             } else {
-                if (system($cmd) != 0) {
+                my $i = 0;
+                my ($failed_to_execute, $exit_signal, $exit_coredump, $exit_value) = (0, 0, 0, 0);
+              RUN_AGAIN:
+                system($cmd);
+                if ($? == -1) {
+                    $failed_to_execute = 1;
+                }
+                if ($? > (128 << 8)) {
+                    # $cmd is run inside shell, so need to strip one layer
+                    $exit_value = $? >> 8;
+                    $exit_signal = $exit_value & 127;
+                    $exit_coredump = $exit_value & 128;
+                    $exit_value = $exit_value >> 8;
+                } else {
+                    $exit_value = $? >> 8;
+                    $exit_signal = $? & 127;
+                    $exit_coredump = $? & 128;
+                }
+                if (defined $must_die) {
+                    # This might be different case
+                    # Test::More::is($exit_signal, 0, "$name - exit without signal");
+                    # Always should be able to execute
+                    # Always should not dump core
+                    if ($failed_to_execute) {
+                        Test::More::is($failed_to_execute, 0, "$name - failed to execute");
+                    } elsif ($exit_coredump) {
+                        Test::More::is($exit_coredump, 0, "$name - coredumped");
+                    } elsif ($must_die) {
+                        Test::More::is($exit_value, $must_die, "$name - died as expected");
+                    } else {
+                        Test::More::isnt($exit_value, 0, "$name - died as expected");
+                    }
+                    $ErrLogFilePos = 0;
+                    $CheckErrorLog->($block, undef, $dry_run, 0, 0);
+                    goto RUN_AGAIN if (++$i < $RepeatEach);
+                    return;
+                }
+                if ($? != 0) {
                     if ($ENV{TEST_NGINX_IGNORE_MISSING_DIRECTIVES} and
                             my $directive = check_if_missing_directives())
                     {
