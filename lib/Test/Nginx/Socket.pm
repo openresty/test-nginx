@@ -49,6 +49,7 @@ use Test::Nginx::Util qw(
   $ServRoot
   $ConfFile
   $RunTestHelper
+  $CheckErrorLog
   $FilterHttpConfig
   $RepeatEach
   $CheckLeak
@@ -106,6 +107,7 @@ sub get_linear_regression_slope ($);
 sub value_contains ($$);
 
 $RunTestHelper = \&run_test_helper;
+$CheckErrorLog = \&check_error_log;
 
 sub set_http_config_filter ($) {
     $FilterHttpConfig = shift;
@@ -2812,6 +2814,36 @@ value. Also used when a request is split in packets.
 
 Skip the tests in the current test block in the "check leak" testing mode
 (i.e, with C<TEST_NGINX_CHECK_LEAK>=1).
+
+=head2 must_die
+
+Test the cases that Nginx must die right after starting. If a value is specified, the exit code must match the specified value.
+
+Normal request and response cycle is not done. But you can still use the
+C<error_log> section to check if there is an error message to be seen.
+
+This is meant to test bogus configuration is noticed and given proper
+error message. It is normal to see stderr error message when running these tests.
+
+Below is an example:
+
+    === TEST 1: bad "return" directive
+    --- config
+        location = /t {
+            return a b c;
+        }
+    --- request
+        GET /t
+    --- must_die
+    --- error_log
+    invalid number of arguments in "return" directive
+    --- no_error_log
+    [error]
+
+This configuration ignores C<TEST_NGINX_USE_VALGRIND>
+C<TEST_NGINX_USE_STAP> or C<TEST_NGINX_CHECK_LEAK> since there is no point to check other things when the nginx is expected to die right away.
+
+This directive is handled before checking C<TEST_NGINX_IGNORE_MISSING_DIRECTIVES>.
 
 =head1 Environment variables
 

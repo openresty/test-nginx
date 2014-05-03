@@ -16,6 +16,7 @@ use Time::HiRes qw( sleep );
 use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile :POSIX );
+use Scalar::Util qw( looks_like_number );
 use IO::Socket::INET;
 use IO::Socket::UNIX;
 use Test::LongString;
@@ -317,6 +318,7 @@ our @EXPORT_OK = qw(
     $ServRoot
     $ConfFile
     $RunTestHelper
+    $CheckErrorLog
     $FilterHttpConfig
     $NoNginxManager
     $RepeatEach
@@ -352,6 +354,7 @@ sub config_preamble ($) {
 }
 
 our $RunTestHelper;
+our $CheckErrorLog;
 
 our $NginxVersion;
 our $NginxRawVersion;
@@ -980,6 +983,35 @@ sub run_test ($) {
         $LogLevel = $block->log_level;
     }
 
+    my $must_die;
+    local $UseStap = $UseStap;
+    local $UseValgrind = $UseValgrind;
+    local $UseHup = $UseHup;
+    local $Profiling = $Profiling;
+
+    if (defined $block->must_die) {
+        $must_die = $block->must_die;
+        if (defined $block->stap) {
+            bail_out("$name: --- stap cannot be used with --- must_die");
+        }
+
+        if ($UseStap) {
+            undef $UseStap;
+        }
+
+        if ($UseValgrind) {
+            undef $UseValgrind;
+        }
+
+        if ($UseHup) {
+            undef $UseHup;
+        }
+
+        if ($Profiling) {
+            undef $Profiling;
+        }
+    }
+
     if (!defined $config) {
         if (!$NoNginxManager) {
             # Manager without config.
@@ -1466,7 +1498,51 @@ start_nginx:
                 sleep $TestNginxSleep;
 
             } else {
-                if (system($cmd) != 0) {
+                my $i = 0;
+                $ErrLogFilePos = 0;
+                my ($exec_failed, $coredump, $exit_code);
+
+RUN_AGAIN:
+                system($cmd);
+
+                if ($? == -1) {
+                    $exec_failed = 1;
+
+                } else {
+                    $exit_code = $? >> 8;
+
+                    if ($? > (128 << 8)) {
+                        $coredump = ($exit_code & 128);
+                        $exit_code = ($exit_code >> 8);
+
+                    } else {
+                        $coredump = ($? & 128);
+                    }
+                }
+
+                if (defined $must_die) {
+                    # Always should be able to execute
+                    if ($exec_failed) {
+                        Test::More::fail("$name - failed to execute the nginx command line")
+
+                    } elsif ($coredump) {
+                        Test::More::fail("$name - nginx core dumped")
+
+                    } elsif (looks_like_number($must_die)) {
+                        Test::More::is($must_die, $exit_code,
+                                       "$name - die with the expected exit code")
+
+                    } else {
+                        Test::More::isnt($?, 0, "$name - die as expected")
+                    }
+
+                    $CheckErrorLog->($block, undef, $dry_run, $i, 0);
+
+                    goto RUN_AGAIN if ++$i < $RepeatEach;
+                    return;
+                }
+
+                if ($? != 0) {
                     if ($ENV{TEST_NGINX_IGNORE_MISSING_DIRECTIVES} and
                             my $directive = check_if_missing_directives())
                     {
