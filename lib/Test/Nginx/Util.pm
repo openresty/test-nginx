@@ -339,6 +339,8 @@ our @EXPORT_OK = qw(
     server_port
     server_port_for_client
     no_nginx_manager
+    perl_modules
+    perl_require
 );
 
 
@@ -351,6 +353,18 @@ our $ConfigPreamble = '';
 
 sub config_preamble ($) {
     $ConfigPreamble = shift;
+}
+
+our $PerlModules = '';
+
+sub perl_modules ($) {
+    $PerlModules = shift;
+}
+
+our $PerlRequire = '';
+
+sub perl_require ($) {
+    $PerlRequire = shift;
 }
 
 our $RunTestHelper;
@@ -731,6 +745,9 @@ http {
     keepalive_timeout  68;
 
 $http_config
+
+    $PerlModules
+    $PerlRequire
 
     server {
         listen          $ServerPort;

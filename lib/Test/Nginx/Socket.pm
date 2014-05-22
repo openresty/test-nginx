@@ -70,6 +70,8 @@ use Test::Nginx::Util qw(
   server_port
   server_port_for_client
   no_nginx_manager
+  perl_modules
+  perl_require  
 );
 
 #use Smart::Comments::JSON '###';
@@ -87,6 +89,7 @@ our @EXPORT = qw( plan run_tests run_test
   server_name
   server_addr server_root html_dir server_port server_port_for_client
   timeout no_nginx_manager check_accum_error_log
+  perl_modules perl_require
 );
 
 our $TotalConnectingTimeouts = 0;
