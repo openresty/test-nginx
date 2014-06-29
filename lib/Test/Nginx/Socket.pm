@@ -2805,6 +2805,12 @@ Just like C<udp_query>, but for the embedded TCP server.
 
 Specifies the expected TCP query received by the embedded TCP server.
 
+If C<tcp_query> is specified, C<tcp_query_len> defaults to the length of the value of C<tcp_query>.
+
+=head2 tcp_shutdown
+
+Shuts down the reading part, writing part, or both in the embedded TCP server as soon as a new connection is established. Its value specifies which part to shut down: 0 for read part only, 1 for write part only, and 2 for both directions.
+
 =head2 raw_request_middle_delay
 
 Delay in sec between sending successive packets in the "raw_request" array
