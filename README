@@ -239,6 +239,15 @@ DEBIAN PACKAGES
     António P. P. Almeida is maintaining a Debian package for this module in
     his Debian repository: http://debian.perusio.net
 
+Community
+  English Mailing List
+    The "openresty-en" mailing list is for English speakers:
+    <https://groups.google.com/group/openresty-en>
+
+  Chinese Mailing List
+    The "openresty" mailing list is for Chinese speakers:
+    <https://groups.google.com/group/openresty>
+
 AUTHORS
     agentzh (章亦春) "<agentzh@gmail.com>"
 

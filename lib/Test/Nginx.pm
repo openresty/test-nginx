@@ -287,6 +287,16 @@ If you want a commit bit, feel free to drop me a line.
 António P. P. Almeida is maintaining a Debian package for this module
 in his Debian repository: http://debian.perusio.net
 
+=head1 Community
+
+=head2 English Mailing List
+
+The C<openresty-en> mailing list is for English speakers: L<https://groups.google.com/group/openresty-en>
+
+=head2 Chinese Mailing List
+
+The C<openresty> mailing list is for Chinese speakers: L<https://groups.google.com/group/openresty>
+
 =head1 AUTHORS
 
 agentzh (章亦春) C<< <agentzh@gmail.com> >>
