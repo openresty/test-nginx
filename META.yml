@@ -1,5 +1,5 @@
 ---
-abstract: 'Testing modules for Nginx C module development'
+abstract: 'Data-driven test scaffold for Nginx C module and OpenResty Lua library development'
 author:
   - 'agentzh (章亦春) C<< <agentzh@gmail.com> >>'
 build_requires:

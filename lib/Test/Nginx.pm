@@ -11,7 +11,7 @@ __END__
 
 =head1 NAME
 
-Test::Nginx - Testing modules for Nginx C module development
+Test::Nginx - Data-driven test scaffold for Nginx C module and OpenResty Lua library development
 
 =head1 DESCRIPTION
 
