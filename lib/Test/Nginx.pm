@@ -285,7 +285,7 @@ If you want a commit bit, feel free to drop me a line.
 =head1 DEBIAN PACKAGES
 
 António P. P. Almeida is maintaining a Debian package for this module
-in his Debian repository: http://debian.perusio.net
+in his Debian repository: L<http://debian.perusio.net>
 
 =head1 Community
 
