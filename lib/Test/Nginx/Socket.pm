@@ -1030,24 +1030,33 @@ sub check_error_log ($$$$) {
             $pats = \@clone;
         }
 
+        my %found;
         $lines ||= error_log_data();
         for my $line (@$lines) {
             for my $pat (@$pats) {
                 next if !defined $pat;
                 #warn "test $pat\n";
                 if ((ref $pat && $line =~ /$pat/) || $line =~ /\Q$pat\E/) {
+                    if ($found{$pat}) {
+                        my $tb = Test::More->builder;
+                        $tb->no_ending(1);
+
+                    } else {
+                        $found{$pat} = 1;
+                    }
+
                     SKIP: {
                         skip "$name - no_error_log - tests skipped due to $dry_run", 1 if $dry_run;
                         my $ln = fmt_str($line);
                         my $p = fmt_str($pat);
                         fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\" (req $repeated_req_idx)");
                     }
-                    undef $pat;
                 }
             }
         }
 
         for my $pat (@$pats) {
+            next if $found{$pat};
             if (defined $pat) {
                 SKIP: {
                     skip "$name - no_error_log - tests skipped due to $dry_run", 1 if $dry_run;
