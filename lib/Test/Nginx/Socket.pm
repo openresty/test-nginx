@@ -1694,13 +1694,14 @@ sub gen_cmd_from_req ($$) {
 
     $req = join '', map { $_->{value} } @$req;
 
-    #warn "Req: $req\n";
+    #use JSON::XS;
+    #warn "Req: ",  JSON::XS->new->encode([$req]), "\n";
 
     my ($meth, $uri, $http_ver);
-    if ($req =~ m{^\s*(\w+)\s+(.*\S)\s*HTTP/(\S+)\r\n}gcs) {
+    if ($req =~ m{^\s*(\w+)\s+(\S+)\s+HTTP/(\S+)\r?\n}smi) {
         ($meth, $uri, $http_ver) = ($1, $2, $3);
 
-    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r\n}gcs) {
+    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r?\n}smi) {
         ($meth, $uri) = ($1, $2);
         $http_ver = '0.9';
 
@@ -1724,7 +1725,7 @@ sub gen_cmd_from_req ($$) {
 
     my @headers;
     if ($http_ver ge '1.0') {
-        if ($req =~ m{\G(.*?)\r\n\r\n}gcs) {
+        if ($req =~ m{\G(.*?)\r?\n\r?\n}gcs) {
             my $headers = $1;
             #warn "raw headers: $headers\n";
             @headers = grep {
@@ -1770,6 +1771,9 @@ sub gen_cmd_from_req ($$) {
 
         } elsif ($meth eq 'POST') {
             push @opts, '-p', $bodyfile;
+
+        } elsif ($meth eq 'GET') {
+            warn "WARNING: method $meth not supported for ab when taking a request body\n";
 
         } else {
             warn "WARNING: method $meth not supported for ab when taking a request body\n";
