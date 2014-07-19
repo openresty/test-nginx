@@ -1747,24 +1747,27 @@ request:
 
                         $buf .= $b;
 
+
+                        # flush read data to the file as soon as possible:
+
+                        if ($tcp_query_file) {
+                            open my $out, ">$tcp_query_file"
+                                or die "cannot open $tcp_query_file for writing: $!\n";
+
+                            if ($Verbose) {
+                                warn "writing received data [$buf] to file $tcp_query_file\n";
+                            }
+
+                            print $out $buf;
+                            close $out;
+                        }
+
                         if (!$req_len || length($buf) >= $req_len) {
                             if ($Verbose) {
                                 warn "len: ", length($buf), ", req len: $req_len\n";
                             }
                             last;
                         }
-                    }
-
-                    if ($tcp_query_file) {
-                        open my $out, ">$tcp_query_file"
-                            or die "cannot open $tcp_query_file for writing: $!\n";
-
-                        if ($Verbose) {
-                            warn "writing received data [$buf] to file $tcp_query_file\n";
-                        }
-
-                        print $out $buf;
-                        close $out;
                     }
                 }
 
