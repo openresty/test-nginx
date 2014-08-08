@@ -1,5 +1,8 @@
 Changes for Test::Nginx
 
+master - 2014-08-08
+ *   change: set --num-callers=50 to valgrind by default
+
 0.23 - 2014-04-05
  *   feature: added new section --- response_body_unlike. thanks
      Rickey Visinski for the patch.
