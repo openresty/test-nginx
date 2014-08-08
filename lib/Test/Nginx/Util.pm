@@ -1362,9 +1362,9 @@ start_nginx:
                     $opts = "--tool=memcheck --leak-check=full --show-possibly-lost=no";
 
                     if (-f 'valgrind.suppress') {
-                        $cmd = "valgrind --num-callers=100 -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
+                        $cmd = "valgrind --num-callers=50 -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
                     } else {
-                        $cmd = "valgrind --num-callers=100 -q $opts --gen-suppressions=all $cmd";
+                        $cmd = "valgrind --num-callers=50 -q $opts --gen-suppressions=all $cmd";
                     }
 
                 } else {
