@@ -1388,13 +1388,15 @@ start_nginx:
                     my ($stap_fh, $stap_fname) = tempfile("XXXXXXX", SUFFIX => '.stp', TMPDIR => 1);
                     my $stap = $block->stap;
 
-                    if ($stap =~ /\$LIBLUA_PATH\b/) {
+                    if ($stap =~ /\$LIB([_A-Z0-9]+)_PATH\b/) {
+                        my $name = $1;
+                        my $libname = 'lib' . lc($name);
                         my $nginx_path = can_run($NginxBinary);
                         #warn "nginx path: ", $nginx_path;
-                        my $line = `ldd $nginx_path|grep -E 'liblua.*?\.so'`;
-                        warn "line: $line";
+                        my $line = `ldd $nginx_path|grep -E '$libname.*?\.so'`;
+                        #warn "line: $line";
                         my $liblua_path;
-                        if ($line =~ m{\S+/liblua.*?\.so(?:\.\d+)*}) {
+                        if ($line =~ m{\S+/$libname.*?\.so(?:\.\d+)*}) {
                             $liblua_path = $&;
 
                         } else {
@@ -1402,23 +1404,7 @@ start_nginx:
                             $liblua_path = $nginx_path;
                         }
 
-                        $stap =~ s/\$LIBLUA_PATH\b/$liblua_path/g;
-                    }
-
-                    if ($stap =~ /\$LIBPCRE_PATH\b/) {
-                        my $nginx_path = can_run($NginxBinary);
-                        #warn "nginx path: ", $nginx_path;
-                        my $line = `ldd $nginx_path|grep libpcre.so`;
-                        my $libpcre_path;
-                        if ($line =~ m{\S+/libpcre\.so(?:\.\d+)*}) {
-                            $libpcre_path = $&;
-
-                        } else {
-                            # static linking is used?
-                            $libpcre_path = $nginx_path;
-                        }
-
-                        $stap =~ s/\$LIBPCRE_PATH\b/$libpcre_path/g;
+                        $stap =~ s/\$LIB${name}_PATH\b/$liblua_path/gi;
                     }
 
                     $stap =~ s/^\bS\(([^)]+)\)/probe process("nginx").statement("*\@$1")/smg;
