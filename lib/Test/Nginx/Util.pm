@@ -1929,24 +1929,24 @@ request:
                 }
 
                 if (ref $reply) {
-                    for my $r (@$reply) {
-                        #warn "sending reply $r";
-                        my $bytes = $udp_socket->send($r);
+                    if (ref($reply) eq "CODE") {
+                        my $result = $reply->($buf);
+                        my $bytes = $udp_socket->send($result);
                         if (!defined $bytes) {
                             warn "WARNING: udp server failed to send reply: $!\n";
+                        }
+                    } else {
+                        for my $r (@$reply) {
+                            #warn "sending reply $r";
+                            my $bytes = $udp_socket->send($r);
+                            if (!defined $bytes) {
+                                warn "WARNING: udp server failed to send reply: $!\n";
+                            }
                         }
                     }
 
                 } else {
-                    my $reply_sub = eval($reply);
-                    if ($@) {
-                        bail_out("failed to eval --- udp_reply block: $@");
-                    }
-                    my $result = $reply;
-                    if (ref($reply_sub) eq "CODE") {
-                        $result = $reply_sub->($buf);
-                    }
-                    my $bytes = $udp_socket->send($result);
+                    my $bytes = $udp_socket->send($reply);
                     if (!defined $bytes) {
                         warn "WARNING: udp server failed to send reply: $!\n";
                     }
