@@ -1928,8 +1928,14 @@ request:
                     sleep $delay;
                 }
 
-                if (defined $reply) {
-                    if (ref $reply) {
+                if (ref $reply) {
+                    if (ref($reply) eq "CODE") {
+                        my $result = $reply->($buf);
+                        my $bytes = $udp_socket->send($result);
+                        if (!defined $bytes) {
+                            warn "WARNING: udp server failed to send reply: $!\n";
+                        }
+                    } else {
                         for my $r (@$reply) {
                             #warn "sending reply $r";
                             my $bytes = $udp_socket->send($r);
@@ -1937,12 +1943,12 @@ request:
                                 warn "WARNING: udp server failed to send reply: $!\n";
                             }
                         }
+                    }
 
-                    } else {
-                        my $bytes = $udp_socket->send($reply);
-                        if (!defined $bytes) {
-                            warn "WARNING: udp server failed to send reply: $!\n";
-                        }
+                } else {
+                    my $bytes = $udp_socket->send($reply);
+                    if (!defined $bytes) {
+                        warn "WARNING: udp server failed to send reply: $!\n";
                     }
                 }
 
