@@ -174,6 +174,9 @@ sub no_nginx_manager () {
     $NoNginxManager = 1;
 }
 
+our @CleanupHandlers;
+our @BlockPreprocessors;
+
 sub bail_out (@);
 
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
@@ -301,6 +304,7 @@ our @EXPORT_OK = qw(
     stap_out_fh
     stap_out_fname
     bail_out
+    add_cleanup_handler
     error_log_data
     setup_server_root
     write_config_file
@@ -323,6 +327,7 @@ our @EXPORT_OK = qw(
     $NoNginxManager
     $RepeatEach
     $CheckLeak
+    add_block_preprocessor
     timeout
     worker_connections
     workers
@@ -360,6 +365,10 @@ our $NginxVersion;
 our $NginxRawVersion;
 our $TODO;
 
+sub add_block_preprocessor(&) {
+    push @BlockPreprocessors, shift;
+}
+
 #our ($PrevRequest)
 our $PrevConfig;
 
@@ -394,6 +403,10 @@ sub html_dir () {
 
 sub server_root () {
     return $ServRoot;
+}
+
+sub add_cleanup_handler ($) {
+   push @CleanupHandlers, shift;
 }
 
 sub bail_out (@) {
@@ -465,6 +478,10 @@ sub kill_process ($$) {
 }
 
 sub cleanup () {
+    for my $hdl (@CleanupHandlers) {
+       $hdl->();
+    }
+
     if (defined $UdpServerPid) {
         kill_process($UdpServerPid, 1);
         undef $UdpServerPid;
@@ -514,6 +531,9 @@ sub run_tests () {
     }
 
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
+        for my $hdl (@BlockPreprocessors) {
+            $block = $hdl->($block);
+        }
         run_test($block);
     }
 
