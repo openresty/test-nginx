@@ -296,17 +296,32 @@ sub build_request_from_packets($$$$$) {
     if (   !$is_chunked
         && defined $parsed_req->{content}
         && $parsed_req->{content} ne ''
-        && $more_headers !~ /\bContent-Length:/ )
+        && $more_headers !~ /(?:^|\n)Content-Length:/ )
     {
         $parsed_req->{content} =~ s/^\s+|\s+$//gs;
 
         $len_header .=
           "Content-Length: " . length( $parsed_req->{content} ) . "\r\n";
     }
+
+    $more_headers =~ s/(?<!\r)\n/\r\n/gs;
+
+    my $headers = '';
+
+    if ($more_headers !~ /(?:^|\n)Host:/msi) {
+        $headers .= "Host: $ServerName\r\n";
+    }
+
+    if ($more_headers !~ /(?:^|\n)Connection/msi) {
+        $headers .= "Connection: $conn_header\r\n";
+    }
+
+    $headers .= "$more_headers$len_header\r\n";
+
     $parsed_req->{method} .= ' ';
     $parsed_req->{url} .= ' ';
     $parsed_req->{http_ver} .= "\r\n";
-    $parsed_req->{headers} = "Host: $ServerName\r\nConnection: $conn_header\r\n$more_headers$len_header\r\n";
+    $parsed_req->{headers} = $headers;
 
     #  Get the moves from parsing
     my @elements_moves = get_moves($parsed_req);
@@ -402,7 +417,7 @@ sub get_req_from_block ($) {
             if (!ref $request) {
                 # One request and it is a good old string.
                 my $r_br = build_request_from_packets($name, $more_headers,
-                                                      $is_chunked, 'Close',
+                                                      $is_chunked, 'close',
                                                       [$request] );
                 push @req_list, [{value => $$r_br[0]}];
             } elsif (ref $request eq 'ARRAY') {
@@ -411,7 +426,7 @@ sub get_req_from_block ($) {
                     if (!ref $one_req) {
                         # This request is a good old string.
                         my $r_br = build_request_from_packets($name, $more_headers,
-                                                      $is_chunked, 'Close',
+                                                      $is_chunked, 'close',
                                                       [$one_req] );
                         push @req_list, [{value => $$r_br[0]}];
                     } elsif (ref $one_req eq 'ARRAY') {
@@ -429,7 +444,7 @@ sub get_req_from_block ($) {
                             }
                         }
                         my $transformed_packet_array = build_request_from_packets($name, $more_headers,
-                                                   $is_chunked, 'Close',
+                                                   $is_chunked, 'close',
                                                    \@packet_array);
                         my @transformed_req = ();
                         my $idx = 0;
@@ -2084,7 +2099,7 @@ web server and even use a different version of HTTP. This is possible:
 
 Please note that specifying HTTP/1.0 will not prevent Test::Nginx from
 sending the C<Host> header. Actually Test::Nginx always sends 2 headers:
-C<Host> (with value localhost) and C<Connection> (with value Close for
+C<Host> (with value localhost) and C<Connection> (with value C<close> for
 simple requests and keep-alive for all but the last pipelined_requests).
 
 You can also add a content to your request:
@@ -2489,7 +2504,7 @@ C<Content-Length> header or splitting packets right in the middle of headers:
     --- raw_request eval
     ["POST /rrd/taratata HTTP/1.1\r
     Host: localhost\r
-    Connection: Close\r
+    Connection: close\r
     Content-Type: application/",
     "x-www-form-urlencoded\r
     Content-Length:15\r\n\r\nvalue=N%3A12345"]
