@@ -1935,7 +1935,17 @@ request:
                 }
 
                 if (defined $reply) {
-                    if (ref $reply) {
+                    my $ref = ref $reply;
+                    if ($ref && $ref eq 'CODE') {
+                        $reply = $reply->($buf);
+                        $ref = ref $reply;
+                    }
+
+                    if ($ref) {
+                        if ($ref ne 'ARRAY') {
+                            bail_out("bad --- udp_reply value");
+                        }
+
                         for my $r (@$reply) {
                             #warn "sending reply $r";
                             my $bytes = $udp_socket->send($r);

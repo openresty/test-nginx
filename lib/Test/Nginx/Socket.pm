@@ -2810,6 +2810,23 @@ An array value can be specified to make the embedded UDP server to send multiple
     --- udp_reply eval
     [ "hello", "world" ]
 
+This section also accepts a Perl subroutine value that can be used to
+generate dynamic response packet or packets based on the actualactual query, for example:
+
+    --- udp_reply eval
+    sub {
+        my $req = shift;
+        return "hello, $req";
+    }
+
+The custom Perl subroutine can also return an array reference, for example,
+
+    --- udp_reply eval
+    sub {
+        my $req = shift;
+        return ["hello, $req", "hiya, $req"];
+    }
+
 See the C<udp_listen> section for more details.
 
 =head2 udp_reply_delay
