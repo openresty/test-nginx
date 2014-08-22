@@ -344,46 +344,46 @@ sub get_req_from_block ($) {
 
     my @req_list = ();
 
-    if ( defined $block->raw_request ) {
+    if (defined $block->raw_request) {
 
         # Should be deprecated.
-        if ( ref $block->raw_request && ref $block->raw_request eq 'ARRAY' ) {
+        if (ref $block->raw_request && ref $block->raw_request eq 'ARRAY') {
 
             #  User already provided an array. So, he/she specified where the
             # data should be split. This allows for backward compatibility but
             # should use request with arrays as it provides the same functionnality.
             my @rr_list = ();
-            for my $elt ( @{ $block->raw_request } ) {
+            for my $elt (@{ $block->raw_request }) {
                 push @rr_list, {value => $elt};
             }
             push @req_list, \@rr_list;
-        }
-        else {
+
+        } else {
             push @req_list, [{value => $block->raw_request}];
         }
-    }
-    else {
+
+    } else {
         my $request;
-        if ( defined $block->request_eval ) {
+        if (defined $block->request_eval) {
 
             diag "$name - request_eval DEPRECATED. Use request eval instead.";
             $request = eval $block->request_eval;
             if ($@) {
                 warn $@;
             }
-        }
-        else {
+
+        } else {
             $request = $block->request;
         }
 
         my $is_chunked   = 0;
         my $more_headers = '';
-        if ( $block->more_headers ) {
+        if ($block->more_headers) {
             my @headers = split /\n+/, $block->more_headers;
             for my $header (@headers) {
                 next if $header =~ /^\s*\#/;
-                my ( $key, $val ) = split /:\s*/, $header, 2;
-                if ( lc($key) eq 'transfer-encoding' and $val eq 'chunked' ) {
+                my ($key, $val) = split /:\s*/, $header, 2;
+                if (lc($key) eq 'transfer-encoding' and $val eq 'chunked') {
                     $is_chunked = 1;
                 }
 
@@ -394,7 +394,7 @@ sub get_req_from_block ($) {
 
         if ( $block->pipelined_requests ) {
             my $reqs = $block->pipelined_requests;
-            if ( !ref $reqs || ref $reqs ne 'ARRAY' ) {
+            if (!ref $reqs || ref $reqs ne 'ARRAY') {
                 bail_out(
                     "$name - invalid entries in --- pipelined_requests");
             }
@@ -402,10 +402,10 @@ sub get_req_from_block ($) {
             my $prq = "";
             for my $request (@$reqs) {
                 my $conn_type;
-                if ( $i++ == @$reqs - 1 ) {
+                if ($i++ == @$reqs - 1) {
                     $conn_type = 'close';
-                }
-                else {
+
+                } else {
                     $conn_type = 'keep-alive';
                 }
                 my $r_br = build_request_from_packets($name, $more_headers,
@@ -414,8 +414,8 @@ sub get_req_from_block ($) {
                 $prq .= $$r_br[0];
             }
             push @req_list, [{value =>$prq}];
-        }
-        else {
+
+        } else {
             # request section.
             if (!ref $request) {
                 # One request and it is a good old string.
@@ -1460,13 +1460,13 @@ sub send_request ($$$$@) {
 
         #warn "doing select...\n";
 
-        my ( $new_readable, $new_writable, $new_err ) =
-          IO::Select->select( $readable_hdls, $writable_hdls, $err_hdls,
-            $timeout );
+        my ($new_readable, $new_writable, $new_err) =
+          IO::Select->select($readable_hdls, $writable_hdls, $err_hdls,
+            $timeout);
 
-        if (   !defined $new_err
+        if (!defined $new_err
             && !defined $new_readable
-            && !defined $new_writable )
+            && !defined $new_writable)
         {
 
             # timed out
