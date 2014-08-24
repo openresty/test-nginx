@@ -19,6 +19,7 @@ use File::Temp qw( tempfile );
 use POSIX ":sys_wait_h";
 
 use Test::Nginx::Util qw(
+  is_str
   check_accum_error_log
   is_running
   $NoLongString
@@ -81,7 +82,7 @@ use IO::Socket;
 
 #our ($PrevRequest, $PrevConfig);
 
-our @EXPORT = qw( plan run_tests run_test
+our @EXPORT = qw( is_str plan run_tests run_test
   repeat_each config_preamble worker_connections
   master_process_enabled
   no_long_string workers master_on master_off
@@ -90,6 +91,7 @@ our @EXPORT = qw( plan run_tests run_test
   server_addr server_root html_dir server_port server_port_for_client
   timeout no_nginx_manager check_accum_error_log
   add_block_preprocessor bail_out add_cleanup_handler
+  add_response_body_check
 );
 
 our $TotalConnectingTimeouts = 0;
@@ -114,6 +116,12 @@ $CheckErrorLog = \&check_error_log;
 
 sub set_http_config_filter ($) {
     $FilterHttpConfig = shift;
+}
+
+our @ResponseBodyChecks;
+
+sub add_response_body_check ($) {
+    push @ResponseBodyChecks, shift;
 }
 
 #  This will parse a "request"" string. The expected format is:
@@ -1227,6 +1235,10 @@ sub check_response_body ($$$$$) {
             );
         }
     }
+
+    for my $check (@ResponseBodyChecks) {
+        $check->($block, $res->content, $req_idx, $dry_run);
+    }
 }
 
 sub parse_response($$$) {
@@ -2055,6 +2067,42 @@ For example,
 
         # initialize external dependencies like memcached services...
     });
+
+=head2 add_response_body_check
+
+Add custom checks for testing response bodies by specifying a Perl subroutine object as the argument.
+
+Below is an example for doing HTML title checks:
+
+    add_response_body_check(sub {
+            my ($block, $body, $req_idx, $dry_run) = @_;
+
+            my $name = $block->name;
+            my $expected_title = $block->resp_title;
+
+            if ($expected_title && !ref $expected_title) {
+                $expected_title =~ s/^\s*|\s*$//gs;
+            }
+
+            if (defined $expected_title) {
+                SKIP: {
+                    skip "$name - resp_title - tests skipped due to $dry_run", 1 if $dry_run;
+
+                    my $title;
+                    if ($body =~ m{<\s*title\s*>\s*(.*?)<\s*/\s*title\s*>}) {
+                        $title = $1;
+                        $title =~ s/\s*$//s;
+                    }
+
+                    is_str($title, $expected_title,
+                           "$name - resp_title (req $req_idx)" );
+                }
+            }
+        });
+
+=head2 is_str
+
+Performs intelligent string comparison subtests which honors both C<no_long_string> and regular expression references in the "expected" argument.
 
 =head1 Sections supported
 

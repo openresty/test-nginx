@@ -129,6 +129,20 @@ sub no_long_string () {
     $NoLongString = 1;
 }
 
+sub is_str (@) {
+    my ($got, $expected, $desc) = @_;
+
+    if (ref $expected && ref $expected eq 'Regexp') {
+        return like($got, $expected, $desc);
+    }
+
+    if ($NoLongString) {
+        return Test::More::is($got, $expected, $desc);
+    }
+
+    return is_string($got, $expected, $desc);
+}
+
 sub server_addr (@) {
     if (@_) {
 
@@ -289,6 +303,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT_OK = qw(
+    is_str
     check_accum_error_log
     is_running
     $NoLongString
