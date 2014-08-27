@@ -105,7 +105,7 @@ sub test_stap ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
-sub check_response_body ($$$$$);
+sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_cmd_from_req ($$);
 sub get_linear_regression_slope ($);
@@ -667,7 +667,7 @@ again:
             check_error_code($block, $res, $dry_run, $req_idx, $need_array);
             check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
             check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
-            check_response_body($block, $res, $dry_run, $req_idx, $need_array);
+            check_response_body($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array);
         }
 
         if ($n || $req_idx < @$r_req_list - 1) {
@@ -1136,8 +1136,8 @@ sub fmt_str ($) {
     $str;
 }
 
-sub check_response_body ($$$$$) {
-    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+sub check_response_body ($$$$$$) {
+    my ($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array) = @_;
     my $name = $block->name;
     if (   defined $block->response_body
         || defined $block->response_body_eval )
@@ -1181,16 +1181,16 @@ sub check_response_body ($$$$$) {
         SKIP: {
             skip "$name - response_body - tests skipped due to $dry_run", 1 if $dry_run;
             if (ref $expected) {
-                like $content, $expected, "$name - response_body - like";
+                like $content, $expected, "$name - response_body - like (req $repeated_req_idx)";
 
             } else {
                 if ($NoLongString) {
                     is( $content, $expected,
-                        "$name - response_body - response is expected" );
+                        "$name - response_body - response is expected (req $repeated_req_idx)" );
                 }
                 else {
                     is_string( $content, $expected,
-                        "$name - response_body - response is expected" );
+                        "$name - response_body - response is expected (req $repeated_req_idx)" );
                 }
             }
         }
@@ -1237,7 +1237,7 @@ sub check_response_body ($$$$$) {
     }
 
     for my $check (@ResponseBodyChecks) {
-        $check->($block, $res->content, $req_idx, $dry_run);
+        $check->($block, $res->content, $req_idx, $repeated_req_idx, $dry_run);
     }
 }
 
@@ -2080,7 +2080,7 @@ Add custom checks for testing response bodies by specifying a Perl subroutine ob
 Below is an example for doing HTML title checks:
 
     add_response_body_check(sub {
-            my ($block, $body, $req_idx, $dry_run) = @_;
+            my ($block, $body, $req_idx, $repeated_req_idx, $dry_run) = @_;
 
             my $name = $block->name;
             my $expected_title = $block->resp_title;
@@ -2100,7 +2100,7 @@ Below is an example for doing HTML title checks:
                     }
 
                     is_str($title, $expected_title,
-                           "$name - resp_title (req $req_idx)" );
+                           "$name - resp_title (req $repeated_req_idx)" );
                 }
             }
         });
