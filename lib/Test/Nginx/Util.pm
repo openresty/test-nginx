@@ -381,7 +381,7 @@ our $NginxRawVersion;
 our $TODO;
 
 sub add_block_preprocessor(&) {
-    push @BlockPreprocessors, shift;
+    unshift @BlockPreprocessors, shift;
 }
 
 #our ($PrevRequest)
@@ -421,7 +421,7 @@ sub server_root () {
 }
 
 sub add_cleanup_handler ($) {
-   push @CleanupHandlers, shift;
+   unshift @CleanupHandlers, shift;
 }
 
 sub bail_out (@) {
