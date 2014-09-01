@@ -382,6 +382,10 @@ sub get_req_from_block ($) {
 
         } else {
             $request = $block->request;
+            while ($request =~ s/^\s*\#[^\n]+\s+|^\s+//gs) {
+               # do nothing
+            }
+            #warn "my req: $request";
         }
 
         my $is_chunked   = 0;
@@ -2259,6 +2263,13 @@ Of course, everything can be combined till your brain starts boiling ;) :
     ".substr($val, 0, 6),
     {value => substr($val, 6, 5), delay_before=>5},
     substr($val, 11)],  "GET /rrd/foo"]
+
+Adding comments before the actual request spec is also supported, for example,
+
+   --- request
+   # this request contains the URI args
+   # "foo" and "bar":
+   GET /api?foo=1&bar=2
 
 =head2 request_eval
 
