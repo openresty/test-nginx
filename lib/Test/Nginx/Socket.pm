@@ -146,7 +146,7 @@ sub parse_request ($$) {
     my ($rel_url, $rel_url_size, $after_rel_url);
     my ($http_ver, $http_ver_size, $after_http_ver);
     my $end_line_size;
-    if ($first =~ /^(\s*)(\S+)( *)((\S+)( *))?((\S+)( *))?(\s*)/) {
+    if ($first =~ /^(\s*)(\S+)( *)((\S+)( *))?((\S+)( *))?(\s*)$/) {
         $before_meth = defined $1 ? length($1) : undef;
         $meth = $2;
         $after_meth = defined $3 ? length($3) : undef;
