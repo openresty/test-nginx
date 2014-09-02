@@ -166,7 +166,7 @@ sub parse_request ($$) {
         }
         $end_line_size = defined $10 ? length($10) : undef;
     } else {
-        bail_out("$name - Request line is not valid. Should be 'meth [url [version]]'");
+        bail_out("$name - Request line is not valid. Should be 'meth [url [version]]' but got \"$first\".");
     }
     if ( !defined $rel_url ) {
         $rel_url = '/';
