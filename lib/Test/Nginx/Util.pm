@@ -56,6 +56,8 @@ our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 3;
 
 our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
 
+our $Benchmark = $ENV{TEST_NGINX_BENCHMARK} || 0;
+
 our $CheckAccumErrLog = $ENV{TEST_NGINX_CHECK_ACCUM_ERR_LOG};
 
 our $ServerAddr = '127.0.0.1';
@@ -68,6 +70,32 @@ our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
     '#', '@', '-', '_', '^');
 
 our $ErrLogFilePos;
+
+if ($Benchmark) {
+    if ($UseStap) {
+        warn "WARNING: TEST_NGINX_BENCHMARK and TEST_NGINX_USE_STAP "
+             ."are both set and the former wins.\n";
+        undef $UseStap;
+    }
+
+    if ($UseValgrind) {
+        warn "WARNING: TEST_NGINX_BENCHMARK and TEST_NGINX_USE_VALGRIND "
+             ."are both set and the former wins.\n";
+        undef $UseValgrind;
+    }
+
+    if ($UseHup) {
+        warn "WARNING: TEST_NGINX_BENCHMARK and TEST_NGINX_USE_HUP "
+             ."are both set and the former wins.\n";
+        undef $UseHup;
+    }
+
+    if ($CheckLeak) {
+        warn "WARNING: TEST_NGINX_BENCHMARK and TEST_NGINX_CHECK_LEAK "
+             ."are both set and the former wins.\n";
+        undef $CheckLeak;
+    }
+}
 
 if ($CheckLeak) {
     if ($UseStap) {
@@ -237,7 +265,7 @@ sub server_port_for_client (@) {
 
 sub repeat_each (@) {
     if (@_) {
-        if ($CheckLeak) {
+        if ($CheckLeak || $Benchmark) {
             return;
         }
         $RepeatEach = shift;
@@ -302,7 +330,7 @@ sub master_process_enabled (@) {
     }
 }
 
-our @EXPORT_OK = qw(
+our @EXPORT = qw(
     is_str
     check_accum_error_log
     is_running
@@ -342,6 +370,7 @@ our @EXPORT_OK = qw(
     $NoNginxManager
     $RepeatEach
     $CheckLeak
+    $Benchmark
     add_block_preprocessor
     timeout
     worker_connections
@@ -734,7 +763,7 @@ sub write_config_file ($$$$) {
         $post_main_config = '';
     }
 
-    if ($CheckLeak) {
+    if ($CheckLeak || $Benchmark) {
         $LogLevel = 'warn';
         $AccLogFile = 'off';
     }
@@ -1092,7 +1121,7 @@ sub run_test ($) {
     my $skip_slave = $block->skip_slave;
     my ($tests_to_skip, $should_skip, $skip_reason);
 
-    if ($CheckLeak && defined $block->no_check_leak) {
+    if (($CheckLeak || $Benchmark) && defined $block->no_check_leak) {
         $should_skip = 1;
     }
 
@@ -1601,7 +1630,7 @@ request:
             warn "Run the test block...\n";
         }
 
-        if ($CheckLeak && defined $block->tcp_listen) {
+        if (($CheckLeak || $Benchmark) && defined $block->tcp_listen) {
 
             my $n = defined($block->tcp_query_len) ? 1 : 0;
             $n += defined($block->tcp_query) ? 1 : 0;
@@ -1615,7 +1644,7 @@ request:
         }
 
         my ($tcp_socket, $tcp_query_file);
-        if (!$CheckLeak && defined $block->tcp_listen) {
+        if (!($CheckLeak || $Benchmark) && defined $block->tcp_listen) {
 
             my $target = $block->tcp_listen;
 
@@ -1851,7 +1880,7 @@ request:
             }
         }
 
-        if ($CheckLeak && defined $block->udp_listen) {
+        if (($CheckLeak || $Benchmark) && defined $block->udp_listen) {
 
             my $n = defined($block->udp_query) ? 1 : 0;
 
@@ -1864,7 +1893,7 @@ request:
         }
 
         my ($udp_socket, $uds_socket_file, $udp_query_file);
-        if (!$CheckLeak && defined $block->udp_listen) {
+        if (!($CheckLeak || $Benchmark) && defined $block->udp_listen) {
             my $reply = $block->udp_reply;
             if (!defined $reply) {
                 bail_out("$name - no --- udp_reply specified but --- udp_listen is specified");

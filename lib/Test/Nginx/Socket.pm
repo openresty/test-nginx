@@ -18,62 +18,7 @@ use IO::Select ();
 use File::Temp qw( tempfile );
 use POSIX ":sys_wait_h";
 
-use Test::Nginx::Util qw(
-  is_str
-  check_accum_error_log
-  is_running
-  $NoLongString
-  no_long_string
-  $ServerAddr
-  server_addr
-  $ServerName
-  server_name
-  parse_time
-  $UseStap
-  verbose
-  sleep_time
-  stap_out_fh
-  stap_out_fname
-  setup_server_root
-  write_config_file
-  get_canon_version
-  get_nginx_version
-  add_cleanup_handler
-  bail_out
-  trim
-  show_all_chars
-  get_pid_from_pidfile
-  parse_headers
-  run_tests
-  $ServerPortForClient
-  $ServerPort
-  $PidFile
-  $ServRoot
-  $ConfFile
-  $RunTestHelper
-  $CheckErrorLog
-  $FilterHttpConfig
-  $RepeatEach
-  $CheckLeak
-  timeout
-  error_log_data
-  worker_connections
-  master_process_enabled
-  add_block_preprocessor
-  config_preamble
-  repeat_each
-  workers
-  master_on
-  master_off
-  log_level
-  no_shuffle
-  no_root_location
-  server_root
-  html_dir
-  server_port
-  server_port_for_client
-  no_nginx_manager
-);
+use Test::Nginx::Util;
 
 #use Smart::Comments::JSON '###';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
@@ -107,7 +52,7 @@ sub read_event_handler ($);
 sub write_event_handler ($);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
-sub gen_cmd_from_req ($$);
+sub gen_cmd_from_req ($$@);
 sub get_linear_regression_slope ($);
 sub value_contains ($$);
 
@@ -503,6 +448,41 @@ sub run_test_helper ($$) {
 
     if ($CheckLeak) {
         $dry_run = "the \"check leak\" testing mode";
+    }
+
+    if ($Benchmark) {
+        $dry_run = "the \"benchmark\" testing mode";
+    }
+
+    if ($Benchmark && !defined $block->no_check_leak) {
+        warn "$name\n";
+
+        my $req = $r_req_list->[0];
+        my ($nreqs, $concur);
+        if ($Benchmark =~ /^\s*(\d+)(?:\s+(\d+))?\s*$/) {
+            ($nreqs, $concur) = ($1, $2);
+        }
+
+        my $cmd = gen_cmd_from_req($block, $req, $nreqs, $concur);
+
+        for my $arg (@$cmd) {
+           if ($arg =~ m{^[- "&%;,|?*.+=\w:/()]*$}) {
+              if ($arg =~ /[ "&%;,|?*()]/) {
+                 $arg = "'$arg'";
+              }
+              next;
+           }
+           $arg =~ s/\\/\\\\/g;
+           $arg =~ s/'/\\'/g;
+           $arg =~ s/\n/\\n/g;
+           $arg =~ s/\r/\\r/g;
+           $arg =~ s/\t/\\t/g;
+           $arg = "\$'$arg'";
+        }
+        $cmd = "@$cmd";
+
+        warn "$cmd\n";
+        system "unbuffer $cmd > /dev/stderr";
     }
 
     if ($CheckLeak && !defined $block->no_check_leak) {
@@ -1735,8 +1715,15 @@ sub read_event_handler ($) {
     return undef;
 }
 
-sub gen_cmd_from_req ($$) {
-    my ($block, $req) = @_;
+sub gen_cmd_from_req ($$@) {
+    my ($block, $req, $nreqs, $concur) = @_;
+
+    $nreqs ||= 100000;
+    $concur ||= 2;
+
+    if ($nreqs < $concur) {
+        $concur = $nreqs;
+    }
 
     my $name = $block->name;
 
@@ -1746,10 +1733,10 @@ sub gen_cmd_from_req ($$) {
     #warn "Req: ",  JSON::XS->new->encode([$req]), "\n";
 
     my ($meth, $uri, $http_ver);
-    if ($req =~ m{^\s*(\w+)\s+(\S+)\s+HTTP/(\S+)\r?\n}smi) {
+    if ($req =~ m{^\s*(\w+)\s+(\S+)\s+HTTP/(\S+)\r?\n}smig) {
         ($meth, $uri, $http_ver) = ($1, $2, $3);
 
-    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r?\n}smi) {
+    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r?\n}smig) {
         ($meth, $uri) = ($1, $2);
         $http_ver = '0.9';
 
@@ -1759,7 +1746,7 @@ sub gen_cmd_from_req ($$) {
 
     #warn "HTTP version: $http_ver\n";
 
-    my @opts = ('-c2', '-k', '-n100000');
+    my @opts = ("-c$concur", '-k', "-n$nreqs");
 
     my $prog;
     if ($http_ver eq '1.1' && $meth eq 'GET') {
@@ -3016,6 +3003,25 @@ starts. The following environment variables are supported by this module:
 =head2 TEST_NGINX_VERBOSE
 
 Controls whether to output verbose debugging messages in Test::Nginx. Default to empty.
+
+=head2 TEST_NGINX_BENCHMARK
+
+When set to an non-empty and non-zero value, then the test scaffold enters the benchmarking testing mode by invoking C<weighttp> (for HTTP 1.1 requests) and C<ab> (for HTTP 1.0 requests)
+to run each test case with the test request repeatedly.
+
+When specifying a positive number as the value, then this number is used for the total number of repeated requests. For example,
+
+    export TEST_NGINX_BENCHMARK=1000
+
+will result in 1000 repeated requests for each test block. Default to C<100000>.
+
+When a second number is specified (separated from the first number by spaces), then this second number is used for the concurrency level for the benchmark. For example,
+
+    export TEST_NGINX_BENCHMARK='1000 10'
+
+will result in 1000 repeated requests over 10 concurrent connections for each test block. The default concurrency level is 2 (or 1 if the number of requests is 1).
+
+The "benchmark" testing mode will also output to stderr the actual "ab" or "weighttp" command line used by the test scaffold. For example,
 
 =head2 TEST_NGINX_CHECK_LEAK
 
