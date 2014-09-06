@@ -3035,6 +3035,8 @@ The "benchmark" testing mode will also output to stderr the actual "ab" or "weig
 
 See also the C<TEST_NGINX_BENCHMARK_WARMUP> environment.
 
+This testing mode requires the C<unbuffer> command-line utility from the C<expect> package.
+
 =head2 TEST_NGINX_BENCHMARK_WARMUP
 
 Specify the number of "warm-up" requests performed before the actual benchmark requests for each test block.
