@@ -463,6 +463,12 @@ sub run_test_helper ($$) {
             ($nreqs, $concur) = ($1, $2);
         }
 
+        if ($BenchmarkWarmup) {
+            my $cmd = gen_cmd_from_req($block, $req, $BenchmarkWarmup, $concur);
+            warn "Warming up with $BenchmarkWarmup requests...\n";
+            system @$cmd;
+        }
+
         my $cmd = gen_cmd_from_req($block, $req, $nreqs, $concur);
 
         for my $arg (@$cmd) {
@@ -3022,6 +3028,20 @@ When a second number is specified (separated from the first number by spaces), t
 will result in 1000 repeated requests over 10 concurrent connections for each test block. The default concurrency level is 2 (or 1 if the number of requests is 1).
 
 The "benchmark" testing mode will also output to stderr the actual "ab" or "weighttp" command line used by the test scaffold. For example,
+
+    weighttp -c2 -k -n2000 -H 'Host: foo.com' http://127.0.0.1:1984/t
+
+See also the C<TEST_NGINX_BENCHMARK_WARMUP> environment.
+
+=head2 TEST_NGINX_BENCHMARK_WARMUP
+
+Specify the number of "warm-up" requests performed before the actual benchmark requests for each test block.
+
+The latencies of the warm-up requests never get included in the final benchmark results.
+
+Only meaningful in the "benchmark" testing mode.
+
+See also the C<TEST_NGINX_BENCHMARK> environment.
 
 =head2 TEST_NGINX_CHECK_LEAK
 

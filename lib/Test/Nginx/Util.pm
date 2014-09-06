@@ -58,6 +58,8 @@ our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
 
 our $Benchmark = $ENV{TEST_NGINX_BENCHMARK} || 0;
 
+our $BenchmarkWarmup = $ENV{TEST_NGINX_BENCHMARK_WARMUP} || 0;
+
 our $CheckAccumErrLog = $ENV{TEST_NGINX_CHECK_ACCUM_ERR_LOG};
 
 our $ServerAddr = '127.0.0.1';
@@ -371,6 +373,7 @@ our @EXPORT = qw(
     $RepeatEach
     $CheckLeak
     $Benchmark
+    $BenchmarkWarmup
     add_block_preprocessor
     timeout
     worker_connections
