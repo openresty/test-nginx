@@ -327,8 +327,10 @@ sub get_req_from_block ($) {
 
         } else {
             $request = $block->request;
-            while ($request =~ s/^\s*\#[^\n]+\s+|^\s+//gs) {
-               # do nothing
+            if (defined $request) {
+                while ($request =~ s/^\s*\#[^\n]+\s+|^\s+//gs) {
+                   # do nothing
+                }
             }
             #warn "my req: $request";
         }
@@ -1252,7 +1254,7 @@ sub parse_response($$$) {
     my $enc = $res->header('Transfer-Encoding');
     my $len = $res->header('Content-Length');
 
-    if ($code !~ /^\d+$/) {
+    if ($code && $code !~ /^\d+$/) {
        undef $code;
        $res->code(undef);
     }
