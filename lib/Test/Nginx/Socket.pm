@@ -285,6 +285,24 @@ sub build_request_from_packets($$$$$) {
     return apply_moves($request_packets, \@elements_moves);
 }
 
+sub parse_more_headers ($) {
+    my ($in) = @_;
+    my @headers = split /\n+/, $in;
+    my $is_chunked;
+    my $out = '';
+    for my $header (@headers) {
+        next if $header =~ /^\s*\#/;
+        my ($key, $val) = split /:\s*/, $header, 2;
+        if (lc($key) eq 'transfer-encoding' and $val eq 'chunked') {
+            $is_chunked = 1;
+        }
+
+        #warn "[$key, $val]\n";
+        $out .= "$key: $val\r\n";
+    }
+    return $out, $is_chunked;
+}
+
 #  Returns an array of array of hashes from the block. Each element of
 # the first-level array is a request.
 #  Each request is an array of the "packets" to be sent. Each packet is a
@@ -335,21 +353,7 @@ sub get_req_from_block ($) {
             #warn "my req: $request";
         }
 
-        my $is_chunked   = 0;
-        my $more_headers = '';
-        if ($block->more_headers) {
-            my @headers = split /\n+/, $block->more_headers;
-            for my $header (@headers) {
-                next if $header =~ /^\s*\#/;
-                my ($key, $val) = split /:\s*/, $header, 2;
-                if (lc($key) eq 'transfer-encoding' and $val eq 'chunked') {
-                    $is_chunked = 1;
-                }
-
-                #warn "[$key, $val]\n";
-                $more_headers .= "$key: $val\r\n";
-            }
-        }
+        my $more_headers = $block->more_headers || '';
 
         if ( $block->pipelined_requests ) {
             my $reqs = $block->pipelined_requests;
@@ -361,20 +365,44 @@ sub get_req_from_block ($) {
             my $prq = "";
             for my $request (@$reqs) {
                 my $conn_type;
-                if ($i++ == @$reqs - 1) {
+                if ($i == @$reqs - 1) {
                     $conn_type = 'close';
 
                 } else {
                     $conn_type = 'keep-alive';
                 }
-                my $r_br = build_request_from_packets($name, $more_headers,
+
+                my ($hdr, $is_chunked);
+                if (ref $more_headers eq 'ARRAY') {
+                    #warn "Found ", scalar @$more_headers, " entries in --- more_headers.";
+                    $hdr = $more_headers->[$i];
+                    if (!defined $hdr) {
+                        bail_out("--- more_headers lacks data for the $i pipelined request");
+                    }
+                    ($hdr, $is_chunked) = parse_more_headers($hdr);
+                    #warn "more headers: $hdr";
+
+                } else {
+                    ($hdr, $is_chunked)  = parse_more_headers($more_headers);
+                }
+
+                my $r_br = build_request_from_packets($name, $hdr,
                                       $is_chunked, $conn_type,
                                       [$request] );
                 $prq .= $$r_br[0];
+                $i++;
             }
             push @req_list, [{value =>$prq}];
 
         } else {
+            my $is_chunked;
+            if ($more_headers) {
+                ($more_headers, $is_chunked) = parse_more_headers($more_headers);
+
+            } else {
+                $more_headers = '';
+            }
+
             # request section.
             if (!ref $request) {
                 # One request and it is a good old string.
