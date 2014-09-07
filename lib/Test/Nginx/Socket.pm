@@ -53,6 +53,7 @@ sub write_event_handler ($);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_ab_cmd_from_req ($$@);
+sub gen_curl_cmd_from_req ($$);
 sub get_linear_regression_slope ($);
 sub value_contains ($$);
 
@@ -493,6 +494,12 @@ sub run_test_helper ($$) {
 
     if ( $#$r_req_list < 0 ) {
         bail_out("$name - request empty");
+    }
+
+    if (defined $block->curl) {
+        my $req = $r_req_list->[0];
+        my $cmd = gen_curl_cmd_from_req($block, $req);
+        warn "# ", quote_sh_args($cmd), "\n";
     }
 
     if ($CheckLeak) {
@@ -1755,6 +1762,86 @@ sub read_event_handler ($) {
     return undef;
 }
 
+sub gen_curl_cmd_from_req ($$) {
+    my ($block, $req) = @_;
+
+    my $name = $block->name;
+
+    $req = join '', map { $_->{value} } @$req;
+
+    #use JSON::XS;
+    #warn "Req: ",  JSON::XS->new->encode([$req]), "\n";
+
+    my ($meth, $uri, $http_ver);
+    if ($req =~ m{^\s*(\w+)\s+(\S+)\s+HTTP/(\S+)\r?\n}smig) {
+        ($meth, $uri, $http_ver) = ($1, $2, $3);
+
+    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r?\n}smig) {
+        ($meth, $uri) = ($1, $2);
+        $http_ver = '0.9';
+
+    } else {
+        bail_out "$name - cannot parse the status line in the request: $req";
+    }
+
+    my @args = ('curl', '-i');
+
+    if ($meth eq 'HEAD') {
+        push @args, '-I';
+
+    } elsif ($meth ne 'GET') {
+        warn "WARNING: --- curl: request method $meth not supported yet.\n";
+    }
+
+    if ($http_ver ne '1.1') {
+        # HTTP 1.0 or HTTP 0.9
+        push @args, '-0';
+    }
+
+    my @headers;
+    if ($http_ver ge '1.0') {
+        if ($req =~ m{\G(.*?)\r?\n\r?\n}gcs) {
+            my $headers = $1;
+            #warn "raw headers: $headers\n";
+            @headers = grep {
+                !/^Connection\s*:/i
+                && !/^Host: \Q$ServerName\E$/i
+                && !/^Content-Length\s*:/i
+            } split /\r\n/, $headers;
+
+        } else {
+            bail_out "cannot parse the header entries in the request: $req";
+        }
+    }
+
+    #warn "headers: @headers ", scalar(@headers), "\n";
+
+    for my $h (@headers) {
+        #warn "h: $h\n";
+        if ($h =~ /^\s*User-Agent\s*:\s*(.*\S)/i) {
+            push @args, '-A', $1;
+
+        } else {
+            push @args, '-H', $h;
+        }
+    }
+
+    if ($req =~ m{\G.+}gcs) {
+        warn "WARNING: --- curl: request body not supported.\n";
+    }
+
+    my $link;
+    {
+        my $server = $ServerAddr;
+        my $port = $ServerPortForClient;
+        $link = "http://$server:$port$uri";
+    }
+
+    push @args, $link;
+
+    return \@args;
+}
+
 sub gen_ab_cmd_from_req ($$@) {
     my ($block, $req, $nreqs, $concur) = @_;
 
@@ -2354,6 +2441,25 @@ Adds the content of this section as headers to the request being sent. Example:
 This will add C<X-Foo: blah> to the request (on top of the automatically
 generated headers like C<Host>, C<Connection> and potentially
 C<Content-Length>).
+
+=head2 curl
+
+When this section is specified, the test scaffold will try generating a C<curl> command line for the (first) test request.
+
+For example,
+
+    --- request
+    GET /foo/bar?baz=3
+
+    --- more_headers
+    X-Foo: 3
+    User-Agent: openresty
+
+    --- curl
+
+will produce the following line (to C<stderr>) while running this test block:
+
+    # curl -i -H 'X-Foo: 3' -A openresty 'http://127.0.0.1:1984/foo/bar?baz=3'
 
 =head2 response_body
 
