@@ -52,7 +52,7 @@ sub read_event_handler ($);
 sub write_event_handler ($);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
-sub gen_cmd_from_req ($$@);
+sub gen_ab_cmd_from_req ($$@);
 sub get_linear_regression_slope ($);
 sub value_contains ($$);
 
@@ -463,6 +463,25 @@ sub get_req_from_block ($) {
     return \@req_list;
 }
 
+sub quote_sh_args ($) {
+    my ($args) = @_;
+    for my $arg (@$args) {
+       if ($arg =~ m{^[- "&%;,|?*.+=\w:/()]*$}) {
+          if ($arg =~ /[ "&%;,|?*()]/) {
+             $arg = "'$arg'";
+          }
+          next;
+       }
+       $arg =~ s/\\/\\\\/g;
+       $arg =~ s/'/\\'/g;
+       $arg =~ s/\n/\\n/g;
+       $arg =~ s/\r/\\r/g;
+       $arg =~ s/\t/\\t/g;
+       $arg = "\$'$arg'";
+    }
+    return "@$args";
+}
+
 sub run_test_helper ($$) {
     my ($block, $dry_run, $repeated_req_idx) = @_;
 
@@ -494,28 +513,13 @@ sub run_test_helper ($$) {
         }
 
         if ($BenchmarkWarmup) {
-            my $cmd = gen_cmd_from_req($block, $req, $BenchmarkWarmup, $concur);
+            my $cmd = gen_ab_cmd_from_req($block, $req, $BenchmarkWarmup, $concur);
             warn "Warming up with $BenchmarkWarmup requests...\n";
             system @$cmd;
         }
 
-        my $cmd = gen_cmd_from_req($block, $req, $nreqs, $concur);
-
-        for my $arg (@$cmd) {
-           if ($arg =~ m{^[- "&%;,|?*.+=\w:/()]*$}) {
-              if ($arg =~ /[ "&%;,|?*()]/) {
-                 $arg = "'$arg'";
-              }
-              next;
-           }
-           $arg =~ s/\\/\\\\/g;
-           $arg =~ s/'/\\'/g;
-           $arg =~ s/\n/\\n/g;
-           $arg =~ s/\r/\\r/g;
-           $arg =~ s/\t/\\t/g;
-           $arg = "\$'$arg'";
-        }
-        $cmd = "@$cmd";
+        my $cmd = gen_ab_cmd_from_req($block, $req, $nreqs, $concur);
+        $cmd = quote_sh_args($cmd);
 
         warn "$cmd\n";
         system "unbuffer $cmd > /dev/stderr";
@@ -525,7 +529,7 @@ sub run_test_helper ($$) {
         warn "$name\n";
 
         my $req = $r_req_list->[0];
-        my $cmd = gen_cmd_from_req($block, $req);
+        my $cmd = gen_ab_cmd_from_req($block, $req);
 
         # start a sub-process to run ab or weighttp
         my $pid = fork();
@@ -1751,7 +1755,7 @@ sub read_event_handler ($) {
     return undef;
 }
 
-sub gen_cmd_from_req ($$@) {
+sub gen_ab_cmd_from_req ($$@) {
     my ($block, $req, $nreqs, $concur) = @_;
 
     $nreqs ||= 100000;
