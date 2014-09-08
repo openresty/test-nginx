@@ -2461,6 +2461,9 @@ will produce the following line (to C<stderr>) while running this test block:
 
     # curl -i -H 'X-Foo: 3' -A openresty 'http://127.0.0.1:1984/foo/bar?baz=3'
 
+You need to remember to set the C<TEST_NGINX_NO_CLEAN> environment to 1 to prevent the nginx
+and other processes from quitting automatically upon test exits.
+
 =head2 response_body
 
 The expected value for the body of the submitted request.
