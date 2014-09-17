@@ -661,32 +661,39 @@ sub write_user_files ($) {
 
     my $name = $block->name;
 
-    if ($block->user_files) {
-        my $raw = $block->user_files;
+    my $files = $block->user_files;
+    if ($files) {
+        if (!ref $files) {
+            my $raw = $files;
 
-        open my $in, '<', \$raw;
+            open my $in, '<', \$raw;
 
-        my @files;
-        my ($fname, $body, $date);
-        while (<$in>) {
-            if (/>>> (\S+)(?:\s+(.+))?/) {
-                if ($fname) {
-                    push @files, [$fname, $body, $date];
+            my $files = [];
+            my ($fname, $body, $date);
+            while (<$in>) {
+                if (/>>> (\S+)(?:\s+(.+))?/) {
+                    if ($fname) {
+                        push @$files, [$fname, $body, $date];
+                    }
+
+                    $fname = $1;
+                    $date = $2;
+                    undef $body;
+                } else {
+                    $body .= $_;
                 }
-
-                $fname = $1;
-                $date = $2;
-                undef $body;
-            } else {
-                $body .= $_;
             }
+
+            if ($fname) {
+                push @$files, [$fname, $body, $date];
+            }
+
+        } elsif (ref $files ne 'ARRAY') {
+            bail_out "$name - wrong value type: ", ref $files,
+                     ", only scalar or ARRAY are accepted";
         }
 
-        if ($fname) {
-            push @files, [$fname, $body, $date];
-        }
-
-        for my $file (@files) {
+        for my $file (@$files) {
             my ($fname, $body, $date) = @$file;
             #warn "write file $fname with content [$body]\n";
 
@@ -711,6 +718,8 @@ sub write_user_files ($) {
 
             open my $out, ">$path" or
                 bail_out "$name - Cannot open $path for writing: $!\n";
+            binmode $out;
+            #warn "write file $path with data len ", length $body;
             print $out $body;
             close $out;
 

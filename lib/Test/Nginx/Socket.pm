@@ -2794,6 +2794,29 @@ html directory of the nginx server under test. For example:
 will create a file named C<blah.txt> in the html directory of the nginx
 server tested. The file will contain the text "Hello, world".
 
+Multiple files are supported, for example,
+
+    --- user_files
+    >>> foo.txt
+    Hello, world!
+    >>> bar.txt
+    Hello, heaven!
+
+An optional last modified timestamp (in elpased seconds since Epoch) is supported, for example,
+
+    --- user_files
+    >>> blah.txt 199801171935.33
+    Hello, world
+
+It's also possible to specify a Perl data structure for the user files
+to be created, for example,
+
+    --- user_files eval
+    [
+        [ "foo.txt" => "Hello, world!", 199801171935.33 ],
+        [ "bar.txt" => "Hello, heaven!" ],
+    ]
+
 =head2 skip_eval
 
 Skip the specified number of subtests (in the current test block) if the result of running a piece of Perl code is true.
