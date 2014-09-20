@@ -958,6 +958,7 @@ sub check_error_log ($$$$) {
 
     my $check_alert_message = 1;
     my $check_crit_message = 1;
+    my $check_emerg_message = 1;
 
     my $grep_pat;
     my $grep_pats = $block->grep_error_log;
@@ -1024,6 +1025,10 @@ sub check_error_log ($$$$) {
             undef $check_crit_message;
         }
 
+        if (value_contains($pats, "[emerg")) {
+            undef $check_emerg_message;
+        }
+
         if (!ref $pats) {
             chomp $pats;
             my @lines = split /\n+/, $pats;
@@ -1072,6 +1077,10 @@ sub check_error_log ($$$$) {
 
         if (value_contains($pats, "[crit")) {
             undef $check_crit_message;
+        }
+
+        if (value_contains($pats, "[emerg")) {
+            undef $check_emerg_message;
         }
 
         if (!ref $pats) {
@@ -1140,6 +1149,17 @@ sub check_error_log ($$$$) {
         for my $line (@$lines) {
             #warn "test $pat\n";
             if ($line =~ /\[crit\]/) {
+                my $ln = fmt_str($line);
+                warn("WARNING: $name - $ln");
+            }
+        }
+    }
+
+    if ($check_emerg_message && !$dry_run) {
+        $lines ||= error_log_data();
+        for my $line (@$lines) {
+            #warn "test $pat\n";
+            if ($line =~ /\[emerg\]/) {
                 my $ln = fmt_str($line);
                 warn("WARNING: $name - $ln");
             }
