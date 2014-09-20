@@ -668,7 +668,7 @@ sub write_user_files ($) {
 
             open my $in, '<', \$raw;
 
-            my $files = [];
+            $files = [];
             my ($fname, $body, $date);
             while (<$in>) {
                 if (/>>> (\S+)(?:\s+(.+))?/) {
