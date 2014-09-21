@@ -1461,7 +1461,10 @@ start_nginx:
                 }
 
                 if ($block->stap) {
-                    my ($stap_fh, $stap_fname) = tempfile("XXXXXXX", SUFFIX => '.stp', TMPDIR => 1);
+                    my ($stap_fh, $stap_fname) = tempfile("XXXXXXX",
+                                                          SUFFIX => '.stp',
+                                                          TMPDIR => 1,
+                                                          UNLINK => 1);
                     my $stap = $block->stap;
 
                     if ($stap =~ /\$LIB([_A-Z0-9]+)_PATH\b/) {
@@ -1500,7 +1503,10 @@ start_nginx:
                     }
 
                     if (!$StapOutFile) {
-                        ($out, $outfile) = tempfile("XXXXXXXX", SUFFIX => '.stp-out', TMPDIR => 1);
+                        ($out, $outfile) = tempfile("XXXXXXXX",
+                                                    SUFFIX => '.stp-out',
+                                                    TMPDIR => 1,
+                                                    UNLINK => 1);
                         close $out;
 
                         $StapOutFile = $outfile;
