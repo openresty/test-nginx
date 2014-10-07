@@ -2642,6 +2642,12 @@ An optional time unit can be specified, for example,
 
 Acceptable time units are C<s> (seconds) and C<ms> (milliseconds). If no time unit is specified, then default to seconds.
 
+=head2 error_log_file
+
+Specify the global error log file for the current test block only.
+
+Right now, it will not affect the C<--- error_log> section and etc accordingly.
+
 =head2 error_log
 
 Checks if the pattern or multiple patterns all appear in lines of the F<error.log> file.
