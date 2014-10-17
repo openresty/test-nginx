@@ -163,7 +163,7 @@ sub is_str (@) {
     my ($got, $expected, $desc) = @_;
 
     if (ref $expected && ref $expected eq 'Regexp') {
-        return like($got, $expected, $desc);
+        return Test::More::like($got, $expected, $desc);
     }
 
     if ($NoLongString) {
@@ -732,8 +732,9 @@ sub write_user_files ($) {
     }
 }
 
-sub write_config_file ($$$$) {
-    my ($config, $http_config, $main_config, $post_main_config) = @_;
+sub write_config_file ($$$$$) {
+    my ($config, $http_config, $main_config, $post_main_config,
+        $err_log_file) = @_;
 
     if ($UseHup) {
         master_on(); # config reload is buggy when master is off
@@ -780,13 +781,17 @@ sub write_config_file ($$$$) {
         $AccLogFile = 'off';
     }
 
+    if (!$err_log_file) {
+        $err_log_file = $ErrLogFile;
+    }
+
     open my $out, ">$ConfFile" or
         bail_out "Can't open $ConfFile for writing: $!\n";
     print $out <<_EOC_;
 worker_processes  $Workers;
 daemon $DaemonEnabled;
 master_process $MasterProcessEnabled;
-error_log $ErrLogFile $LogLevel;
+error_log $err_log_file $LogLevel;
 pid       $PidFile;
 env MOCKEAGAIN_VERBOSE;
 env MOCKEAGAIN;
@@ -1033,6 +1038,53 @@ sub check_if_missing_directives () {
     return 0;
 }
 
+sub run_tcp_server_tests ($$$) {
+    my ($block, $tcp_socket, $tcp_query_file) = @_;
+
+    my $name = $block->name;
+
+    if (defined $tcp_socket) {
+        my $buf = '';
+        if ($tcp_query_file) {
+            if (open my $in, $tcp_query_file) {
+                $buf = do { local $/; <$in> };
+                close $in;
+            }
+        }
+
+        if (defined $block->tcp_query) {
+            is_str($buf, $block->tcp_query, "$name - tcp_query ok");
+        }
+
+        if (defined $block->tcp_query_len) {
+            Test::More::is(length($buf), $block->tcp_query_len, "$name - TCP query length ok");
+        }
+    }
+}
+
+sub run_udp_server_tests ($$$) {
+    my ($block, $udp_socket, $udp_query_file) = @_;
+
+    my $name = $block->name;
+
+    if (defined $udp_socket) {
+        my $buf = '';
+        if ($udp_query_file) {
+            if (!open my $in, $udp_query_file) {
+                warn "WARNING: cannot open udp query file $udp_query_file for reading: $!\n";
+
+            } else {
+                $buf = do { local $/; <$in> };
+                close $in;
+            }
+        }
+
+        if (defined $block->udp_query) {
+            is_str($buf, $block->udp_query, "$name - udp_query ok");
+        }
+    }
+}
+
 sub run_test ($) {
     my $block = shift;
     my $name = $block->name;
@@ -1162,6 +1214,9 @@ sub run_test ($) {
             $tests_to_skip = $1;
             my ($op, $ver1, $ver2, $ver3) = ($2, $3, $4, $5);
             $skip_reason = $6;
+            if (!$skip_reason) {
+                $skip_reason = "nginx version $op $ver1.$ver2.$ver3";
+            }
             #warn "$ver1 $ver2 $ver3";
             my $ver = get_canon_version($ver1, $ver2, $ver3);
             if ((!defined $NginxVersion and $op =~ /^</)
@@ -1322,7 +1377,8 @@ sub run_test ($) {
                     write_user_files($block);
                     write_config_file($config, $block->http_config,
                                       $block->main_config,
-                                      $block->post_main_config);
+                                      $block->post_main_config,
+                                      $block->error_log_file);
 
                     if ($Verbose) {
                         warn "sending USR1 signal to $pid.\n";
@@ -1410,7 +1466,8 @@ start_nginx:
             setup_server_root();
             write_user_files($block);
             write_config_file($config, $block->http_config,
-                              $block->main_config, $block->post_main_config);
+                              $block->main_config, $block->post_main_config,
+                              $block->error_log_file);
             #warn "nginx binary: $NginxBinary";
             if (!can_run($NginxBinary)) {
                 bail_out("$name - Cannot find the nginx executable in the PATH environment");
@@ -1973,8 +2030,16 @@ request:
 
                 local $| = 1;
 
-                my $buf;
+                if ($Verbose) {
+                    warn "UDP server reading data...\n";
+                }
+
+                my $buf = '';
                 $udp_socket->recv($buf, 4096);
+
+                if ($Verbose) {
+                    warn "UDP server has got data: ", length $buf, "\n";
+                }
 
                 if ($udp_query_file) {
                     open my $out, ">$udp_query_file"
@@ -2049,6 +2114,8 @@ request:
                 Test::More::skip("$name - $skip_reason", $tests_to_skip);
 
                 $RunTestHelper->($block, $dry_run, $i - 1);
+                run_tcp_server_tests($block, $tcp_socket, $tcp_query_file);
+                run_udp_server_tests($block, $udp_socket, $udp_query_file);
             }
 
         } elsif ($should_todo) {
@@ -2056,32 +2123,17 @@ request:
                 local $TODO = "$name - $todo_reason";
 
                 $RunTestHelper->($block, $dry_run, $i - 1);
+                run_tcp_server_tests($block, $tcp_socket, $tcp_query_file);
+                run_udp_server_tests($block, $udp_socket, $udp_query_file);
             }
 
         } else {
             $RunTestHelper->($block, $dry_run, $i - 1);
+            run_tcp_server_tests($block, $tcp_socket, $tcp_query_file);
+            run_udp_server_tests($block, $udp_socket, $udp_query_file);
         }
 
         if (defined $udp_socket) {
-            my $buf = '';
-            if ($udp_query_file) {
-                if (!open my $in, $udp_query_file) {
-                    warn "WARNING: cannot open tcp query file $udp_query_file for reading: $!\n";
-
-                } else {
-                    $buf = do { local $/; <$in> };
-                    close $in;
-                }
-            }
-
-            if (defined $block->udp_query) {
-                if ($NoLongString) {
-                    Test::More::is($buf, $block->udp_query, "$name - udp_query ok");
-                } else {
-                    is_string $buf, $block->udp_query, "$name - udp_query ok";
-                }
-            }
-
             if (defined $UdpServerPid) {
                 kill_process($UdpServerPid, 1);
                 undef $UdpServerPid;
@@ -2097,26 +2149,6 @@ request:
         }
 
         if (defined $tcp_socket) {
-            my $buf = '';
-            if ($tcp_query_file) {
-                if (open my $in, $tcp_query_file) {
-                    $buf = do { local $/; <$in> };
-                    close $in;
-                }
-            }
-
-            if (defined $block->tcp_query) {
-                if ($NoLongString) {
-                    Test::More::is($buf, $block->tcp_query, "$name - tcp_query ok");
-                } else {
-                    is_string $buf, $block->tcp_query, "$name - tcp_query ok";
-                }
-            }
-
-            if (defined $block->tcp_query_len) {
-                Test::More::is(length($buf), $block->tcp_query_len, "$name - TCP query length ok");
-            }
-
             if (defined $TcpServerPid) {
                 if ($Verbose) {
                     warn "killing TCP server, pid $TcpServerPid\n";
@@ -2161,7 +2193,8 @@ retry:
             if (is_running($pid)) {
                 write_config_file($config, $block->http_config,
                                   $block->main_config,
-                                  $block->post_main_config);
+                                  $block->post_main_config,
+                                  $block->error_log_file);
 
                 if ($Verbose) {
                     warn "sending QUIT signal to $pid";
