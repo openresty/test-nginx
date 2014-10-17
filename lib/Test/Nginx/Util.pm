@@ -857,7 +857,7 @@ $post_main_config
 #timer_resolution 100ms;
 
 events {
-    #accept_mutex off;
+    accept_mutex off;
 
     worker_connections  $WorkerConnections;
 _EOC_
