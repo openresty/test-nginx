@@ -732,9 +732,14 @@ sub write_user_files ($) {
     }
 }
 
-sub write_config_file ($$$$$) {
-    my ($config, $http_config, $main_config, $post_main_config,
-        $err_log_file) = @_;
+sub write_config_file ($$) {
+    my ($block, $config) = @_;
+
+    my $http_config = $block->http_config;
+    my $main_config = $block->main_config;
+    my $post_main_config = $block->post_main_config;
+    my $err_log_file = $block->error_log_file;
+    my $server_name = $block->server_name;
 
     if ($UseHup) {
         master_on(); # config reload is buggy when master is off
@@ -785,6 +790,13 @@ sub write_config_file ($$$$$) {
         $err_log_file = $ErrLogFile;
     }
 
+    if (!defined $server_name) {
+        $server_name = $ServerName;
+    }
+
+    (my $quoted_server_name = $server_name) =~ s/\\/\\\\/g;
+    $quoted_server_name =~ s/'/\\'/g;
+
     open my $out, ">$ConfFile" or
         bail_out "Can't open $ConfFile for writing: $!\n";
     print $out <<_EOC_;
@@ -815,7 +827,7 @@ $http_config
 
     server {
         listen          $ServerPort;
-        server_name     '$ServerName';
+        server_name     '$server_name';
 
         client_max_body_size 30M;
         #client_body_buffer_size 4k;
@@ -1375,10 +1387,7 @@ sub run_test ($) {
 
                     setup_server_root();
                     write_user_files($block);
-                    write_config_file($config, $block->http_config,
-                                      $block->main_config,
-                                      $block->post_main_config,
-                                      $block->error_log_file);
+                    write_config_file($block, $config);
 
                     if ($Verbose) {
                         warn "sending USR1 signal to $pid.\n";
@@ -1465,9 +1474,7 @@ start_nginx:
             #warn "*** Restarting the nginx server...\n";
             setup_server_root();
             write_user_files($block);
-            write_config_file($config, $block->http_config,
-                              $block->main_config, $block->post_main_config,
-                              $block->error_log_file);
+            write_config_file($block, $config);
             #warn "nginx binary: $NginxBinary";
             if (!can_run($NginxBinary)) {
                 bail_out("$name - Cannot find the nginx executable in the PATH environment");
@@ -2191,10 +2198,7 @@ request:
             my $i = 0;
 retry:
             if (is_running($pid)) {
-                write_config_file($config, $block->http_config,
-                                  $block->main_config,
-                                  $block->post_main_config,
-                                  $block->error_log_file);
+                write_config_file($block, $config);
 
                 if ($Verbose) {
                     warn "sending QUIT signal to $pid";
