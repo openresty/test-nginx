@@ -702,6 +702,10 @@ again:
         }
 
         if ($n || $req_idx < @$r_req_list - 1) {
+            if ($block->wait) {
+                sleep($block->wait);
+            }
+
             check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
         }
 
@@ -1043,6 +1047,7 @@ sub check_error_log ($$$$) {
         }
 
         $lines ||= error_log_data();
+        #warn "error log data: ", join "\n", @$lines;
         for my $line (@$lines) {
             for my $pat (@$pats) {
                 next if !defined $pat;
@@ -3002,7 +3007,7 @@ Just like C<stap_like>, but the subtest only passes when the specified pattern d
 =head2 wait
 
 Takes an integer value for the seconds of time to wait right after processing the Nginx response and
-before performing the error log and systemtap output checks.
+before performing the error log and/or systemtap output checks.
 
 =head2 udp_listen
 
