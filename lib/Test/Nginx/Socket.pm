@@ -2,6 +2,7 @@ package Test::Nginx::Socket;
 
 use lib 'lib';
 use lib 'inc';
+use Digest::MD5 qw(md5_hex);
 
 use Test::Base -Base;
 
@@ -1290,6 +1291,48 @@ sub check_response_body ($$$$$$) {
                 "$name - response_body_$type - response is expected ($summary)"
             );
         }
+
+    } elsif ( defined $block->response_body_md5 )
+    {
+        my $content = $res ? $res->content : undef;
+        if ( defined $content ) {
+            $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
+            $content =~ s/^Connection: TE, close\r\n//gms;
+        }
+
+        my $expected = get_indexed_value($name,
+                                          $block->response_body_md5,
+                                          $req_idx,
+                                          $need_array);
+
+        if ( $block->charset ) {
+            Encode::from_to( $expected, 'UTF-8', $block->charset );
+        }
+
+        unless (ref $expected) {
+            $expected =~ s/\$ServerPort\b/$ServerPort/g;
+            $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+        }
+
+        #warn show_all_chars($content);
+
+        #warn "no long string: $NoLongString";
+        SKIP: {
+            skip "$name - response_body_md5 - tests skipped due to $dry_run", 1 if $dry_run;
+            if (ref $expected) {
+                like md5_hex($content), $expected, "$name - response_body_md5 - like (req $repeated_req_idx)";
+
+            } else {
+                if ($NoLongString) {
+                    is( md5_hex($content), $expected,
+                        "$name - response_body_md5 - response is expected (req $repeated_req_idx)" );
+                }
+                else {
+                    is_string( md5_hex($content), $expected,
+                        "$name - response_body_md5 - response is expected (req $repeated_req_idx)" );
+                }
+            }
+        }
     }
 
     for my $check (@ResponseBodyChecks) {
@@ -2540,6 +2583,30 @@ be an array and each request B<MUST> match the corresponding pattern.
 
 Just like C<response_body_like> but this test only pass when the specified pattern
 does I<not> match the actual response body data.
+
+=head2 response_body_md5
+
+The expected md5 value for the body of the submitted request.
+
+    --- response_body_md5 chomp
+    b1946ac92492d2347c6235b4d2611184
+    
+If the test is made of multiple requests, then the response_body_md5 B<MUST>
+be an array and each request B<MUST> return the corresponding expected
+body:
+
+    --- config
+        location /hello {
+            echo "hello";
+        }
+        location /world {
+            echo "world";
+        }
+    --- request eval
+    ["GET /hello", "GET /world"]
+    --- response_body_md5 eval
+    ["b1946ac92492d2347c6235b4d2611184", "591785b794601e212b260e25925636fd"]
+
 
 =head2 response_headers
 

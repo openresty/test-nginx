@@ -3,6 +3,7 @@ package Test::Nginx::LWP;
 use lib 'lib';
 use lib 'inc';
 use Test::Base -Base;
+use Digest::MD5 qw(md5_hex);
 
 our $VERSION = '0.23';
 
@@ -260,6 +261,27 @@ sub run_test_helper ($$) {
             }
         } else {
             like($content, qr/$expected_pat/s, "$name - response_body_like - response is expected ($summary)");
+        }
+    }
+    elsif (defined $block->response_body_md5) {
+        my $content = $res->content;
+        if (defined $content) {
+            $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
+        }
+
+        $content =~ s/^Connection: TE, close\r\n//gms;
+        my $expected = $block->response_body;
+        $expected =~ s/\$ServerPort\b/$ServerPort/g;
+        $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+        #warn show_all_chars($content);
+
+        if ($dry_run) {
+            SKIP: {
+                Test::More::skip("$name - tests skipped due to $dry_run", 1);
+            }
+        } else {
+            is(md5_hex($content), $expected, "$name - response_body_md5 - response is expected");
+            #is($content, $expected, "$name - response_body - response is expected");
         }
     }
 }
