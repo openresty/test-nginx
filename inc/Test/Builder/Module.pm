@@ -3,12 +3,12 @@ package Test::Builder::Module;
 
 use strict;
 
-use Test::Builder;
+use Test::Builder 0.99;
 
 require Exporter;
 our @ISA = qw(Exporter);
 
-our $VERSION = '0.98';
+our $VERSION = '1.001009';
 $VERSION = eval $VERSION;      ## no critic (BuiltinFunctions::ProhibitStringyEval)
 
 

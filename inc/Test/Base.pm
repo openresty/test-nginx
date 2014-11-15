@@ -1,9 +1,22 @@
 #line 1
 package Test::Base;
-use 5.006001;
-use Spiffy 0.30 -Base;
+our $VERSION = '0.88';
+
+use Spiffy -Base;
 use Spiffy ':XXX';
-our $VERSION = '0.60';
+
+my $HAS_PROVIDER;
+BEGIN {
+    $HAS_PROVIDER = eval "require Test::Builder::Provider; 1";
+
+    if ($HAS_PROVIDER) {
+        Test::Builder::Provider->import('provides');
+    }
+    else {
+        *provides = sub { 1 };
+    }
+}
+
 
 my @test_more_exports;
 BEGIN {
@@ -24,9 +37,9 @@ our @EXPORT = (@test_more_exports, qw(
     is no_diff
 
     blocks next_block first_block
-    delimiters spec_file spec_string 
+    delimiters spec_file spec_string
     filters filters_delay filter_arguments
-    run run_compare run_is run_is_deeply run_like run_unlike 
+    run run_compare run_is run_is_deeply run_like run_unlike
     skip_all_unless_require is_deep run_is_deep
     WWW XXX YYY ZZZ
     tie_output no_diag_on_only
@@ -59,7 +72,7 @@ my $default_class;
 my $default_object;
 my $reserved_section_names = {};
 
-sub default_object { 
+sub default_object {
     $default_object ||= $default_class->new;
     return $default_object;
 }
@@ -67,7 +80,7 @@ sub default_object {
 my $import_called = 0;
 sub import() {
     $import_called = 1;
-    my $class = (grep /^-base$/i, @_) 
+    my $class = (grep /^-base$/i, @_)
     ? scalar(caller)
     : $_[0];
     if (not defined $default_class) {
@@ -90,7 +103,7 @@ sub import() {
         Test::More->import(import => \@test_more_exports, @args)
             if @args;
      }
-    
+
     _strict_warnings();
     goto &Spiffy::import;
 }
@@ -147,14 +160,14 @@ sub blocks() {
       if @_ && $_[0] !~ /^[a-zA-Z]\w*$/;
 
     my $blocks = $self->block_list;
-    
+
     my $section_name = shift || '';
     my @blocks = $section_name
     ? (grep { exists $_->{$section_name} } @$blocks)
     : (@$blocks);
 
     return scalar(@blocks) unless wantarray;
-    
+
     return (@blocks) if $self->_filters_delay;
 
     for my $block (@blocks) {
@@ -225,7 +238,7 @@ sub filters() {
     if (ref($_[0]) eq 'HASH') {
         $self->_filters_map(shift);
     }
-    else {    
+    else {
         my $filters = $self->_filters;
         push @$filters, @_;
     }
@@ -242,23 +255,24 @@ sub have_text_diff {
         $Algorithm::Diff::VERSION >= 1.15;
 }
 
+provides 'is';
 sub is($$;$) {
     (my ($self), @_) = find_my_self(@_);
     my ($actual, $expected, $name) = @_;
-    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    local $Test::Builder::Level = $Test::Builder::Level + 1 unless $HAS_PROVIDER;
     if ($ENV{TEST_SHOW_NO_DIFFS} or
          not defined $actual or
          not defined $expected or
-         $actual eq $expected or 
-         not($self->have_text_diff) or 
+         $actual eq $expected or
+         not($self->have_text_diff) or
          $expected !~ /\n./s
     ) {
         Test::More::is($actual, $expected, $name);
     }
     else {
         $name = '' unless defined $name;
-        ok $actual eq $expected,
-           $name . "\n" . Text::Diff::diff(\$expected, \$actual);
+        ok $actual eq $expected, $name;
+        diag Text::Diff::diff(\$expected, \$actual);
     }
 }
 
@@ -322,7 +336,7 @@ sub run_is() {
     for my $block (@{$self->block_list}) {
         next unless exists($block->{$x}) and exists($block->{$y});
         $block->run_filters unless $block->is_filtered;
-        is($block->$x, $block->$y, 
+        is($block->$x, $block->$y,
            $block->name ? $block->name : ()
           );
     }
@@ -335,7 +349,7 @@ sub run_is_deeply() {
     for my $block (@{$self->block_list}) {
         next unless exists($block->{$x}) and exists($block->{$y});
         $block->run_filters unless $block->is_filtered;
-        is_deeply($block->$x, $block->$y, 
+        is_deeply($block->$x, $block->$y,
            $block->name ? $block->name : ()
           );
     }
@@ -391,7 +405,7 @@ sub run_is_deep() {
     for my $block (@{$self->block_list}) {
         next unless exists($block->{$x}) and exists($block->{$y});
         $block->run_filters unless $block->is_filtered;
-        is_deep($block->$x, $block->$y, 
+        is_deep($block->$x, $block->$y,
            $block->name ? $block->name : ()
           );
     }
@@ -462,7 +476,7 @@ sub _make_block {
     }
     $description =~ s/\s*\z//;
     $block->set_value(description => $description);
-    
+
     my $section_map = {};
     my $section_order = [];
     while (@parts) {
@@ -499,9 +513,9 @@ sub _spec_init {
         $spec = <FILE>;
         close FILE;
     }
-    else {    
-        $spec = do { 
-            package main; 
+    else {
+        $spec = do {
+            package main;
             no warnings 'once';
             <DATA>;
         };
@@ -617,7 +631,7 @@ sub run_filters {
                         join '', @value;
                 my $old = $_;
                 @value = &$function(@value);
-                if (not(@value) or 
+                if (not(@value) or
                     @value == 1 and defined($value[0]) and $value[0] =~ /\A(\d+|)\z/
                 ) {
                     if ($value[0] && $_ eq $old) {
@@ -650,7 +664,7 @@ sub _get_filters {
     $map_filters = [ $map_filters ] unless ref $map_filters;
     my @append = ();
     for (
-        @{$self->blocks_object->_filters}, 
+        @{$self->blocks_object->_filters},
         @$map_filters,
         split(/\s+/, $string),
     ) {
@@ -675,8 +689,4 @@ sub _get_filters {
     } keys(%Test::Base::Block::), qw( new DESTROY );
 }
 
-__DATA__
-
-=encoding utf8
-
-#line 1374
+1;

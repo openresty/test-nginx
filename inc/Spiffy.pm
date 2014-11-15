@@ -1,18 +1,10 @@
 #line 1
-##
-# name:      Spiffy
-# abstract:  Spiffy Perl Interface Framework For You
-# author:    Ingy döt Net <ingy@ingy.net>
-# license:   perl
-# copyright: 2004, 2006, 2011, 2012
-
+use strict; use warnings;
 package Spiffy;
-use strict;
-use 5.006001;
-use warnings;
+our $VERSION = '0.46';
+
 use Carp;
 require Exporter;
-our $VERSION = '0.31';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -230,7 +222,8 @@ sub field {
     my $code = $code{sub_start};
     if ($args->{-init}) {
         my $fragment = $args->{-weak} ? $code{weak_init} : $code{init};
-        $code .= sprintf $fragment, $field, $args->{-init}, ($field) x 4;
+        my @count = ($fragment =~ /(%s)/g);
+        $code .= sprintf $fragment, $field, $args->{-init}, ($field) x (@count - 2);
     }
     $code .= sprintf $code{set_default}, $field, $default_string, $field
       if defined $default;
@@ -540,4 +533,3 @@ sub ZZZ {
 }
 
 1;
-

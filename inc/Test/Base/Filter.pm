@@ -336,6 +336,4 @@ sub _write_to {
       or die "Couldn't close $filename: $!\n";
 }
 
-__DATA__
-
-#line 636
+1;
