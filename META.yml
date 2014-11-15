@@ -1,7 +1,7 @@
 ---
 abstract: 'Data-driven test scaffold for Nginx C module and OpenResty Lua library development'
 author:
-  - 'agentzh (章亦春) C<< <agentzh@gmail.com> >>'
+  - 'Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>'
 build_requires:
   ExtUtils::MakeMaker: 6.59
 configure_requires:
