@@ -1226,7 +1226,7 @@ sub check_response_body ($$$$$$) {
             Encode::from_to( $expected, 'UTF-8', $block->charset );
         }
 
-        unless (ref $expected) {
+        unless (!defined $expected || ref $expected) {
             $expected =~ s/\$ServerPort\b/$ServerPort/g;
             $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
         }
