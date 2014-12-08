@@ -21,7 +21,7 @@ Table of Contents
 
 This distribution provides two testing modules for Nginx C module development:
 
-- [Test::Nginx::Socket](https://metacpan.org/pod/Test::Nginx::Socket) (This is recommended.)
+- [Test::Nginx::Socket](https://metacpan.org/pod/Test::Nginx::Socket) (This is highly recommended.)
 - [Test::Nginx::LWP](https://metacpan.org/pod/Test::Nginx::LWP) (This is obsolete.)
 
 All of them are based on [Test::Base](https://metacpan.org/pod/Test::Base).
@@ -46,11 +46,11 @@ as in
 
 - ngx\_echo
 
-    [http://github.com/agentzh/echo-nginx-module](http://github.com/agentzh/echo-nginx-module)
+    [https://github.com/openresty/echo-nginx-module](https://github.com/openresty/echo-nginx-module)
 
 - ngx\_headers\_more
 
-    [http://github.com/agentzh/headers-more-nginx-module](http://github.com/agentzh/headers-more-nginx-module)
+    [https://github.com/openresty/headers-more-nginx-module](https://github.com/openresty/headers-more-nginx-module)
 
 - ngx\_chunkin
 
@@ -62,55 +62,55 @@ as in
 
 - ngx\_drizzle
 
-    [http://github.com/chaoslawful/drizzle-nginx-module](http://github.com/chaoslawful/drizzle-nginx-module)
+    [https://github.com/chaoslawful/drizzle-nginx-module](https://github.com/chaoslawful/drizzle-nginx-module)
 
 - ngx\_rds\_json
 
-    [http://github.com/agentzh/rds-json-nginx-module](http://github.com/agentzh/rds-json-nginx-module)
+    [https://github.com/openresty/rds-json-nginx-module](https://github.com/openresty/rds-json-nginx-module)
 
 - ngx\_rds\_csv
 
-    [http://github.com/agentzh/rds-csv-nginx-module](http://github.com/agentzh/rds-csv-nginx-module)
+    [https://github.com/openresty/rds-csv-nginx-module](https://github.com/openresty/rds-csv-nginx-module)
 
 - ngx\_xss
 
-    [http://github.com/agentzh/xss-nginx-module](http://github.com/agentzh/xss-nginx-module)
+    [https://github.com/openresty/xss-nginx-module](https://github.com/openresty/xss-nginx-module)
 
 - ngx\_srcache
 
-    [http://github.com/agentzh/srcache-nginx-module](http://github.com/agentzh/srcache-nginx-module)
+    [https://github.com/openresty/srcache-nginx-module](https://github.com/openresty/srcache-nginx-module)
 
 - ngx\_lua
 
-    [http://github.com/chaoslawful/lua-nginx-module](http://github.com/chaoslawful/lua-nginx-module)
+    [https://github.com/chaoslawful/lua-nginx-module](https://github.com/chaoslawful/lua-nginx-module)
 
 - ngx\_set\_misc
 
-    [http://github.com/agentzh/set-misc-nginx-module](http://github.com/agentzh/set-misc-nginx-module)
+    [https://github.com/openresty/set-misc-nginx-module](https://github.com/openresty/set-misc-nginx-module)
 
 - ngx\_array\_var
 
-    [http://github.com/agentzh/array-var-nginx-module](http://github.com/agentzh/array-var-nginx-module)
+    [https://github.com/openresty/array-var-nginx-module](https://github.com/openresty/array-var-nginx-module)
 
 - ngx\_form\_input
 
-    [http://github.com/calio/form-input-nginx-module](http://github.com/calio/form-input-nginx-module)
+    [https://github.com/calio/form-input-nginx-module](https://github.com/calio/form-input-nginx-module)
 
 - ngx\_iconv
 
-    [http://github.com/calio/iconv-nginx-module](http://github.com/calio/iconv-nginx-module)
+    [https://github.com/calio/iconv-nginx-module](https://github.com/calio/iconv-nginx-module)
 
 - ngx\_set\_cconv
 
-    [http://github.com/liseen/set-cconv-nginx-module](http://github.com/liseen/set-cconv-nginx-module)
+    [https://github.com/liseen/set-cconv-nginx-module](https://github.com/liseen/set-cconv-nginx-module)
 
 - ngx\_postgres
 
-    [http://github.com/FRiCKLE/ngx\_postgres](http://github.com/FRiCKLE/ngx_postgres)
+    [https://github.com/FRiCKLE/ngx\_postgres](https://github.com/FRiCKLE/ngx_postgres)
 
 - ngx\_coolkit
 
-    [http://github.com/FRiCKLE/ngx\_coolkit](http://github.com/FRiCKLE/ngx_coolkit)
+    [https://github.com/FRiCKLE/ngx\_coolkit](https://github.com/FRiCKLE/ngx_coolkit)
 
 - Naxsi
 
@@ -120,7 +120,7 @@ as in
 
 This module has a Git repository on Github, which has access for all.
 
-    http://github.com/agentzh/test-nginx
+[https://github.com/openresty/test-nginx](https://github.com/openresty/test-nginx)
 
 If you want a commit bit, feel free to drop me a line.
 

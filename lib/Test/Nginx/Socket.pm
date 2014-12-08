@@ -3603,7 +3603,7 @@ stdout/stderr.
 
 This module has a Git repository on Github, which has access for all:
 
-L<https://github.com/agentzh/test-nginx>
+L<https://github.com/openresty/test-nginx>
 
 If you want a commit bit, feel free to drop me a line.
 

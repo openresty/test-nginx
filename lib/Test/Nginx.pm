@@ -21,7 +21,7 @@ This distribution provides two testing modules for Nginx C module development:
 
 =item *
 
-L<Test::Nginx::Socket> (This is recommended.)
+L<Test::Nginx::Socket> (This is highly recommended.)
 
 =item *
 
@@ -53,11 +53,11 @@ as in
 
 =item ngx_echo
 
-L<http://github.com/agentzh/echo-nginx-module>
+L<https://github.com/openresty/echo-nginx-module>
 
 =item ngx_headers_more
 
-L<http://github.com/agentzh/headers-more-nginx-module>
+L<https://github.com/openresty/headers-more-nginx-module>
 
 =item ngx_chunkin
 
@@ -69,55 +69,55 @@ L<http://wiki.nginx.org/NginxHttpMemcModule>
 
 =item ngx_drizzle
 
-L<http://github.com/chaoslawful/drizzle-nginx-module>
+L<https://github.com/chaoslawful/drizzle-nginx-module>
 
 =item ngx_rds_json
 
-L<http://github.com/agentzh/rds-json-nginx-module>
+L<https://github.com/openresty/rds-json-nginx-module>
 
 =item ngx_rds_csv
 
-L<http://github.com/agentzh/rds-csv-nginx-module>
+L<https://github.com/openresty/rds-csv-nginx-module>
 
 =item ngx_xss
 
-L<http://github.com/agentzh/xss-nginx-module>
+L<https://github.com/openresty/xss-nginx-module>
 
 =item ngx_srcache
 
-L<http://github.com/agentzh/srcache-nginx-module>
+L<https://github.com/openresty/srcache-nginx-module>
 
 =item ngx_lua
 
-L<http://github.com/chaoslawful/lua-nginx-module>
+L<https://github.com/chaoslawful/lua-nginx-module>
 
 =item ngx_set_misc
 
-L<http://github.com/agentzh/set-misc-nginx-module>
+L<https://github.com/openresty/set-misc-nginx-module>
 
 =item ngx_array_var
 
-L<http://github.com/agentzh/array-var-nginx-module>
+L<https://github.com/openresty/array-var-nginx-module>
 
 =item ngx_form_input
 
-L<http://github.com/calio/form-input-nginx-module>
+L<https://github.com/calio/form-input-nginx-module>
 
 =item ngx_iconv
 
-L<http://github.com/calio/iconv-nginx-module>
+L<https://github.com/calio/iconv-nginx-module>
 
 =item ngx_set_cconv
 
-L<http://github.com/liseen/set-cconv-nginx-module>
+L<https://github.com/liseen/set-cconv-nginx-module>
 
 =item ngx_postgres
 
-L<http://github.com/FRiCKLE/ngx_postgres>
+L<https://github.com/FRiCKLE/ngx_postgres>
 
 =item ngx_coolkit
 
-L<http://github.com/FRiCKLE/ngx_coolkit>
+L<https://github.com/FRiCKLE/ngx_coolkit>
 
 =item Naxsi
 
@@ -129,7 +129,7 @@ L<http://code.google.com/p/naxsi/>
 
 This module has a Git repository on Github, which has access for all.
 
-    http://github.com/agentzh/test-nginx
+L<https://github.com/openresty/test-nginx>
 
 If you want a commit bit, feel free to drop me a line.
 
