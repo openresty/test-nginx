@@ -2014,7 +2014,7 @@ __END__
 
 =head1 NAME
 
-Test::Nginx::Socket - Socket-backed test scaffold for the Nginx C modules
+Test::Nginx::Socket - Socket-backed test scaffold for the Nginx C modules and Nginx/OpenResty-based libraries and applications
 
 =head1 SYNOPSIS
 
