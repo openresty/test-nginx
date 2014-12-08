@@ -3447,86 +3447,165 @@ only see the logs for the last test run (which you usually do not control
 except if you set C<TEST_NGINX_NO_SHUFFLE=1>). With this, you accumulate
 all logs into a single file that is never cleaned up by Test::Nginx.
 
-=head1 Samples
+=head2 Valgrind Integration
 
-You'll find live samples in the following Nginx 3rd-party modules:
+Test::Nginx has integrated support for valgrind (L<http://valgrind.org>) even though by
+default it does not bother running it with the tests because valgrind
+will significantly slow down the test suite.
 
-=over
+First ensure that your valgrind executable visible in your PATH env.
+And then run your test suite with the C<TEST_NGINX_USE_VALGRIND> env set
+to true:
 
-=item ngx_echo
+   TEST_NGINX_USE_VALGRIND=1 prove -r t
 
-L<http://github.com/agentzh/echo-nginx-module>
+If you see false alarms, you do have a chance to skip them by defining
+a ./valgrind.suppress file at the root of your module source tree, as
+in
 
-=item ngx_chunkin
+L<https://github.com/chaoslawful/drizzle-nginx-module/blob/master/valgrind.suppress>
 
-L<http://wiki.nginx.org/NginxHttpChunkinModule>
+This is the suppression file for ngx_drizzle. Test::Nginx will
+automatically use it to start nginx with valgrind memcheck if this
+file does exist at the expected location.
 
-=item ngx_memc
+If you do see a lot of "Connection refused" errors while running the
+tests this way, then you probably have a slow machine (or a very busy
+one) that the default waiting time is not sufficient for valgrind to
+start. You can define the sleep time to a larger value by setting the
+C<TEST_NGINX_SLEEP> env:
 
-L<http://wiki.nginx.org/NginxHttpMemcModule>
+   TEST_NGINX_SLEEP=1 prove -r t
 
-=item ngx_drizzle
+The time unit used here is "second". The default sleep setting just
+fits my ThinkPad (C<Core2Duo T9600>).
 
-L<http://github.com/chaoslawful/drizzle-nginx-module>
+Applying the no-pool patch to your nginx core is recommended while
+running nginx with valgrind:
 
-=item ngx_rds_json
+L<https://github.com/shrimp/no-pool-nginx>
 
-L<http://github.com/agentzh/rds-json-nginx-module>
+The nginx memory pool can prevent valgrind from spotting lots of
+invalid memory reads/writes as well as certain double-free errors. We
+did find a lot more memory issues in many of our modules when we first
+introduced the no-pool patch in practice ;)
 
-=item ngx_xss
+There's also more advanced features in Test::Nginx that have never
+documented. I'd like to write more about them in the near future ;)
 
-L<http://github.com/agentzh/xss-nginx-module>
+=head2 Etcproxy Integration
 
-=item ngx_srcache
+B<WARNING:> use etcproxy is no longer recommended because the mockeagain is way more effective and efficient:
 
-L<http://github.com/agentzh/srcache-nginx-module>
+L<https://github.com/openresty/mockeagain>
 
-=item ngx_lua
+The default settings in etcproxy (https://github.com/chaoslawful/etcproxy)
+makes this small TCP proxy split the TCP packets into bytes and introduce 1 ms latency among them.
 
-L<http://github.com/chaoslawful/lua-nginx-module>
+There's usually various TCP chains that we can put etcproxy into, for example
 
-=item ngx_set_misc
+=head3 Test::Nginx <=> nginx
 
-L<http://github.com/agentzh/set-misc-nginx-module>
+  $ ./etcproxy 1234 1984
 
-=item ngx_array_var
+Here we tell etcproxy to listen on port 1234 and to delegate all the
+TCP traffic to the port 1984, the default port that Test::Nginx makes
+nginx listen to.
 
-L<http://github.com/agentzh/array-var-nginx-module>
+And then we tell Test::Nginx to test against the port 1234, where
+etcproxy listens on, rather than the port 1984 that nginx directly
+listens on:
 
-=item ngx_form_input
+  $ TEST_NGINX_CLIENT_PORT=1234 prove -r t/
 
-L<http://github.com/calio/form-input-nginx-module>
+Then the TCP chain now looks like this:
 
-=item ngx_iconv
+  Test::Nginx <=> etcproxy (1234) <=> nginx (1984)
 
-L<http://github.com/calio/iconv-nginx-module>
+So etcproxy can effectively emulate extreme network conditions and
+exercise "unusual" code paths in your nginx server by your tests.
 
-=item ngx_set_cconv
+In practice, *tons* of weird bugs can be captured by this setting.
+Even ourselves didn't expect that this simple approach is so
+effective.
 
-L<http://github.com/liseen/set-cconv-nginx-module>
+=head3 nginx <=> memcached
 
-=item ngx_postgres
+We first start the memcached server daemon on port 11211:
 
-L<http://github.com/FRiCKLE/ngx_postgres>
+   memcached -p 11211 -vv
 
-=item ngx_coolkit
+and then we another etcproxy instance to listen on port 11984 like this
 
-L<http://github.com/FRiCKLE/ngx_coolkit>
+   $ ./etcproxy 11984 11211
 
-=back
+Then we tell our t/foo.t test script to connect to 11984 rather than 11211:
+
+  # foo.t
+  use Test::Nginx::Socket;
+  repeat_each(1);
+  plan tests => 2 * repeat_each() * blocks();
+  $ENV{TEST_NGINX_MEMCACHED_PORT} ||= 11211;  # make this env take a default value
+  run_tests();
+
+  __DATA__
+
+  === TEST 1: sanity
+  --- config
+  location /foo {
+       set $memc_cmd set;
+       set $memc_key foo;
+       set $memc_value bar;
+       memc_pass 127.0.0.1:$TEST_NGINX_MEMCACHED_PORT;
+  }
+  --- request
+      GET /foo
+  --- response_body_like: STORED
+  --- error_code: 201
+
+The Test::Nginx library will automatically expand the special macro
+C<$TEST_NGINX_MEMCACHED_PORT> to the environment with the same name.
+You can define your own C<$TEST_NGINX_BLAH_BLAH_PORT> macros as long as
+its prefix is C<TEST_NGINX_> and all in upper case letters.
+
+And now we can run your test script against the etcproxy port 11984:
+
+   TEST_NGINX_MEMCACHED_PORT=11984 prove t/foo.t
+
+Then the TCP chains look like this:
+
+   Test::Nginx <=> nginx (1984) <=> etcproxy (11984) <=> memcached (11211)
+
+If C<TEST_NGINX_MEMCACHED_PORT> is not set, then it will take the default
+value 11211, which is what we want when there's no etcproxy
+configured:
+
+   Test::Nginx <=> nginx (1984) <=> memcached (11211)
+
+This approach also works for proxied mysql and postgres traffic.
+Please see the live test suite of ngx_drizzle and ngx_postgres for
+more details.
+
+Usually we set both C<TEST_NGINX_CLIENT_PORT> and
+C<TEST_NGINX_MEMCACHED_PORT> (and etc) at the same time, effectively
+yielding the following chain:
+
+   Test::Nginx <=> etcproxy (1234) <=> nginx (1984) <=> etcproxy (11984) <=> memcached (11211)
+
+as long as you run two separate etcproxy instances in two separate terminals.
+
+It's easy to verify if the traffic actually goes through your etcproxy
+server. Just check if the terminal running etcproxy emits outputs. By
+default, etcproxy always dump out the incoming and outgoing data to
+stdout/stderr.
 
 =head1 SOURCE REPOSITORY
 
-This module has a Git repository on Github, which has access for all.
+This module has a Git repository on Github, which has access for all:
 
-    http://github.com/agentzh/test-nginx
+L<https://github.com/agentzh/test-nginx>
 
 If you want a commit bit, feel free to drop me a line.
-
-=head1 DEBIAN PACKAGES
-
-António P. P. Almeida is maintaining a Debian package for this module
-in his Debian repository: L<http://debian.perusio.net>
 
 =head1 Community
 
