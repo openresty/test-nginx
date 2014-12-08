@@ -2,6 +2,21 @@
 
 Test::Nginx - Data-driven test scaffold for Nginx C module and Nginx/OpenResty-based libraries and applications
 
+Table of Contents
+=================
+
+* [NAME](#name)
+* [DESCRIPTION](#description)
+* [Nginx C modules that use Test::Nginx to drive their test suites](#nginx-c-modules-that-use-testnginx-to-drive-their-test-suites)
+* [SOURCE REPOSITORY](#source-repository)
+* [DEBIAN PACKAGES](#debian-packages)
+* [Community](#community)
+    * [English Mailing List](#english-mailing-list)
+    * [Chinese Mailing List](#chinese-mailing-list)
+* [AUTHORS](#authors)
+* [COPYRIGHT & LICENSE](#copyright--license)
+* [SEE ALSO](#see-also)
+
 # DESCRIPTION
 
 This distribution provides two testing modules for Nginx C module development:
@@ -109,26 +124,38 @@ This module has a Git repository on Github, which has access for all.
 
 If you want a commit bit, feel free to drop me a line.
 
+[Back to TOC](#table-of-contents)
+
 # DEBIAN PACKAGES
 
 António P. P. Almeida is maintaining a Debian package for this module
 in his Debian repository: [http://debian.perusio.net](http://debian.perusio.net)
 
+[Back to TOC](#table-of-contents)
+
 # Community
+
+[Back to TOC](#table-of-contents)
 
 ## English Mailing List
 
 The `openresty-en` mailing list is for English speakers: [https://groups.google.com/group/openresty-en](https://groups.google.com/group/openresty-en)
 
+[Back to TOC](#table-of-contents)
+
 ## Chinese Mailing List
 
 The `openresty` mailing list is for Chinese speakers: [https://groups.google.com/group/openresty](https://groups.google.com/group/openresty)
+
+[Back to TOC](#table-of-contents)
 
 # AUTHORS
 
 Yichun Zhang (agentzh) `<agentzh@gmail.com>`
 
 Antoine BONAVITA `<antoine.bonavita@gmail.com>`
+
+[Back to TOC](#table-of-contents)
 
 # COPYRIGHT & LICENSE
 
@@ -146,6 +173,10 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+[Back to TOC](#table-of-contents)
+
 # SEE ALSO
 
 [Test::Nginx::LWP](https://metacpan.org/pod/Test::Nginx::LWP), [Test::Nginx::Socket](https://metacpan.org/pod/Test::Nginx::Socket), [Test::Base](https://metacpan.org/pod/Test::Base).
+[Back to TOC](#table-of-contents)
+
