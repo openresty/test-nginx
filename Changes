@@ -1,5 +1,110 @@
 Changes for Test::Nginx
 
+0.24 - 2014-12-07
+ *   feature: added support for the "benchmark" testing mode enabled
+     by the TEST_NGINX_BENCHMARK environment variable.
+
+ *   feature: added support for the TEST_NGINX_BENCHMARK_WARMUP
+     environment to specify the number of warm-up requests before the
+     actual benchmark testing.
+
+ *   feature: added support for the "--- curl" section that generates
+     a "curl" command line for the corresponding test request.
+
+ *   feature: added new section "--- server_name" to control the
+     value of the server_name nginx config directive used for the
+     default server {}.
+
+ *   feature: added new section "--- error_log_file".
+
+ *   feature: automatically print out warnings for [emerg] messages
+     in nginx's error.log to stderr if it is not mentioned in "---
+     error_log" nor "--- no_error_log".
+
+ *   feature: Test::Nginx::Socket: "--- request" now supports leading
+     comment lines prefixed by "#".
+
+ *   feature: the "--- user_files" section supports raw Perl data
+     structures for specifying the user files.
+
+ *   feature: the "--- more_headers" section now supports perl
+     array-ref typed values for pipelined requests.
+
+ *   feature: exported the "add_response_body_check" and "is_str"
+     utility functions.
+
+ *   feature: the "--- udp_reply" section now accepts a Perl
+     subroutine as its value which can be used to generate dynamic
+     replies based on the actual query. thanks blablacio for the
+     original patch.
+
+ *   feature: Test::Nginx::Socket: exported new Perl utility
+     functions "add_cleanup_handler", "add_block_preprocessor", and
+     "bail_out".
+
+ *   feature: made the special $LIBxxx_PATH variable more general in
+     the "--- stap" section.
+
+ *   feature: the "--- no_error_log" section now tries to find all
+     the matched lines in error logs instead of stopping on the first
+     hit.
+
+ *   feature: added new section "--- tcp_shutdown" for shutting down
+     read, write, or both parts of the connection in the embedded TCP
+     server immedately after the connection is established.
+
+ *   feature: the value of "--- tcp_query_len" now defaults to the
+     lenghth of the value of "--- tcp_query" (if any).
+
+ *   feature: added new section "--- must_die" for testing the cases
+     that nginx fail to start (like invalid nginx configurations and
+     etc). thanks Markus Linnala for the patch.
+
+ *   bugfix: when user specifies "Host" and "Connection" in "---
+     more_headers", then we should not add our own Host request
+     headers.
+
+ *   bugfix: made the default value of the "Connection" request
+     header to be "close" instead of "Close".
+
+ *   bugfix: the "check leak" testing mode might send a bogus request
+     header via ab or weighttp.
+
+ *   bugfix: we should also wait for the time specified by the "---
+     abort" section before checking error logs for the repeated
+     requests that are not the last one.
+
+ *   optimize disabled accept_mutex by default in the auto-generated
+     nginx.conf.
+
+ *   bugfix: "--- skip_nginx" and "--- skip_nginx2" did not skip
+     tests related to the mocked TCP and UDP servers.
+
+ *   bugfix: we did not automatically remove the .stp and .stp-out
+     temp files created by the "--- stap" sections in the systemtap
+     testing mode.
+
+ *   bugfix: "--- request" did not provide the guilty request line
+     that it failed to parse.
+
+ *   bugfix: Test::Nginx::Socket: "--- error_code" might take bad
+     values.
+
+ *   bugfix: we incorrectly discarded all the query data read in the
+     mocked TCP server when timeout errors happen (due to the actual
+     query is shorter than the expected data specified "---
+     tcp_query", for example).
+
+ *   bugfix: the "check leak" testing mode could not parse raw HTTP
+     requests using LF instead of CRLF for line terminators.
+
+ *   doc: documented the section "--- init".
+
+ *   doc: added info for the openresty and openresty-en mailing lists
+     for discussions.
+
+ *   doc: spelling fixes from Markus Linnala.
+
 0.23 - 2014-04-05
  *   feature: added new section --- response_body_unlike. thanks
      Rickey Visinski for the patch.
