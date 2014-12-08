@@ -1,5 +1,5 @@
 ---
-abstract: 'Data-driven test scaffold for Nginx C module and OpenResty Lua library development'
+abstract: 'Data-driven test scaffold for Nginx C module and Nginx/OpenResty-based libraries and applications'
 author:
   - 'Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>'
 build_requires:
@@ -42,5 +42,5 @@ requires:
   perl: 5.6.1
 resources:
   license: http://opensource.org/licenses/bsd-license.php
-  repository: http://github.com/agentzh/test-nginx
+  repository: https://github.com/openresty/test-nginx
 version: 0.24

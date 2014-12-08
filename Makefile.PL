@@ -5,7 +5,7 @@ use inc::Module::Install;
 name            ('Test-Nginx');
 license         ('bsd');
 perl_version    ('5.006001');
-repository      ('http://github.com/agentzh/test-nginx');
+repository      ('https://github.com/openresty/test-nginx');
 all_from        ('lib/Test/Nginx.pm');
 
 requires        ('Test::Base');

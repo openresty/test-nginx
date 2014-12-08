@@ -1,6 +1,6 @@
 NAME
-    Test::Nginx - Data-driven test scaffold for Nginx C module and OpenResty
-    Lua library development
+    Test::Nginx - Data-driven test scaffold for Nginx C module and
+    Nginx/OpenResty-based libraries and applications
 
 DESCRIPTION
     This distribution provides two testing modules for Nginx C module
