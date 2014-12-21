@@ -2042,7 +2042,7 @@ request:
                 }
 
                 my $buf = '';
-                $udp_socket->recv($buf, 4096);
+                $udp_socket->recv($buf, 4096) or warn "udp recv failed: $!";
 
                 if ($Verbose) {
                     warn "UDP server has got data: ", length $buf, "\n";
@@ -2063,7 +2063,7 @@ request:
                 my $delay = parse_time($block->udp_reply_delay);
                 if ($delay) {
                     if ($Verbose) {
-                        warn "sleep $delay before sending UDP reply\n";
+                        warn "$name - sleep $delay before sending UDP reply\n";
                     }
                     sleep $delay;
                 }
@@ -2077,21 +2077,25 @@ request:
 
                     if ($ref) {
                         if ($ref ne 'ARRAY') {
-                            bail_out("bad --- udp_reply value");
+                            warn("$name - Bad --- udp_reply value");
                         }
 
                         for my $r (@$reply) {
                             #warn "sending reply $r";
                             my $bytes = $udp_socket->send($r);
                             if (!defined $bytes) {
-                                warn "WARNING: udp server failed to send reply: $!\n";
+                                warn "$name - WARNING: udp server failed to send reply: $!\n";
                             }
                         }
 
                     } else {
+                        if ($reply =~ /syntax error at \(eval \d+\) line \d+, near/) {
+                            bail_out("$name - Bad --- udp_reply: $reply");
+                        }
+
                         my $bytes = $udp_socket->send($reply);
                         if (!defined $bytes) {
-                            warn "WARNING: udp server failed to send reply: $!\n";
+                            warn "$name - WARNING: udp server failed to send reply: $!\n";
                         }
                     }
                 }
