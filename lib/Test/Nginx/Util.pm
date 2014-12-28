@@ -1637,18 +1637,20 @@ start_nginx:
 RUN_AGAIN:
                 system($cmd);
 
-                if ($? == -1) {
+                my $status = $?;
+
+                if ($status == -1) {
                     $exec_failed = 1;
 
                 } else {
-                    $exit_code = $? >> 8;
+                    $exit_code = $status >> 8;
 
                     if ($? > (128 << 8)) {
                         $coredump = ($exit_code & 128);
                         $exit_code = ($exit_code >> 8);
 
                     } else {
-                        $coredump = ($? & 128);
+                        $coredump = ($status & 128);
                     }
                 }
 
@@ -1665,23 +1667,38 @@ RUN_AGAIN:
                                        "$name - die with the expected exit code")
 
                     } else {
-                        Test::More::isnt($?, 0, "$name - die as expected")
+                        Test::More::isnt($status, 0, "$name - die as expected")
                     }
 
                     $CheckErrorLog->($block, undef, $dry_run, $i, 0);
+
+                    #warn "Status: $status\n";
+                    if ($status == 0) {
+                        warn("WARNING: $name - nginx must die but it does ",
+                             "not; killing it (req $i)");
+                        my $max_i = 15;
+                        for (my $i = 1; $i <= $max_i; $i++) {
+                            if (-f $PidFile) {
+                                last;
+                            }
+                            sleep $TestNginxSleep;
+                        }
+                        my $pid = get_pid_from_pidfile($name);
+                        kill_process($pid, 1);
+                    }
 
                     goto RUN_AGAIN if ++$i < $RepeatEach;
                     return;
                 }
 
-                if ($? != 0) {
+                if ($status != 0) {
                     if ($ENV{TEST_NGINX_IGNORE_MISSING_DIRECTIVES} and
                             my $directive = check_if_missing_directives())
                     {
                         $dry_run = "the lack of directive $directive";
 
                     } else {
-                        bail_out("$name - Cannot start nginx using command \"$cmd\".");
+                        bail_out("$name - Cannot start nginx using command \"$cmd\" (status code $status).");
                     }
                 }
             }
