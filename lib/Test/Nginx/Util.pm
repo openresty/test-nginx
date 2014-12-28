@@ -271,9 +271,9 @@ sub repeat_each (@) {
             return;
         }
         $RepeatEach = shift;
-    } else {
-        return $RepeatEach;
     }
+
+    return $RepeatEach;
 }
 
 sub worker_connections (@) {
