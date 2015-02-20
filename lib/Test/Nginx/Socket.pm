@@ -400,28 +400,51 @@ sub get_req_from_block ($) {
             push @req_list, [{value =>$prq}];
 
         } else {
-            my $is_chunked;
-            if ($more_headers) {
-                ($more_headers, $is_chunked) = parse_more_headers($more_headers);
-
-            } else {
-                $more_headers = '';
-            }
+            my ($is_chunked, $hdr);
 
             # request section.
             if (!ref $request) {
+                if (ref $more_headers eq 'ARRAY') {
+                    #warn "Found ", scalar @$more_headers, " entries in --- more_headers.";
+                    $hdr = $more_headers->[0];
+                    if (!defined $hdr) {
+                        bail_out("--- more_headers lacks data for the request");
+                    }
+                    ($hdr, $is_chunked) = parse_more_headers($hdr);
+                    #warn "more headers: $hdr";
+
+                } else {
+                    ($hdr, $is_chunked)  = parse_more_headers($more_headers);
+                }
+
                 # One request and it is a good old string.
-                my $r_br = build_request_from_packets($name, $more_headers,
+                my $r_br = build_request_from_packets($name, $hdr,
                                                       $is_chunked, 'close',
                                                       [$request] );
                 push @req_list, [{value => $$r_br[0]}];
 
             } elsif (ref $request eq 'ARRAY') {
                 # A bunch of requests...
+                my $i = 0;
                 for my $one_req (@$request) {
+
+                    if (ref $more_headers eq 'ARRAY') {
+                        #warn "Found ", scalar @$more_headers, " entries in --- more_headers.";
+                        $hdr = $more_headers->[$i];
+                        if (!defined $hdr) {
+                            bail_out("--- more_headers lacks data for the "
+                                     . "${i}th request");
+                        }
+                        ($hdr, $is_chunked) = parse_more_headers($hdr);
+                        #warn "more headers: $hdr";
+
+                    } else {
+                        ($hdr, $is_chunked)  = parse_more_headers($more_headers);
+                    }
+
                     if (!ref $one_req) {
                         # This request is a good old string.
-                        my $r_br = build_request_from_packets($name, $more_headers,
+                        my $r_br = build_request_from_packets($name, $hdr,
                                                       $is_chunked, 'close',
                                                       [$one_req] );
                         push @req_list, [{value => $$r_br[0]}];
@@ -440,7 +463,8 @@ sub get_req_from_block ($) {
                                 bail_out "$name - Invalid syntax. $one_packet should be a string or hash with value.";
                             }
                         }
-                        my $transformed_packet_array = build_request_from_packets($name, $more_headers,
+
+                        my $transformed_packet_array = build_request_from_packets($name, $hdr,
                                                    $is_chunked, 'close',
                                                    \@packet_array);
                         my @transformed_req = ();
@@ -456,10 +480,14 @@ sub get_req_from_block ($) {
                             $idx++;
                         }
                         push @req_list, \@transformed_req;
+
                     } else {
                         bail_out "$name - Invalid syntax. $one_req should be a string or an array of packets.";
                     }
+
+                    $i++;
                 }
+
             } else {
                 bail_out(
                     "$name - invalid ---request : MUST be string or array of requests");
