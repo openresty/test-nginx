@@ -293,7 +293,11 @@ sub parse_more_headers ($) {
     my $out = '';
     for my $header (@headers) {
         next if $header =~ /^\s*\#/;
+        #warn "HEADER: $header";
         my ($key, $val) = split /:\s*/, $header, 2;
+        if (!defined $val) {
+            $val = '';
+        }
         if (lc($key) eq 'transfer-encoding' and $val eq 'chunked') {
             $is_chunked = 1;
         }
@@ -411,6 +415,7 @@ sub get_req_from_block ($) {
                                                       $is_chunked, 'close',
                                                       [$request] );
                 push @req_list, [{value => $$r_br[0]}];
+
             } elsif (ref $request eq 'ARRAY') {
                 # A bunch of requests...
                 for my $one_req (@$request) {
@@ -420,6 +425,7 @@ sub get_req_from_block ($) {
                                                       $is_chunked, 'close',
                                                       [$one_req] );
                         push @req_list, [{value => $$r_br[0]}];
+
                     } elsif (ref $one_req eq 'ARRAY') {
                         # Request expressed as a serie of packets
                         my @packet_array = ();
