@@ -2954,6 +2954,19 @@ For example:
     --- skip_nginx2
     2: < 0.8.53 and >= 0.8.41
 
+=head2 todo
+
+Mark tests as todo. Currently they are not used but they should be.
+
+The format for this section is
+
+    --- todo
+    <subtest-count>: <reason>
+
+The <subtest-count> value must be a positive integer.
+
+<reason> is logged when you run tests with --directives.
+
 =head2 stap
 
 This section is used to specify user systemtap script file (.stp file)
