@@ -410,7 +410,6 @@ our $CheckErrorLog;
 
 our $NginxVersion;
 our $NginxRawVersion;
-our $TODO;
 
 sub add_block_preprocessor(&) {
     unshift @BlockPreprocessors, shift;
@@ -1321,6 +1320,22 @@ sub run_test ($) {
         }
     }
 
+    my $todo = $block->todo;
+    if (defined $todo) {
+        if ($todo =~ m{
+                ^ \s* (\d+) \s* : \s* (.*)
+            }xs)
+        {
+            $should_todo = 1;
+            $tests_to_skip = $1;
+            $todo_reason = $2;
+        } else {
+            bail_out("$name - Invalid --- todo spec: " .
+                $todo);
+            die;
+        }
+    }
+
     if (!defined $todo_reason) {
         $todo_reason = "various reasons";
     }
@@ -2148,7 +2163,7 @@ request:
 
         } elsif ($should_todo) {
             TODO: {
-                local $TODO = "$name - $todo_reason";
+                Test::More::todo_skip("$name - $todo_reason", $tests_to_skip);
 
                 $RunTestHelper->($block, $dry_run, $i - 1);
                 run_tcp_server_tests($block, $tcp_socket, $tcp_query_file);
