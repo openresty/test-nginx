@@ -20,6 +20,7 @@ use Scalar::Util qw( looks_like_number );
 use IO::Socket::INET;
 use IO::Socket::UNIX;
 use Test::LongString;
+use Carp qw( croak );
 
 our $ConfigVersion;
 our $FilterHttpConfig;
@@ -240,6 +241,19 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
 our $ChildPid;
 our $UdpServerPid;
 our $TcpServerPid;
+our @EnvToNginx;
+
+sub env_to_nginx (@) {
+    if (!@_) {
+        croak "env_to_nginx: no arguments specified";
+    }
+    for my $v (@_) {
+        if ($v !~ /^[A-Za-z_]/ || $v =~ /\n/) {
+            croak "env_to_nginx: bad argument value: $v\n";
+        }
+        push @EnvToNginx, $v;
+    }
+}
 
 sub sleep_time {
     return $TestNginxSleep;
@@ -333,6 +347,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT = qw(
+    env_to_nginx
     is_str
     check_accum_error_log
     is_running
@@ -811,6 +826,16 @@ env LD_PRELOAD;
 env LD_LIBRARY_PATH;
 env DYLD_INSERT_LIBRARIES;
 env DYLD_FORCE_FLAT_NAMESPACE;
+_EOC_
+
+    for my $v (@EnvToNginx) {
+        if ($v =~ /\s/) {
+            $v = "'$v'";
+        }
+        print $out "env $v;\n";
+    }
+
+    print $out <<_EOC_;
 #env LUA_PATH;
 #env LUA_CPATH;
 
