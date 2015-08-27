@@ -918,6 +918,7 @@ _EOC_
     print $out "}\n";
 
     print $out <<_EOC_;
+env ASAN_OPTIONS;
 _EOC_
 
     close $out;

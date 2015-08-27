@@ -2324,6 +2324,10 @@ DYLD_INSERT_LIBRARIES
 
 DYLD_FORCE_FLAT_NAMESPACE
 
+=item *
+
+ASAN_OPTIONS
+
 =back
 
 =head2 workers
