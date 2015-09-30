@@ -7,7 +7,7 @@ use Module::Install::Base;
 
 use vars qw($VERSION @ISA);
 BEGIN {
-    $VERSION = '0.60';
+    $VERSION = '0.86';
     @ISA     = 'Module::Install::Base';
 }
 
@@ -23,7 +23,3 @@ sub use_test_base {
 }
 
 1;
-
-=encoding utf8
-
-#line 70
