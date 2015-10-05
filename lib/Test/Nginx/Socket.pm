@@ -2312,7 +2312,7 @@ For example,
         # use "--- req_headers" for "--- more_Headers":
         $block->set_value("more_headers", $block->req_headers);
 
-        # initialize external dependencies like memcached services...
+        # initialize external dependencies like memcached services here...
     });
 
 =head2 add_response_body_check

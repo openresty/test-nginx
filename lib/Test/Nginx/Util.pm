@@ -593,7 +593,7 @@ sub run_tests () {
 
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
         for my $hdl (@BlockPreprocessors) {
-            $block = $hdl->($block);
+            $hdl->($block);
         }
         run_test($block);
     }
