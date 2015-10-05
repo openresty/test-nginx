@@ -780,11 +780,13 @@ sub write_config_file ($$) {
         undef $PostponeOutput;
     }
 
+    my $extra_http_config = '';
+
     if (defined $PostponeOutput) {
         if ($PostponeOutput !~ /^\d+$/) {
             bail_out "Bad TEST_NGINX_POSTPOHNE_OUTPUT value: $PostponeOutput\n";
         }
-        $http_config .= "\n    postpone_output $PostponeOutput;\n";
+        $extra_http_config .= "\n    postpone_output $PostponeOutput;\n";
     }
 
     if (!defined $main_config) {
@@ -888,6 +890,8 @@ _EOC_
             return 200 '$ConfigVersion';
         }
     }
+
+$extra_http_config
 _EOC_
     }
 
