@@ -2293,7 +2293,7 @@ retry:
                     waitpid($pid, 0);
 
                     unlink $PidFile or
-                        bail_out "Failed to remove pid file $PidFile\n";
+                        bail_out "Failed to remove pid file $PidFile: $!\n";
 
                 } else {
                     #warn "nginx killed";
@@ -2301,7 +2301,7 @@ retry:
 
             } else {
                 unlink $PidFile or
-                    bail_out "Failed to remove pid file $PidFile\n";
+                    bail_out "Failed to remove pid file $PidFile: $!\n";
             }
         } else {
             #warn "pid file not found";
