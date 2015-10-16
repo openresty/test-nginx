@@ -23,6 +23,16 @@ This distribution provides two testing modules for Nginx C module development:
 
 L<Test::Nginx::Socket> (This is highly recommended.)
 
+This library also has a subclass:
+
+=over
+
+=item *
+
+L<Test::Nginx::Socket::Lua>
+
+=back
+
 =item *
 
 L<Test::Nginx::LWP> (This is obsolete.)

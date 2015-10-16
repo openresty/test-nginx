@@ -2139,6 +2139,83 @@ This module will create a temporary server root under t/servroot/ of the current
 You will often want to look into F<t/servroot/logs/error.log>
 when things go wrong ;)
 
+=head2 Features inherited from L<Test::Base>
+
+All the features of L<Test::Base> are inherited since it is an ancestor
+class of this module anyway.
+
+Still we would highlight some of the inherited features here for those
+unfamiliar with L<Test::Base>.
+
+=head3 Meta sections
+
+=over
+
+=item C<--- ONLY>
+
+Runs the surrounding test block only. You need to remember removing
+C<--- ONLY> before committing your changes though. Don't
+worry, the test scaffold would warn you loudly on the console
+when you left a C<--- ONLY> in some test file.
+
+It is also very intuitive for the developer's workflow. One does not have
+to specify a (unique) test name on the command-line; just find the
+block in the editor, insert a C<--- ONLY> line right away, and run
+the current test file immediately (for Vim users, the final step
+is as simple as entering C<:!prove %> where C<:!> is the Vim way
+of running an external shell command and C<%> would get substituted
+with the current file being edited in Vim's buffer).
+
+This is definitely one of the most useful and frequently used features.
+
+=item C<--- SKIP>
+
+Skips the surrounding test block unconditionally. You can use C<--- skip_nginx>
+and C<--- skip_nginx2> providied this module (see their documentation below)
+to conditionally skip tests according to the current NGINX server versions.
+
+=back
+
+=head3 Filters
+
+We can use filters to preprocess the values of our blocks, which can make
+specifying special values much easier.
+
+For example, we could chop off
+the last new-line character (if any) of the current section value by
+specifying the C<chomp> filter, like this:
+
+    --- response_body chomp
+    Hello world!
+
+Without the C<chomp> filter, the value of the C<response_body> section would
+take a trailing new line.
+
+We list some of the common filters below (please keep in mind that one can
+define custom filters!)
+
+=over
+
+=item C<chomp>
+
+Remove the last character if it is a newline.
+
+=item C<chop>
+
+Remove the last character no matter what it is.
+
+=item C<eval>
+
+Treat the section value as a Perl source code snippet, evaluate it right away, and use
+the returned value of the Perl code snippet (usually being the value of the last expression).
+
+This is very useful for specifying non-printable characters in section values, as in
+
+    --- response_body eval
+    "I don't know what \0 is.\n"
+
+=back
+
 =head1 Exported Perl Functions
 
 The following Perl functions are exported by default:
