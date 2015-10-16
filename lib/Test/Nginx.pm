@@ -166,7 +166,7 @@ Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2014, Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>.
+Copyright (c) 2009-2015, Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>.
 
 Copyright (c) 2011-2012, Antoine Bonavita C<< <antoine.bonavita@gmail.com> >>.
 

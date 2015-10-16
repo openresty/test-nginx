@@ -72,7 +72,7 @@ Yichun "agentzh" Zhang (章亦春) C<< <agentzh@gmail.com> >>, CloudFlare Inc.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2014, Yichun Zhang C<< <agentzh@gmail.com> >>, CloudFlare Inc.
+Copyright (c) 2009-2015, Yichun Zhang C<< <agentzh@gmail.com> >>, CloudFlare Inc.
 
 This module is licensed under the terms of the BSD license.
 
