@@ -1461,8 +1461,14 @@ sub send_request ($$$$@) {
 
     #warn "connecting...\n";
 
+    my $server_addr = $block->server_addr_for_client;
+
+    if (!defined $server_addr) {
+        $server_addr = $ServerAddr;
+    }
+
     my $sock = IO::Socket::INET->new(
-        PeerAddr  => $ServerAddr,
+        PeerAddr  => $server_addr,
         PeerPort  => $ServerPortForClient,
         Proto     => 'tcp',
         #ReuseAddr => 1,
@@ -3390,6 +3396,10 @@ This configuration ignores C<TEST_NGINX_USE_VALGRIND>
 C<TEST_NGINX_USE_STAP> or C<TEST_NGINX_CHECK_LEAK> since there is no point to check other things when the nginx is expected to die right away.
 
 This directive is handled before checking C<TEST_NGINX_IGNORE_MISSING_DIRECTIVES>.
+
+=head2 server_addr_for_client
+
+This section specifies the server address Test::Nginx will connect to. If server_addr_for_client is not set, then 127.0.0.1 is used.
 
 =head1 Environment variables
 
