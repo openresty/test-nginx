@@ -520,8 +520,8 @@ sub kill_process ($$) {
             warn "WARNING: killing the child process $pid.\n";
         }
 
-        if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-            warn "WARNING: failed to send quit signal to the child process with PID $pid.\n";
+        if (kill(SIGTERM, $pid) == 0) { # send term signal
+            warn "WARNING: failed to send term signal to the child process with PID $pid.\n";
         }
 
         sleep $TestNginxSleep * $i;
@@ -530,6 +530,7 @@ sub kill_process ($$) {
         $i++;
     }
 
+    #system("ps aux|grep $pid > /dev/stderr");
     warn "WARNING: killing the child process $pid with force...";
 
     kill(SIGKILL, $pid);
