@@ -2293,16 +2293,18 @@ retry:
                     kill(SIGKILL, $pid);
                     waitpid($pid, 0);
 
-                    unlink $PidFile or
+                    if (!unlink($PidFile) && -f $PidFile) {
                         bail_out "Failed to remove pid file $PidFile: $!\n";
+                    }
 
                 } else {
                     #warn "nginx killed";
                 }
 
             } else {
-                unlink $PidFile or
+                if (!unlink($PidFile) && -f $PidFile) {
                     bail_out "Failed to remove pid file $PidFile: $!\n";
+                }
             }
         } else {
             #warn "pid file not found";
