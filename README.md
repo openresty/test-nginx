@@ -22,6 +22,12 @@ Table of Contents
 This distribution provides two testing modules for Nginx C module development:
 
 - [Test::Nginx::Socket](https://metacpan.org/pod/Test::Nginx::Socket) (This is highly recommended.)
+
+    This library also has the following subclasses:
+
+    - [Test::Nginx::Socket::Lua](https://metacpan.org/pod/Test::Nginx::Socket::Lua)
+    - [Test::Nginx::Socket::Lua::Stream](https://metacpan.org/pod/Test::Nginx::Socket::Lua::Stream)
+
 - [Test::Nginx::LWP](https://metacpan.org/pod/Test::Nginx::LWP) (This is obsolete.)
 
 All of them are based on [Test::Base](https://metacpan.org/pod/Test::Base).
@@ -135,8 +141,6 @@ in his Debian repository: [http://debian.perusio.net](http://debian.perusio.net)
 
 # Community
 
-[Back to TOC](#table-of-contents)
-
 ## English Mailing List
 
 The `openresty-en` mailing list is for English speakers: [https://groups.google.com/group/openresty-en](https://groups.google.com/group/openresty-en)
@@ -159,7 +163,7 @@ Antoine BONAVITA `<antoine.bonavita@gmail.com>`
 
 # COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2014, Yichun Zhang (agentzh) `<agentzh@gmail.com>`.
+Copyright (c) 2009-2016, Yichun Zhang (agentzh) `<agentzh@gmail.com>`.
 
 Copyright (c) 2011-2012, Antoine Bonavita `<antoine.bonavita@gmail.com>`.
 

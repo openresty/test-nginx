@@ -31,3 +31,9 @@ genmobi\.sh$
 .*\.tar$
 ^MYMETA\.\w+$
 ^tags$
+^html_out
+\.diff$
+\.patch$
+\.tags$
+\.sh$
+\.pdf$
