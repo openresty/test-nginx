@@ -3852,5 +3852,5 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 =head1 SEE ALSO
 
-L<Test::Nginx::LWP>, L<Test::Base>.
+L<Test::Nginx::Lua>, L<Test::Nginx::Lua::Stream>, L<Test::Nginx::LWP>, L<Test::Base>.
 
