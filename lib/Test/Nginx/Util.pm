@@ -917,6 +917,9 @@ _EOC_
 
     print $out "}\n";
 
+    print $out <<_EOC_;
+_EOC_
+
     close $out;
 }
 
