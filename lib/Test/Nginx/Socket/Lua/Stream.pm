@@ -15,7 +15,11 @@ add_block_preprocessor(sub {
 
     my $stream_config = $block->stream_config;
     my $stream_server_config = $block->stream_server_config;
+    my $stream_server_config2 = $block->stream_server_config2;
+    my $stream_server_config3 = $block->stream_server_config3;
     my $stream_req = $block->stream_request;
+    my $stream_req2 = $block->stream_request2;
+    my $stream_req3 = $block->stream_request3;
 
     if (defined $stream_server_config || defined $stream_config) {
         $stream_server_config //= '';
@@ -29,8 +33,33 @@ $stream_config
 
 $stream_server_config
     }
-}
 _EOC_
+
+        if (defined $stream_server_config2) {
+            my $port2 = $port + 1;
+            $new_main_config .= <<_EOC_;
+    server {
+        listen $port2;
+
+$stream_server_config2
+    }
+_EOC_
+        }
+
+
+        if (defined $stream_server_config3) {
+            my $port3 = $port + 2;
+            $new_main_config .= <<_EOC_;
+    server {
+        listen $port3;
+
+$stream_server_config3
+    }
+_EOC_
+        }
+
+        $new_main_config .= "}\n";
+
         my $main_config = $block->main_config;
         if (defined $main_config) {
             $main_config .= $new_main_config;
@@ -75,10 +104,100 @@ _EOC_
                     end
 _EOC_
 
-        if (defined $block->response_body || defined $block->stream_response) {
+        if (defined $block->response_body
+            || defined $block->response_body_like
+            || defined $block->stream_response
+            || defined $block->stream_response_like)
+        {
             $new_http_server_config .= <<_EOC_;
                     ngx.print(data)
 _EOC_
+        }
+
+        if (defined $stream_server_config2) {
+            my $port2 = $port + 1;
+            $new_http_server_config .= <<_EOC_;
+                    local ok, err = sock:connect("$ServerAddr", $port2)
+                    if not ok then
+                        ngx.say("connect to stream server error: ", err)
+                        return
+                    end
+_EOC_
+
+            if (defined $stream_req2) {
+                my $level = get_best_long_bracket_level($stream_req);
+                my $equals = "=" x $level;
+                $new_http_server_config .= <<_EOC_;
+
+                        local bytes, err = sock:send([$equals\[$stream_req\]$equals])
+                        if not bytes then
+                            ngx.say("send stream request error: ", err)
+                            return
+                        end
+_EOC_
+            }
+
+            $new_http_server_config .= <<_EOC_;
+
+                        local data, err = sock:receive("*a")
+                        if not data then
+                            ngx.say("receive stream response error: ", err)
+                            return
+                        end
+_EOC_
+
+            if (defined $block->response_body
+                || defined $block->response_body_like
+                || defined $block->stream_response
+                || defined $block->stream_response_like)
+            {
+                $new_http_server_config .= <<_EOC_;
+                        ngx.print(data)
+_EOC_
+            }
+        }
+
+        if (defined $stream_server_config3) {
+            my $port3 = $port + 2;
+            $new_http_server_config .= <<_EOC_;
+                    local ok, err = sock:connect("$ServerAddr", $port3)
+                    if not ok then
+                        ngx.say("connect to stream server error: ", err)
+                        return
+                    end
+_EOC_
+
+            if (defined $stream_req3) {
+                my $level = get_best_long_bracket_level($stream_req);
+                my $equals = "=" x $level;
+                $new_http_server_config .= <<_EOC_;
+
+                        local bytes, err = sock:send([$equals\[$stream_req\]$equals])
+                        if not bytes then
+                            ngx.say("send stream request error: ", err)
+                            return
+                        end
+_EOC_
+            }
+
+            $new_http_server_config .= <<_EOC_;
+
+                        local data, err = sock:receive("*a")
+                        if not data then
+                            ngx.say("receive stream response error: ", err)
+                            return
+                        end
+_EOC_
+
+            if (defined $block->response_body
+                || defined $block->response_body_like
+                || defined $block->stream_response
+                || defined $block->stream_response_like
+            ) {
+                $new_http_server_config .= <<_EOC_;
+                        ngx.print(data)
+_EOC_
+            }
         }
 
         $new_http_server_config .= <<_EOC_;
@@ -102,9 +221,17 @@ _EOC_
     my $stream_response = $block->stream_response;
     if (defined $stream_response) {
         if (defined $block->response_body) {
-            die "$name: conflicting response and response_body sections\n";
+            die "$name: conflicting stream_response and response_body sections\n";
         }
         $block->set_value("response_body", $stream_response);
+    }
+
+    my $stream_response_like = $block->stream_response_like;
+    if (defined $stream_response_like) {
+        if (defined $block->response_body_like) {
+            die "$name: conflicting stream_response_like and response_body_like sections\n";
+        }
+        $block->set_value("response_body_like", $stream_response_like);
     }
 });
 
@@ -152,13 +279,17 @@ NGINX stream-typed modules like ngx_stream_echo_module.
 
 By default, the stream server listens on the port number N + 1 where N is the value
 of the environment C<TEST_NGINX_SERVER_PORT> or C<TEST_NGINX_PORT> (both default to 1984). One can explicitly specify the
-default stream serve's listening port via the C<TEST_NGINX_STREAM_PORT> environment.
+default stream server's listening port via the C<TEST_NGINX_STREAM_PORT> environment.
 
 =head1 Sections supported
 
 All the existing sections of L<Test::Nginx::Socket::Lua> are automatically inherited.
 
 The following new test sections are supported:
+
+=head2 stream_config
+
+Specifies custom content in the default C<stream {}> configuration block.
 
 =head2 stream_server_config
 
@@ -178,9 +309,29 @@ will generate something like below in F<nginx.conf>:
         }
     }
 
+=head2 stream_server_config2
+
+Specifies a second stream server which listens on the port used by the first default server plus one.
+
+=head2 stream_server_config3
+
+Specifies a third stream server which listens on the port used by the first default server plus two.
+
+=head2 stream_request
+
+Specifies the request data sent to the first default stream server (defined by C<stream_server_config>.
+
+=head2 stream_request2
+
+Specifies the request data sent to the second default stream server (defined by C<stream_server_config2>.
+
+=head2 stream_request3
+
+Specifies the request data sent to the third default stream server (defined by C<stream_server_config3>.
+
 =head2 stream_response
 
-Specifies expected response content sent from the default stream server. For example,
+Specifies expected response content sent from the default stream servers. For example,
 
     === TEST 1: simple echo
     --- stream_server_config
@@ -188,6 +339,13 @@ Specifies expected response content sent from the default stream server. For exa
 
     --- stream_response
     Hello, stream echo!
+
+When multiple default stream servers are specified (i.e., via C<stream_server_config2> and
+C<stream_server_config3>, the responses from all these stream servers are concatenated together in the order of their specifications.
+
+=head2 stream_response_like
+
+Specifies the regex pattern used to test the response data from the default stream servers.
 
 =head1 AUTHOR
 
