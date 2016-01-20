@@ -3612,7 +3612,7 @@ C<TEST_NGINX_SERVER_PORT>.
 =head2 TEST_NGINX_SLEEP
 
 How much time (in seconds) should Test::Nginx sleep between two calls to C<syswrite> when
-sending request data. Defaults to 0.
+sending request data. Defaults to 0.015 (seconds).
 
 =head2 TEST_NGINX_FORCE_RESTART_ON_TEST
 

@@ -233,7 +233,7 @@ our $DaemonEnabled          = 'on';
 our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
 our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
 our $NoRootLocation         = 0;
-our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.05;
+our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.015;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
