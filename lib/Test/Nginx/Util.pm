@@ -794,9 +794,13 @@ sub write_config_file ($$) {
         $main_config = '';
     }
 
+    $main_config = expand_env_in_config($main_config);
+
     if (!defined $post_main_config) {
         $post_main_config = '';
     }
+
+    $post_main_config = expand_env_in_config($post_main_config);
 
     if ($CheckLeak || $Benchmark) {
         $LogLevel = 'warn';
