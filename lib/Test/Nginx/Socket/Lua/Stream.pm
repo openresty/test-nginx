@@ -70,6 +70,8 @@ _EOC_
         $block->set_value("main_config", $main_config);
 
         my $new_http_server_config = <<_EOC_;
+            lua_socket_log_errors off;
+
             location = /t {
                 content_by_lua_block {
                     local sock, err = ngx.socket.tcp()
@@ -93,6 +95,18 @@ _EOC_
                         return
                     end
 _EOC_
+        }
+
+        if (defined $block->abort) {
+            my $timeout = Test::Nginx::Util::parse_time($block->timeout)
+                          // Test::Nginx::Util::timeout();
+            $timeout *= 1000;
+            $new_http_server_config .= <<_EOC_;
+
+                    sock:settimeout($timeout)
+_EOC_
+            $block->set_value("timeout", undef);
+            $block->set_value("abort", undef);
         }
 
         $new_http_server_config .= <<_EOC_;
