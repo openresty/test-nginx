@@ -5,8 +5,11 @@ use Test::Nginx::Socket::Lua -Base;
 use Test::Nginx::Util qw( $ServerPort $ServerAddr );
 
 sub get_best_long_bracket_level ($);
+sub quote_as_lua_str ($);
+sub gen_data_file ($);
 
 my $port = $ENV{TEST_NGINX_STREAM_PORT} // ($ServerPort + 1);
+my $counter = 0;
 
 add_block_preprocessor(sub {
     my ($block) = @_;
@@ -85,11 +88,12 @@ _EOC_
 _EOC_
 
         if (defined $stream_req) {
-            my $level = get_best_long_bracket_level($stream_req);
-            my $equals = "=" x $level;
+            my $file = gen_data_file($stream_req);
             $new_http_server_config .= <<_EOC_;
-
-                    local bytes, err = sock:send([$equals\[$stream_req\]$equals])
+                    local f = assert(io.open('$file', 'r'))
+                    local data = assert(f:read("*a"))
+                    assert(f:close())
+                    local bytes, err = sock:send(data)
                     if not bytes then
                         ngx.say("send stream request error: ", err)
                         return
@@ -123,9 +127,16 @@ _EOC_
             || defined $block->stream_response
             || defined $block->stream_response_like)
         {
-            $new_http_server_config .= <<_EOC_;
+            if (defined $block->log_stream_response) {
+                $new_http_server_config .= <<_EOC_;
+                    print("stream response: ", data)
+                    ngx.say("received ", #data, " bytes of response data.")
+_EOC_
+            } else {
+                $new_http_server_config .= <<_EOC_;
                     ngx.print(data)
 _EOC_
+            }
         }
 
         if (defined $stream_server_config2) {
@@ -139,15 +150,16 @@ _EOC_
 _EOC_
 
             if (defined $stream_req2) {
-                my $level = get_best_long_bracket_level($stream_req);
-                my $equals = "=" x $level;
+                my $file = gen_data_file($stream_req2);
                 $new_http_server_config .= <<_EOC_;
-
-                        local bytes, err = sock:send([$equals\[$stream_req\]$equals])
-                        if not bytes then
-                            ngx.say("send stream request error: ", err)
-                            return
-                        end
+                    local f = assert(io.open('$file', 'r'))
+                    local data = assert(f:read("*a"))
+                    assert(f:close())
+                    local bytes, err = sock:send(data)
+                    if not bytes then
+                        ngx.say("send stream request error: ", err)
+                        return
+                    end
 _EOC_
             }
 
@@ -182,11 +194,12 @@ _EOC_
 _EOC_
 
             if (defined $stream_req3) {
-                my $level = get_best_long_bracket_level($stream_req);
-                my $equals = "=" x $level;
+                my $file = gen_data_file($stream_req3);
                 $new_http_server_config .= <<_EOC_;
-
-                        local bytes, err = sock:send([$equals\[$stream_req\]$equals])
+                        local f = assert(io.open('$file', 'r'))
+                        local data = assert(f:read("*a"))
+                        assert(f:close())
+                        local bytes, err = sock:send(data)
                         if not bytes then
                             ngx.say("send stream request error: ", err)
                             return
@@ -262,6 +275,36 @@ sub get_best_long_bracket_level ($) {
     }
 
     die "failed to get the bets long bracket level\n";
+}
+
+sub quote_as_lua_str ($) {
+    my ($s) = @_;
+    $s =~ s/\\/\\\\/g;
+    $s =~ s/'/\\'/g;
+    $s =~ s/\r/\\r/g;
+    $s =~ s/\a/\\a/g;
+    $s =~ s/\t/\\t/g;
+    $s =~ s/\n/\\n/g;
+    $s =~ s/\f/\\f/g;
+    "'$s'";
+}
+
+sub gen_data_file ($) {
+    my $s = shift;
+    $counter++;
+    if (!-d 't/tmp') {
+        mkdir 't/tmp';
+    }
+    my $fname = "t/tmp/data$counter.txt";
+    open my $fh, ">$fname"
+        or die "cannot open $fname for writing: $!\n";
+    print $fh $s;
+    close $fh;
+    return $fname;
+}
+
+END {
+    system("rm -rf t/tmp");
 }
 
 1;
@@ -360,6 +403,11 @@ C<stream_server_config3>, the responses from all these stream servers are concat
 =head2 stream_response_like
 
 Specifies the regex pattern used to test the response data from the default stream servers.
+
+=head2 log_stream_response
+
+Print out the stream response to the nginx error log with the "info" level instead
+of sending it out to the stream client directly.
 
 =head1 AUTHOR
 
