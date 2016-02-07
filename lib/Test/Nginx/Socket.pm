@@ -1099,7 +1099,7 @@ sub check_error_log ($$$$) {
             if (defined $pat) {
                 SKIP: {
                     skip "$name - error_log - tests skipped due to $dry_run", 1 if $dry_run;
-                    fail("$name - pattern \"$pat\" matches a line in error.log (req $repeated_req_idx)");
+                    fail("$name - pattern \"$pat\" should match a line in error.log (req $repeated_req_idx)");
                     #die join("", @$lines);
                 }
             }
