@@ -2838,6 +2838,8 @@ An optional time unit can be specified, for example,
 
 Acceptable time units are C<s> (seconds) and C<ms> (milliseconds). If no time unit is specified, then default to seconds.
 
+Default to 3s.
+
 =head2 error_log_file
 
 Specify the global error log file for the current test block only.
