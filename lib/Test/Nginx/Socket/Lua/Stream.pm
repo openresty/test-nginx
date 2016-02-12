@@ -117,6 +117,7 @@ _EOC_
 
                     local data, err = sock:receive("*a")
                     if not data then
+                        sock:close()
                         ngx.say("receive stream response error: ", err)
                         return
                     end

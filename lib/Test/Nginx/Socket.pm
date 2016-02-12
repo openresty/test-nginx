@@ -3521,6 +3521,19 @@ to 1, it will also enforce the "master_process on" config line
 in the F<nginx.conf> file,
 because Nginx is buggy in processing HUP signal when the master process is off.
 
+=head2 TEST_NGINX_LOAD_MODULES
+
+This environment takes a list of dynamic NGINX module files' paths. The test scaffold generates
+a series of C<load_module> directives in the top-level scope of F<nginx.conf>.
+
+For example, when this environment takes the value C<../../work/nginx/modules/ngx_http_headers_more_filter_module.so ../../work/nginx/modules/ngx_http_lua_module.so >,
+then the following snippet will be generated in F<nginx.conf>:
+
+    load_module ../../work/nginx/modules/ngx_http_headers_more_filter_module.so;
+    load_module ../../work/nginx/modules/ngx_http_lua_module.so;
+
+This requires at least NGINX 1.9.11 to work.
+
 =head2 TEST_NGINX_POSTPONE_OUTPUT
 
 Defaults to empty. This environment takes positive integer numbers as its value and it will cause the auto-generated nginx.conf file to have a "postpone_output" setting in the http {} block.

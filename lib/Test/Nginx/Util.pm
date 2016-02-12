@@ -41,6 +41,8 @@ our $InSubprocess;
 our $RepeatEach = 1;
 our $MAX_PROCESSES = 10;
 
+our $LoadModules = $ENV{TEST_NGINX_LOAD_MODULES};
+
 our $NoShuffle = $ENV{TEST_NGINX_NO_SHUFFLE} || 0;
 
 our $UseValgrind = $ENV{TEST_NGINX_USE_VALGRIND};
@@ -794,6 +796,13 @@ sub write_config_file ($$) {
         $main_config = '';
     }
 
+    if ($LoadModules) {
+        my @modules = map { "load_module $_;" } grep { $_ } split /\s+/, $LoadModules;
+        if (@modules) {
+            $main_config .= join " ", @modules;
+        }
+    }
+
     $main_config = expand_env_in_config($main_config);
 
     if (!defined $post_main_config) {
@@ -935,14 +944,13 @@ sub get_canon_version (@) {
 sub get_nginx_version () {
     my $out = `$NginxBinary -V 2>&1`;
     if (!defined $out || $? != 0) {
-        warn "Failed to get the version of the Nginx in PATH.\n";
+        bail_out("Failed to get the version of the Nginx in PATH");
     }
     if ($out =~ m{(?:nginx|openresty)/(\d+)\.(\d+)\.(\d+)}s) {
         $NginxRawVersion = "$1.$2.$3";
         return get_canon_version($1, $2, $3);
     }
-    warn "Failed to parse the output of \"nginx -V\": $out\n";
-    return undef;
+    bail_out("Failed to parse the output of \"nginx -V\": $out\n");
 }
 
 sub get_pid_from_pidfile ($) {
@@ -2113,7 +2121,11 @@ request:
                 }
 
                 my $buf = '';
-                $udp_socket->recv($buf, 4096) or warn "udp recv failed: $!";
+                my $sender = $udp_socket->recv($buf, 4096);
+                #warn "sender: $sender";
+                if (!defined $sender) {
+                    warn "udp recv failed: $!";
+                }
 
                 if ($Verbose) {
                     warn "UDP server has got data: ", length $buf, "\n";
