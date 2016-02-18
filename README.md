@@ -122,6 +122,10 @@ as in
 
     [http://code.google.com/p/naxsi/](http://code.google.com/p/naxsi/)
 
+- ngx\_shibboleth
+
+    [https://github.com/nginx-shib/nginx-http-shibboleth](https://github.com/nginx-shib/nginx-http-shibboleth)
+
 # SOURCE REPOSITORY
 
 This module has a Git repository on Github, which has access for all.

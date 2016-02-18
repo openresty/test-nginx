@@ -137,6 +137,10 @@ L<https://github.com/FRiCKLE/ngx_coolkit>
 
 L<http://code.google.com/p/naxsi/>
 
+=item ngx_shibboleth
+
+L<https://github.com/nginx-shib/nginx-http-shibboleth>
+
 =back
 
 =head1 SOURCE REPOSITORY
