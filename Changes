@@ -1,5 +1,86 @@
 Changes for Test::Nginx
 
+0.25 - 2016-02-24
+
+ *   feature: added the new test mdoule, Test::Nginx::Socket::Lua::Stream,
+     for testing stream-typed NGINX C modules like ngx_stream_echo_module
+     and ngx_stream_lua_module.
+
+ *   feature: added new section "--- server_addr_for_client" to control
+     the value of server_addr for client. thanks Guanlan Dai for the patch.
+
+ *   feature: added support for the TEST_NGINX_LOAD_MODULES environment for
+     loading dynamic NGINX modules in nginx.conf globally.
+
+ *   feature: added support for ASAN by passing ASAN_OPTIONS environment
+     variable. thanks Markus Linnala for the patch.
+
+ *   feature: Test::Nginx::Socket::Lua: added support for
+     the init_by_lua_block {} directive of ngx_http_lua_module.
+
+ *   feature: avoided variations in the absolute line numbers of user
+     configurations so that the test cases can check nginx configuration
+     file line numbers deterministically.
+
+ *   feature: implemented the env_to_nginx() Perl utility function as per
+     Rollin Crittendon's request. for example:
+     env_to_nginx('foo', 'bar=hello world')
+
+ *   feature: now we pass the environment DYLD_FORCE_FLAT_NAMESPACE to the
+     nginx by default as well.
+
+ *   feature: implemented the "--- todo" section for TODOing test blocks.
+     thanks Markus Linnala for the patch.
+
+ *   feature: repeat_each() also returns the value even when it is used as
+     a setter.
+
+ *   bugfix: testing could not continue properly when the "--- must_die"
+     subtest failed.
+
+ *   bugfix: ARRAY-typed "--- more_headers" now work with ARRAY-typed
+     "--- request". thanks Kipras Mancevičius for the report.
+
+ *   bugfix: fixed the perl warning "Use of uninitialized value $val in
+     concatenation" when "--- more_headers" has headers without values.
+
+ *   bugfix: use SIGTERM to kill non-responsive nginx/valgrind processes
+     instead of SIGQUIT; otherwise the perl test process may hang forever
+     in valgrind testing mode.
+
+ *   bugfix: only complain about failures of removing the nginx pid file
+     when it still exists.
+
+ *   bugfix: we should bail out when `nginx -V` returns anything that we
+     cannot understand.
+
+ *   bugfix: builtin udp server: fixed recv() call's error handling.
+
+ *   bugfix: we did not expand environments TEST_NGINX_XXX in the
+     "--- main_config" and "--- post_main_config" data sections.
+
+ *   bugfix: better error handling in the mocked UDP server.
+
+ *   change: changed the default value of TEST_NGINX_SLEEP to 0.015 (sec).
+     thanks Dejiang Zhu for the patch.
+
+ *   improvement: output the system error message when failing to remove
+     the nginx pid file.
+
+ *   improvement: made the error_log test failure message clearer. thanks
+     Nick Muerdter for the patch.
+
+ *   doc: fixed the module description of Test::Nginx and
+     Test::Nginx::Socket to reflect recent changes.
+
+ *   doc: now we highly recommend Test::Nginx::Socket and its subclasses.
+
+ *   doc: documentged the default timeout value used by the client. thanks
+     Nick Muerdter for the patch.
+
+ *   doc: added a link to the official user guide in the book
+     "Programming OpenResty".
+
 0.24 - 2014-12-07
  *   feature: added support for the "benchmark" testing mode enabled
      by the TEST_NGINX_BENCHMARK environment variable.
