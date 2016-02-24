@@ -1,6 +1,6 @@
 package Test::Nginx::Socket::Lua::Stream;
 
-use 5.010001;
+use v5.10.1;
 use Test::Nginx::Socket::Lua -Base;
 use Test::Nginx::Util qw( $ServerPort $ServerAddr );
 
