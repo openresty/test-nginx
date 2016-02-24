@@ -2145,6 +2145,12 @@ This module will create a temporary server root under t/servroot/ of the current
 You will often want to look into F<t/servroot/logs/error.log>
 when things go wrong ;)
 
+=head2 User Guide
+
+You can find a comprehensive user guide on this test framework in my upcoming book "Programming OpenResty":
+
+L<https://openresty.gitbooks.io/programming-openresty/content/testing/index.html>
+
 =head2 Features inherited from L<Test::Base>
 
 All the features of L<Test::Base> are inherited since it is an ancestor

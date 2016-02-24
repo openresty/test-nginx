@@ -61,6 +61,12 @@ as in
 
     export TEST_NGINX_PORT=1989
 
+=head1 User Guide
+
+You can find a comprehensive user guide on this test framework in my upcoming book "Programming OpenResty":
+
+L<https://openresty.gitbooks.io/programming-openresty/content/testing/index.html>
+
 =head1 Nginx C modules that use Test::Nginx to drive their test suites
 
 =over

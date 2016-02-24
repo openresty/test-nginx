@@ -7,6 +7,7 @@ Table of Contents
 
 * [NAME](#name)
 * [DESCRIPTION](#description)
+* [User Guide](#user-guide)
 * [Nginx C modules that use Test::Nginx to drive their test suites](#nginx-c-modules-that-use-testnginx-to-drive-their-test-suites)
 * [SOURCE REPOSITORY](#source-repository)
 * [DEBIAN PACKAGES](#debian-packages)
@@ -47,6 +48,12 @@ port number by setting his port number to the `TEST_NGINX_PORT` environment,
 as in
 
     export TEST_NGINX_PORT=1989
+
+# User Guide
+
+You can find a comprehensive user guide on this test framework in my upcoming book "Programming OpenResty":
+
+[https://openresty.gitbooks.io/programming-openresty/content/testing/index.html](https://openresty.gitbooks.io/programming-openresty/content/testing/index.html)
 
 # Nginx C modules that use Test::Nginx to drive their test suites
 
@@ -125,6 +132,8 @@ as in
 - ngx\_shibboleth
 
     [https://github.com/nginx-shib/nginx-http-shibboleth](https://github.com/nginx-shib/nginx-http-shibboleth)
+
+[Back to TOC](#table-of-contents)
 
 # SOURCE REPOSITORY
 
