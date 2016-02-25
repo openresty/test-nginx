@@ -25,7 +25,6 @@ requires        ('File::Path' => '2.06_05');
 requires        ('List::MoreUtils');
 requires        ('List::Util');
 requires        ('Encode');
-requires        ('ExtUtils::MakeMaker');
 requires        ('File::Find');
 requires        ('IO::Socket::INET');
 
