@@ -37,3 +37,4 @@ Makefile.old
 .includepath
 MYMETA.json
 MYMETA.yml
+META.yml
