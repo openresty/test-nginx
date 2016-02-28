@@ -1271,16 +1271,16 @@ sub check_response_body ($$$$$$) {
         SKIP: {
             skip "$name - response_body - tests skipped due to $dry_run", 1 if $dry_run;
             if (ref $expected) {
-                like $content, $expected, "$name - response_body - like (req $repeated_req_idx)";
+                like $content, $expected, "$name - response_body - like (repeated req $repeated_req_idx, req $req_idx)";
 
             } else {
                 if ($NoLongString) {
                     is( $content, $expected,
-                        "$name - response_body - response is expected (req $repeated_req_idx)" );
+                        "$name - response_body - response is expected (repeated req $repeated_req_idx, req $req_idx)" );
                 }
                 else {
                     is_string( $content, $expected,
-                        "$name - response_body - response is expected (req $repeated_req_idx)" );
+                        "$name - response_body - response is expected (repeated req $repeated_req_idx, req $req_idx)" );
                 }
             }
         }
