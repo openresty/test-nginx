@@ -1145,6 +1145,9 @@ sub run_udp_server_tests ($$$) {
 
 sub run_test ($) {
     my $block = shift;
+
+    return if defined $block->SKIP;
+
     my $name = $block->name;
 
     my $first_time;
