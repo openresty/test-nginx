@@ -1,0 +1,17 @@
+sudo: required
+dist: trusty
+
+os: linux
+
+language: perl
+perl:
+  - "5.22"
+  - "5.20"
+  - "5.18"
+  - "5.16"
+  - "5.14"
+
+script:
+  - perl Makefile.PL
+  - make -j2 
+  - prove -lv t
