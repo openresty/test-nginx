@@ -89,7 +89,7 @@ L<http://wiki.nginx.org/NginxHttpMemcModule>
 
 =item ngx_drizzle
 
-L<https://github.com/chaoslawful/drizzle-nginx-module>
+L<https://github.com/openresty/drizzle-nginx-module>
 
 =item ngx_rds_json
 
@@ -109,7 +109,7 @@ L<https://github.com/openresty/srcache-nginx-module>
 
 =item ngx_lua
 
-L<https://github.com/chaoslawful/lua-nginx-module>
+L<https://github.com/openresty/lua-nginx-module>
 
 =item ngx_set_misc
 
@@ -141,7 +141,7 @@ L<https://github.com/FRiCKLE/ngx_coolkit>
 
 =item Naxsi
 
-L<http://code.google.com/p/naxsi/>
+L<https://github.com/nbs-system/naxsi>
 
 =item ngx_shibboleth
 

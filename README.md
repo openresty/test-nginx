@@ -75,7 +75,7 @@ You can find a comprehensive user guide on this test framework in my upcoming bo
 
 - ngx\_drizzle
 
-    [https://github.com/chaoslawful/drizzle-nginx-module](https://github.com/chaoslawful/drizzle-nginx-module)
+    [https://github.com/openresty/drizzle-nginx-module](https://github.com/openresty/drizzle-nginx-module)
 
 - ngx\_rds\_json
 
@@ -95,7 +95,7 @@ You can find a comprehensive user guide on this test framework in my upcoming bo
 
 - ngx\_lua
 
-    [https://github.com/chaoslawful/lua-nginx-module](https://github.com/chaoslawful/lua-nginx-module)
+    [https://github.com/openresty/lua-nginx-module](https://github.com/openresty/lua-nginx-module)
 
 - ngx\_set\_misc
 
@@ -127,7 +127,7 @@ You can find a comprehensive user guide on this test framework in my upcoming bo
 
 - Naxsi
 
-    [http://code.google.com/p/naxsi/](http://code.google.com/p/naxsi/)
+    [https://github.com/nbs-system/naxsi](https://github.com/nbs-system/naxsi)
 
 - ngx\_shibboleth
 
