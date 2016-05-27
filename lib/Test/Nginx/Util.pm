@@ -950,6 +950,10 @@ sub get_nginx_version () {
         $NginxRawVersion = "$1.$2.$3";
         return get_canon_version($1, $2, $3);
     }
+    if ($out =~ m{\w+/(\d+)\.(\d+)\.(\d+)}s) {
+        $NginxRawVersion = "$1.$2.$3";
+        return get_canon_version($1, $2, $3);
+    }
     bail_out("Failed to parse the output of \"nginx -V\": $out\n");
 }
 
