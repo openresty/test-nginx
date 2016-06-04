@@ -50,6 +50,7 @@ sub test_stap ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
+sub check_response_filters ($$$$$);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_ab_cmd_from_req ($$@);
@@ -732,6 +733,7 @@ again:
             check_error_code($block, $res, $dry_run, $req_idx, $need_array);
             check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
             check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
+            check_response_filters($block, $res, $dry_run, $req_idx, $need_array);
             check_response_body($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array);
         }
 
@@ -1224,6 +1226,25 @@ sub fmt_str ($) {
     $str =~ s/\r/\\r/g;
     $str =~ s/\n/\\n/g;
     $str;
+}
+
+sub check_response_filters ($$$$$) {
+    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+    my $name = $block->name;
+
+    if ( defined $block->response_body_filters )
+    {
+        my $content = $res ? $res->content : undef;
+        my $expected = get_indexed_value($name, $block->response_body_filters,
+                                            $req_idx, $need_array);
+
+        if (ref $expected && ref $expected eq 'CODE') {
+            my $filtered = &$expected($content);
+            $res->content($filtered) if $res;
+        } else {
+            warn "WARNING: --- response_body_filters only support subroutine reference.\n";
+        }
+    }
 }
 
 sub check_response_body ($$$$$$) {
@@ -2686,6 +2707,27 @@ will produce the following line (to C<stderr>) while running this test block:
 You need to remember to set the C<TEST_NGINX_NO_CLEAN> environment to 1 to prevent the nginx
 and other processes from quitting automatically upon test exits.
 
+=head2 response_body_filters
+
+Transform value for the body of the submitted request.
+
+    sub uppercase {
+        return uc $shift;
+    }
+    --- response_body_filters eval
+    \&main::uppercase
+    --- response_body
+    HELLO
+
+If the response_body_filters is a subroutine reference, it will be invoke, else ignore:
+
+    --- request eval
+    ["GET /hello", "GET /world", "GET /hello_world"]
+    --- response_body_filters eval
+    [\&main::uppercase, undef, \&main::uppercase]
+    --- response_body eval
+    ["HELLO", "world", "HELLO WORLD"]
+
 =head2 response_body
 
 The expected value for the body of the submitted request.
@@ -3005,7 +3047,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo: 
+    x-foo:
     --- http09
 
 =head2 ignore_response
