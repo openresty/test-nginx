@@ -1234,13 +1234,11 @@ sub check_response_filters ($$) {
     my $need_array = ref $block->response_body_filters
             && ref $block->response_body_filters eq 'ARRAY' ? 1 : 0;
 
-    if ( defined $block->response_body_filters )
-    {
+    if ( defined $block->response_body_filters ) {
         my $content = $res ? $res->content : undef;
         my $filters_len = $need_array ? scalar @{$block->response_body_filters} : 1;
 
-        for my $i (0 .. $filters_len - 1)
-        {
+        for my $i (0 .. $filters_len - 1) {
             my $filter = get_indexed_value($name, $block->response_body_filters,
                                             $i, $need_array);
             if (ref $filter && ref $filter eq 'CODE') {
@@ -3053,7 +3051,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo: 
+    x-foo:
     --- http09
 
 =head2 ignore_response
