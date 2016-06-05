@@ -50,7 +50,7 @@ sub test_stap ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
-sub check_response_filters ($$$$$);
+sub check_response_filters ($$);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_ab_cmd_from_req ($$@);
@@ -733,7 +733,7 @@ again:
             check_error_code($block, $res, $dry_run, $req_idx, $need_array);
             check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
             check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
-            check_response_filters($block, $res, $dry_run, $req_idx, $need_array);
+            check_response_filters($block, $res);
             check_response_body($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array);
         }
 
@@ -1228,21 +1228,27 @@ sub fmt_str ($) {
     $str;
 }
 
-sub check_response_filters ($$$$$) {
-    my ($block, $res, $dry_run, $req_idx, $need_array) = @_;
+sub check_response_filters ($$) {
+    my ($block, $res) = @_;
     my $name = $block->name;
+    my $need_array = ref $block->response_body_filters
+            && ref $block->response_body_filters eq 'ARRAY' ? 1 : 0;
 
     if ( defined $block->response_body_filters )
     {
         my $content = $res ? $res->content : undef;
-        my $expected = get_indexed_value($name, $block->response_body_filters,
-                                            $req_idx, $need_array);
+        my $filters_len = $need_array ? scalar @{$block->response_body_filters} : 1;
 
-        if (ref $expected && ref $expected eq 'CODE') {
-            my $filtered = &$expected($content);
-            $res->content($filtered) if $res;
-        } else {
-            warn "WARNING: --- response_body_filters only support subroutine reference.\n";
+        for my $i (0 .. $filters_len - 1)
+        {
+            my $filter = get_indexed_value($name, $block->response_body_filters,
+                                            $i, $need_array);
+            if (ref $filter && ref $filter eq 'CODE') {
+                my $filtered = $filter->($content);
+                $res->content($filtered) if $res;
+            } else {
+                warn "WARNING: --- response_body_filters only support subroutine reference.\n";
+            }
         }
     }
 }
@@ -2709,7 +2715,7 @@ and other processes from quitting automatically upon test exits.
 
 =head2 response_body_filters
 
-Transform value for the body of the submitted request.
+Transform value for the body of the response_body by the filters chain.
 
     sub uppercase {
         return uc $shift;
@@ -2719,14 +2725,14 @@ Transform value for the body of the submitted request.
     --- response_body
     HELLO
 
-If the response_body_filters is a subroutine reference, it will be invoke, else ignore:
+If the response_body_filters is a array, it will be applied the filters chain one by one for all the requests:
 
     --- request eval
-    ["GET /hello", "GET /world", "GET /hello_world"]
+    ["GET /hello"]
     --- response_body_filters eval
-    [\&main::uppercase, undef, \&main::uppercase]
+    [\&main::uppercase, \&main::reverse]
     --- response_body eval
-    ["HELLO", "world", "HELLO WORLD"]
+    ["OLLEH"]
 
 =head2 response_body
 
