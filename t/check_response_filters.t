@@ -1,14 +1,6 @@
 use lib 'lib';
 use Test::Nginx::Socket tests => 1;
 
-sub uppercase {
-	return uc shift;
-}
-
-sub lowercase {
-	return lc shift;
-}
-
 my @block_list = blocks();
 my $i = 0;  # Use $i to make copy/paste of tests easier.
 
@@ -22,6 +14,6 @@ __DATA__
 
 === response_body_filters: filter chain
 --- response_body_filters eval
-[\&main::uppercase, \&main::lowercase, \&main::uppercase]
+[\&CORE::uc, \&CORE::lc, \&CORE::uc]
 --- response_body_like eval
 "<TITLE>GOOGLE</TITLE>"
