@@ -14,6 +14,6 @@ __DATA__
 
 === response_body_filters: filter chain
 --- response_body_filters eval
-[\&CORE::uc, \&CORE::lc, \&CORE::uc]
+[\&CORE::uc, \&CORE::lc]
 --- response_body_like eval
-"<TITLE>GOOGLE</TITLE>"
+"<title>google</title>"
