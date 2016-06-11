@@ -3048,7 +3048,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo:
+    x-foo: 
     --- http09
 
 =head2 ignore_response
