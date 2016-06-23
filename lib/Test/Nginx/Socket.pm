@@ -2723,11 +2723,11 @@ Transform value for the body of the response_body by the a chain of filters.
 If the response_body_filters is a array, it will be applied a chain of filters one by one for all the requests:
 
     --- request eval
-    ["GET /hello"]
+    ["GET /hello", "GET /world"]
     --- response_body_filters eval
     [\&CORE::uc, \&CORE::lc]
     --- response_body eval
-    ["hello"]
+    ["hello", "world"]
 
 =head2 response_body
 
