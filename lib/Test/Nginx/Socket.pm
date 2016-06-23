@@ -50,6 +50,7 @@ sub test_stap ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
+sub check_response_filters ($$);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_ab_cmd_from_req ($$@);
@@ -732,6 +733,7 @@ again:
             check_error_code($block, $res, $dry_run, $req_idx, $need_array);
             check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
             check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
+            check_response_filters($block, $res);
             check_response_body($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array);
         }
 
@@ -1224,6 +1226,29 @@ sub fmt_str ($) {
     $str =~ s/\r/\\r/g;
     $str =~ s/\n/\\n/g;
     $str;
+}
+
+sub check_response_filters ($$) {
+    my ($block, $res) = @_;
+    my $name = $block->name;
+    my $need_array = ref $block->response_body_filters
+            && ref $block->response_body_filters eq 'ARRAY' ? 1 : 0;
+
+    if ( defined $block->response_body_filters ) {
+        my $content = $res ? $res->content : undef;
+        my $filters_len = $need_array ? scalar @{$block->response_body_filters} : 1;
+
+        for my $i (0 .. $filters_len - 1) {
+            my $filter = get_indexed_value($name, $block->response_body_filters,
+                                            $i, $need_array);
+            if (ref $filter && ref $filter eq 'CODE') {
+                my $filtered = $filter->($content);
+                $res->content($filtered) if $res;
+            } else {
+                warn "WARNING: --- response_body_filters only support subroutine reference.\n";
+            }
+        }
+    }
 }
 
 sub check_response_body ($$$$$$) {
@@ -2685,6 +2710,26 @@ will produce the following line (to C<stderr>) while running this test block:
 
 You need to remember to set the C<TEST_NGINX_NO_CLEAN> environment to 1 to prevent the nginx
 and other processes from quitting automatically upon test exits.
+
+=head2 response_body_filters
+
+will apply the filters to the actual response body data instead of the expected response body data.
+
+    --- request eval
+    "GET /hello"
+    --- response_body_filters eval
+    \&CORE::uc
+    --- response_body
+    HELLO
+
+If the response_body_filters is an array, it will be applied a chain of filters one by one for all the requests:
+
+    --- request eval
+    ["GET /hello", "GET /world"]
+    --- response_body_filters eval
+    [\&CORE::uc, \&CORE::lc]
+    --- response_body eval
+    ["hello", "world"]
 
 =head2 response_body
 
