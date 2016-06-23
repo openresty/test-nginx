@@ -1,5 +1,7 @@
 use lib 'lib';
-use Test::Nginx::Socket tests => 1;
+use Test::Nginx::Socket;
+
+plan tests => scalar blocks();
 
 sub uc {
     return uc(shift);
@@ -9,14 +11,18 @@ sub lc {
     return lc(shift);
 }
 
-my @block_list = blocks();
-my $i = 0;  # Use $i to make copy/paste of tests easier.
-
-my $html = "<html><head><title>Google</title></head><body>Search me...</body></html>";
-my $raw_res="HTTP/1.0 200 OK\r\nDate: Fri, 31 Dec 1999 23:59:59 GMT\r\nContent-Type: text/html\r\nContent-Length: ".length($html)."\r\n\r\n".$html;
-my ( $res, $raw_headers, $left ) = Test::Nginx::Socket::parse_response("name", $raw_res, 0);
-Test::Nginx::Socket::transform_response_body($block_list[$i], $res);
-Test::Nginx::Socket::check_response_body($block_list[$i], $res, undef, 0, 0, 0);
+for my $block (blocks) {
+    my $html = "<html><head><title>Google</title></head><body>Search me...</body></html>";
+    my $raw_res = "HTTP/1.0 200 OK\r\n"
+                . "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n"
+                . "Content-Type: text/html\r\n"
+                . "Content-Length: " . length($html)
+                . "\r\n\r\n$html";
+    my ($res, $raw_headers, $left) =
+        Test::Nginx::Socket::parse_response("name", $raw_res, 0);
+    Test::Nginx::Socket::transform_response_body($block, $res);
+    Test::Nginx::Socket::check_response_body($block, $res, undef, 0, 0, 0);
+}
 
 __DATA__
 
