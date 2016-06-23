@@ -1246,6 +1246,8 @@ sub transform_response_body ($$) {
         if (!ref $response_body_filters) {
             $response_body_filters =~ s/^\s+|\s+$//gs;
             $response_body_filters = [split /\s+/, $response_body_filters];
+        } elsif (ref $response_body_filters ne 'ARRAY') {
+            $response_body_filters = [$response_body_filters];
         }
 
         my $new = $content;
