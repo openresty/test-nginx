@@ -2713,14 +2713,16 @@ and other processes from quitting automatically upon test exits.
 
 =head2 response_body_filters
 
-Transform value for the body of the response_body by the a chain of filters.
+will apply the filters to the actual response body data instead of the expected response body data.
 
+    --- request eval
+    "GET /hello"
     --- response_body_filters eval
     \&CORE::uc
     --- response_body
     HELLO
 
-If the response_body_filters is a array, it will be applied a chain of filters one by one for all the requests:
+If the response_body_filters is an array, it will be applied a chain of filters one by one for all the requests:
 
     --- request eval
     ["GET /hello", "GET /world"]
