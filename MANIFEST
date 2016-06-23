@@ -33,5 +33,6 @@ t/apply_moves.t
 t/get_req_from_block.t
 t/parse_request.t
 t/check_response_body.t
+t/resp_body_filters.t
 lib/Test/Nginx/Socket/Lua.pm
 lib/Test/Nginx/Socket/Lua/Stream.pm

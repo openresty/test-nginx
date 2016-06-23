@@ -50,6 +50,7 @@ sub test_stap ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
+sub transform_response_body ($$);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_ab_cmd_from_req ($$@);
@@ -732,6 +733,7 @@ again:
             check_error_code($block, $res, $dry_run, $req_idx, $need_array);
             check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
             check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
+            transform_response_body($block, $res);
             check_response_body($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array);
         }
 
@@ -1224,6 +1226,30 @@ sub fmt_str ($) {
     $str =~ s/\r/\\r/g;
     $str =~ s/\n/\\n/g;
     $str;
+}
+
+sub transform_response_body ($$) {
+    my ($block, $res) = @_;
+    my $name = $block->name;
+    my $need_array = ref $block->response_body_filters
+            && ref $block->response_body_filters eq 'ARRAY' ? 1 : 0;
+
+    if ( defined $block->response_body_filters ) {
+        my $content = $res ? $res->content : undef;
+        my $filters_len = $need_array ? scalar @{$block->response_body_filters} : 1;
+
+        for my $i (0 .. $filters_len - 1) {
+            my $filter = get_indexed_value($name, $block->response_body_filters,
+                                            $i, $need_array);
+            if (ref $filter && ref $filter eq 'CODE') {
+                my $filtered = $filter->($content);
+                $res->content($filtered) if $res;
+            } else {
+                warn "WARNING: $name - the --- response_body_filters section ",
+                     "only supports subroutine reference values.\n";
+            }
+        }
+    }
 }
 
 sub check_response_body ($$$$$$) {
@@ -2685,6 +2711,41 @@ will produce the following line (to C<stderr>) while running this test block:
 
 You need to remember to set the C<TEST_NGINX_NO_CLEAN> environment to 1 to prevent the nginx
 and other processes from quitting automatically upon test exits.
+
+=head2 response_body_filters
+
+Transforms the value of the I<actual> response body data through the a series of filters, before being matched against the expected response body
+data specified by the C<response_body> or C<response_body_like> sections.
+
+Here is an example:
+
+    === TEST 1:
+    --- config
+        location = /t {
+            echo hello;
+        }
+    --- request
+        GET /t
+    --- response_body_filters eval
+    \&CORE::uc
+    --- response_body
+    HELLO
+
+If the response_body_filters value is an array reference, then the actual response body data will go through a chain of filters one by one:
+
+    === TEST 2:
+    --- config
+        location = /t {
+            echo hello;
+        }
+    --- request
+        GET /hello
+    --- response_body_filters eval
+    [\&CORE::uc, \&CORE::lc]
+    --- response_body
+    hello
+
+To reference builtin Perl functions like C<\&CORE::uc> and C<\&CORE::lc>, you need at least perl 5.16.
 
 =head2 response_body
 

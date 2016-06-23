@@ -13,5 +13,5 @@ perl:
 
 script:
   - perl Makefile.PL
-  - make -j2 
+  - make -j2
   - prove -lv t

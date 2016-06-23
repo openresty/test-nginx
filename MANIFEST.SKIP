@@ -37,3 +37,4 @@ genmobi\.sh$
 \.tags$
 \.sh$
 \.pdf$
+^\.travis\.yml$
