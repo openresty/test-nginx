@@ -16,6 +16,8 @@ use List::MoreUtils qw( any );
 use List::Util qw( sum );
 use IO::Select ();
 use File::Temp qw( tempfile );
+use Digest::MD5 ();
+use Digest::SHA ();
 use POSIX ":sys_wait_h";
 
 use Test::Nginx::Util;
@@ -1230,24 +1232,58 @@ sub fmt_str ($) {
 
 sub transform_response_body ($$) {
     my ($block, $res) = @_;
+
+    return unless defined $res;
+
+    my $content = $res->content;
+    return unless defined $content;
+
     my $name = $block->name;
-    my $need_array = ref $block->response_body_filters
-            && ref $block->response_body_filters eq 'ARRAY' ? 1 : 0;
 
-    if ( defined $block->response_body_filters ) {
-        my $content = $res ? $res->content : undef;
-        my $filters_len = $need_array ? scalar @{$block->response_body_filters} : 1;
+    my $response_body_filters = $block->response_body_filters;
 
-        for my $i (0 .. $filters_len - 1) {
-            my $filter = get_indexed_value($name, $block->response_body_filters,
-                                            $i, $need_array);
+    if (defined $response_body_filters) {
+        if (!ref $response_body_filters) {
+            $response_body_filters =~ s/^\s+|\s+$//gs;
+            $response_body_filters = [split /\s+/, $response_body_filters];
+        }
+
+        my $new = $content;
+
+        for my $filter (@$response_body_filters) {
             if (ref $filter && ref $filter eq 'CODE') {
-                my $filtered = $filter->($content);
-                $res->content($filtered) if $res;
+                $new = $filter->($new);
+
+            } elsif (!ref $filter) {
+                for ($filter) {
+                    if ($_ eq 'md5_hex') {
+                        $new = Digest::MD5::md5_hex($new);
+                    } elsif ($_ eq 'sha1_hex') {
+                        $new = Digest::SHA::sha1_hex($new);
+                    } elsif ($_ eq 'uc') {
+                        $new = uc($new);
+                    } elsif ($_ eq 'lc') {
+                        $new = lc($new);
+                    } elsif ($_ eq 'ucfirst') {
+                        $new = ucfirst($new);
+                    } elsif ($_ eq 'lcfirst') {
+                        $new = lcfirst($new);
+                    } elsif ($_ eq 'length') {
+                        $new = length($new);
+                    } else {
+                        bail_out("$name - unknown filter, \"$filter\", "
+                                 . "specified in the --- response_body_filters section");
+                    }
+                }
+
             } else {
-                warn "WARNING: $name - the --- response_body_filters section ",
-                     "only supports subroutine reference values.\n";
+                bail_out("$name - the --- response_body_filters section "
+                         . "only supports subroutine reference values and string values.\n");
             }
+        }
+
+        if ($new ne $content) {
+            $res->content($new);
         }
     }
 }
@@ -2714,10 +2750,51 @@ and other processes from quitting automatically upon test exits.
 
 =head2 response_body_filters
 
-Transforms the value of the I<actual> response body data through the a series of filters, before being matched against the expected response body
+Transforms the value of the I<actual> response body data through a series of filters, before being matched against the expected response body
 data specified by the C<response_body> or C<response_body_like> sections.
 
+The filters can be specified either as names (for builtin filters) or as arbitrary Perl subroutine references.
+
+The following builtin filter names are supported:
+
+=over
+
+=item md5_hex
+
+=item sha1_hex
+
+=item length
+
+=item uc
+
+=item lc
+
+=item ucfirst
+
+=item lcfirst
+
+=back
+
+Their meanings are self-explanatory.
+
 Here is an example:
+
+    === TEST 1:
+    --- config
+        location = /t {
+            echo hello;
+        }
+    --- request
+        GET /t
+    --- response_body_filters
+    uc
+    --- response_body
+    HELLO
+
+Here the actual response body data, C<hello>, will go through the fitler, C<uc>, to become all-upper-case, before getting matched
+against the expected pattern specified by the C<response_body> section, C<HELLO>.
+
+The example above can be rewritten by using raw Perl subroutine reference values:
 
     === TEST 1:
     --- config
@@ -2731,7 +2808,24 @@ Here is an example:
     --- response_body
     HELLO
 
-If the response_body_filters value is an array reference, then the actual response body data will go through a chain of filters one by one:
+To reference builtin Perl functions like C<\&CORE::uc> and C<\&CORE::lc>, you need at least perl 5.16.
+
+Multiple builtin filter names can be specified at the same time and they will be applied in order. For example,
+
+    === TEST 2:
+    --- config
+        location = /t {
+            echo hello;
+        }
+    --- request
+        GET /hello
+    --- response_body_filters
+    uc lc
+    --- response_body
+    hello
+
+If the response_body_filters value can also be an array reference, mostly useful for specifying multiple Perl subroutine
+references as the filters:
 
     === TEST 2:
     --- config
@@ -2744,8 +2838,6 @@ If the response_body_filters value is an array reference, then the actual respon
     [\&CORE::uc, \&CORE::lc]
     --- response_body
     hello
-
-To reference builtin Perl functions like C<\&CORE::uc> and C<\&CORE::lc>, you need at least perl 5.16.
 
 =head2 response_body
 
