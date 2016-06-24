@@ -2470,6 +2470,100 @@ For example,
         # initialize external dependencies like memcached services here...
     });
 
+We can leverage this feature to specify a default value for one or more sections in a single test file. For instance,
+
+    use Test::Nginx::Socket 'no_plan';
+
+    add_block_preprocessor(sub {
+	my $block = shift;
+
+	if (!defined $block->config) {
+	    $block->set_value("config", <<'_END_');
+    location = /t {
+	echo $arg_a;
+    }
+    _END_
+	}
+    });
+
+    run_tests();
+
+    __DATA__
+
+    === TEST 1:
+    --- request
+	GET /t?a=3
+    --- response_body
+    3
+
+
+
+    === TEST 2:
+    --- request
+	GET /t?a=blah
+    --- response_body
+    blah
+
+
+
+    === TEST 3:
+    --- config
+        location = /t {
+	    echo ok;
+	}
+    --- request
+	GET /t?a=blah
+    --- response_body
+    ok
+
+Here all the test blocks in this file have a default C<--- config> section configured. Some of the test blocks can still
+specify its own C<--- config> section to override the default, as in the `TEST 3` test block above.
+
+You can also make the defaults applicable to all the test files. Just create a subclass of L<Test::Nginx::Socket> (or one of its
+subclasses like L<Test::Nginx::Socket::Lua>, as in,
+
+    package t::MyTester;
+
+    use Test::Nginx::Socket -Base;
+
+    add_block_preprocessor(sub {
+	my $block = shift;
+
+	if (!defined $block->config) {
+	    $block->set_value("config", <<'_END_');
+    location = /t {
+	echo $arg_a;
+    }
+    _END_
+	}
+    });
+
+    1;
+
+Save this as file F<t/MyTester.pm>. And then in one of your test file:
+
+    use t::MyTester 'no_plan';
+
+    run_tests();
+
+    __DATA__
+
+    === TEST 1:
+    --- request
+	GET /t?a=3
+    --- response_body
+    3
+
+
+
+    === TEST 2:
+    --- request
+	GET /t?a=blah
+    --- response_body
+    blah
+
+You can do the same with the C<--- http_config> section, or even inventing your own new sections. This is very powerful.
+
 =head2 add_response_body_check
 
 Add custom checks for testing response bodies by specifying a Perl subroutine object as the argument.
