@@ -1155,7 +1155,7 @@ sub check_error_log ($$$$) {
                     }
 
                     SKIP: {
-                        skip "$name - no_error_log - tests skipped due to $dry_run", 1 if $dry_run;
+                        skip "$name - no_error_log - tests skipped due to $dry_run ($line)", 1 if $dry_run;
                         my $ln = fmt_str($line);
                         my $p = fmt_str($pat);
                         fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\" (req $repeated_req_idx)");
