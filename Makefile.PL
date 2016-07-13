@@ -21,7 +21,6 @@ requires        ('URI::Escape');
 requires        ('IO::Select');
 requires        ('File::Path');
 requires        ('File::Temp');
-requires        ('File::Path' => '2.06_05');
 requires        ('List::MoreUtils');
 requires        ('List::Util');
 requires        ('Encode');
