@@ -35,6 +35,10 @@ L<Test::Nginx::Socket::Lua>
 
 L<Test::Nginx::Socket::Lua::Stream>
 
+=item *
+
+L<Test::Nginx::Socket::Lua::Dgram>
+
 =back
 
 =item *

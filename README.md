@@ -28,6 +28,7 @@ This distribution provides two testing modules for Nginx C module development:
 
     - [Test::Nginx::Socket::Lua](https://metacpan.org/pod/Test::Nginx::Socket::Lua)
     - [Test::Nginx::Socket::Lua::Stream](https://metacpan.org/pod/Test::Nginx::Socket::Lua::Stream)
+    - [Test::Nginx::Socket::Lua::Dgram](https://metacpan.org/pod/Test::Nginx::Socket::Lua::Dgram)
 
 - [Test::Nginx::LWP](https://metacpan.org/pod/Test::Nginx::LWP) (This is obsolete.)
 
