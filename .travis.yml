@@ -3,6 +3,11 @@ dist: trusty
 
 os: linux
 
+addons:
+  apt:
+    packages:
+    - cpanminus
+
 language: perl
 perl:
   - "5.22"
@@ -11,7 +16,11 @@ perl:
   - "5.16"
   - "5.14"
 
+env:
+  global:
+    - JOBS=3
+
 script:
-  - perl Makefile.PL
-  - make -j2
-  - prove -lv t
+  - sudo perl Makefile.PL
+  - make -j$(JOBS)
+  - prove -r t
