@@ -21,6 +21,6 @@ env:
     - JOBS=3
 
 script:
-  - sudo perl Makefile.PL
+  - perl Makefile.PL
   - make -j$(JOBS)
-  - prove -r t
+  - make test
