@@ -26,7 +26,6 @@ requires        ('List::Util');
 requires        ('Encode');
 requires        ('File::Find');
 requires        ('IO::Socket::INET');
-requires        ('File::Copy::Recursive');
 
 use_test_base();
 auto_install();

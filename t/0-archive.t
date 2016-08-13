@@ -10,6 +10,7 @@ use Test::Nginx::Socket;
 use File::Path 'remove_tree';
 use File::Spec::Functions 'catfile';
 
+plan skip_all => "nginx is required but not found" if system('nginx -h >/dev/null 2>&1') != 0;
 repeat_each(2);
 plan tests => 8 * blocks();
 
@@ -28,7 +29,7 @@ __DATA__
 
 --- response_body eval
 ["", ""]
-=== TEST 2: each test block has its own output
+=== TEST 1: create files to be archived
 --- config
     location /t {
         return 200;

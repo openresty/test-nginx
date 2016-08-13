@@ -716,7 +716,9 @@ again:
             } else {
                 ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
             }
-            Test::Nginx::Util::write_response($res);
+            if ($Test::Nginx::Util::ArchivePath) {
+                Test::Nginx::Util::write_response($block, $res);
+            }
         }
 
         if (!$n) {
@@ -3255,7 +3257,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo:
+    x-foo: 
     --- http09
 
 =head2 ignore_response
@@ -3923,15 +3925,15 @@ all logs into a single file that is never cleaned up by Test::Nginx.
 
 =head2 TEST_NGINX_ARCHIVE_PATH
 
-Archive files and output of test blocks, which start up nginx server and
-run to completion, to specific path.
+Archive nginx configure, nginx logs, and http response output to specific path
+for test blocks start up nginx server and run to completion.
 
 For example,
 
-    $ TEST_NGINX_ARCHIVE_PATH=t/archive prove -lv t
+    $ TEST_NGINX_ARCHIVE_PATH=t/archive prove -r t
     ...
     $ ls t/archive
-    t.0-archive.TEST_1:_create_files_to_be_archived        t.0-archive.TEST_2:_each_test_block_has_its_own_output
+    t.0-archive.TEST_1_create_files_to_be_archived        t.0-archive.TEST_2_each_test_block_has_its_own_output
 
 =head2 Valgrind Integration
 

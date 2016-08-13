@@ -2,13 +2,15 @@
 BEGIN {
     $ENV{TEST_NGINX_ARCHIVE_PATH} = 't/servroot';
 }
-use Test::Nginx::Socket;
+
+use Test::More;
 use File::Spec::Functions 'catfile';
 
+plan skip_all => "nginx is required but not found" if system('nginx -h >/dev/null 2>&1') != 0;
 plan tests => 5;
 
 my $archive = catfile($ENV{TEST_NGINX_ARCHIVE_PATH},
-    't.0-archive.TEST_1:_create_files_to_be_archived');
+    't.0-archive.TEST_1_create_files_to_be_archived');
 ok(-f catfile($archive, 'logs', 'error.log'), 'Archive error.log');
 ok(-f catfile($archive, 'logs', 'access.log'), 'Archive access.log');
 ok(-f catfile($archive, 'conf', 'nginx.conf'), 'Archive nginx.conf');
@@ -23,8 +25,8 @@ sub count_occurrence_in_file($$) {
 }
 
 my $filename = catfile($archive, 'output');
-is(count_occurrence_in_file($filename, "200 OK"), 4, "Archive output for TEST 1");
+is(count_occurrence_in_file($filename, "200 OK"), 4, "Archive output");
 $archive = catfile($ENV{TEST_NGINX_ARCHIVE_PATH},
-    't.0-archive.TEST_2:_each_test_block_has_its_own_output');
+    't.0-archive.TEST_1_create_files_to_be_archived.1');
 $filename = catfile($archive, 'output');
-is(count_occurrence_in_file($filename, "200 OK"), 4, "Archive output for TEST 2");
+is(count_occurrence_in_file($filename, "200 OK"), 4, "Archive output for test with same name");

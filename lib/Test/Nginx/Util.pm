@@ -16,7 +16,6 @@ use Time::HiRes qw( sleep );
 use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile :POSIX );
-use File::Copy::Recursive 'dircopy';
 use Scalar::Util qw( looks_like_number );
 use IO::Socket::INET;
 use IO::Socket::UNIX;
@@ -43,8 +42,6 @@ our $RepeatEach = 1;
 our $MAX_PROCESSES = 10;
 
 our $ArchivePath = $ENV{TEST_NGINX_ARCHIVE_PATH};
-our $CurrentTestName = undef;
-our $CurrentOutput = '';
 
 our $LoadModules = $ENV{TEST_NGINX_LOAD_MODULES};
 
@@ -1675,8 +1672,6 @@ start_nginx:
                 }
             }
 
-            $CurrentTestName = $name;
-            $CurrentOutput = '';
             if ($Profiling || $UseValgrind || $UseStap) {
                 my $pid = fork();
 
@@ -1785,6 +1780,12 @@ RUN_AGAIN:
 
 request:
 
+    if ($ArchivePath) {
+        if (defined $block->http_response_output) {
+            bail_out "$name: http_response_output field is existed\n";
+        }
+        $block->set_value("http_response_output", '');
+    }
     if ($Verbose) {
         warn "preparing requesting...\n";
     }
@@ -2345,8 +2346,8 @@ retry:
         }
     }
 
-    return if !($ArchivePath && $CurrentTestName);
-    archive_files($CurrentTestName, $ServRoot);
+    return if !($ArchivePath && $block->name);
+    archive_files($ServRoot, $block);
 }
 
 END {
@@ -2391,32 +2392,53 @@ END {
 
 sub map_test_name_to_path($$) {
     my ($archive_path, $name) = @_;
-    # convert t/archive.t "TEST 1: hello world" to t.archive.TEST_1:_hello_world
+    # convert t/archive.t "TEST 1: hello world" to t.archive.TEST_1_hello_world
     (my $file = $0) =~ s/\.[^.]+$/\./;
     $file =~ s/\//\./g;
     $name =~ s/\s/_/g;
-    return File::Spec->catfile($archive_path, $file.$name);
+    $name =~ s/://g;
+    my $dest = File::Spec->catfile($archive_path, $file.$name);
+    if (-d $dest) {
+        my $order = 1;
+        my $dest_with_suffix = $dest.'.'.$order;
+        while (-d $dest_with_suffix) {
+            $order += 1;
+            $dest_with_suffix = $dest.'.'.$order;
+        }
+        return $dest_with_suffix;
+    }
+    return $dest;
 }
 
-sub archive_files($$$) {
-    my ($name, $src) = @_;
+sub archive_files($$) {
+    my ($src, $block) = @_;
+    return if ! -d $src;
+
+    my $name = $block->name;
     my $dest = map_test_name_to_path($ArchivePath, $name);
-    dircopy($src, $dest) or warn "$name: Archive files failed: $!\n";
-
-    return if !$CurrentOutput;
-    my $out_file = File::Spec->catfile($dest, 'output');
-    if (open my $out, ">$out_file") {
-        print $out $CurrentOutput;
-        close $out;
+    if (! -d $ArchivePath) {
+        make_path($ArchivePath) or
+            bail_out "$name: Cannot create directory $ArchivePath: $!\n";
     }
-    else {
-        warn  "$name: Can't open $out_file for writing: $!\n";
+    system("cp -R $src $dest") == 0 or
+        bail_out "$name: Archive files failed: $!\n";
+
+    return if ! defined $block->http_response_output;
+    my $out_file = File::Spec->catfile($dest, 'output');
+    if (open my $out, ">>$out_file") {
+        print $out $block->http_response_output;
+        close $out;
+    } else {
+        bail_out  "$name: Can't open $out_file for writing: $!\n";
     }
 }
 
-sub write_response($) {
-    my $resp = shift;
-    $CurrentOutput .= $resp->as_string . "\n";
+sub write_response($$) {
+    my ($block, $resp) = @_;
+    if (defined $block->http_response_output) {
+        my $out = $block->http_response_output;
+        $block->set_value('http_response_output', $out.$resp->as_string."\n");
+    }
 }
 
 # check if we can run some command
