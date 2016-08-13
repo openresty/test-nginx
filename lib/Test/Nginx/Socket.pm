@@ -716,6 +716,7 @@ again:
             } else {
                 ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
             }
+            Test::Nginx::Util::write_response($res);
         }
 
         if (!$n) {
@@ -3254,7 +3255,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo: 
+    x-foo:
     --- http09
 
 =head2 ignore_response
@@ -3919,6 +3920,18 @@ cycle for C<nginx>. All logs are removed before each restart, so you can
 only see the logs for the last test run (which you usually do not control
 except if you set C<TEST_NGINX_NO_SHUFFLE=1>). With this, you accumulate
 all logs into a single file that is never cleaned up by Test::Nginx.
+
+=head2 TEST_NGINX_ARCHIVE_PATH
+
+Archive files and output of test blocks, which start up nginx server and
+run to completion, to specific path.
+
+For example,
+
+    $ TEST_NGINX_ARCHIVE_PATH=t/archive prove -lv t
+    ...
+    $ ls t/archive
+    t.0-archive.TEST_1:_create_files_to_be_archived        t.0-archive.TEST_2:_each_test_block_has_its_own_output
 
 =head2 Valgrind Integration
 

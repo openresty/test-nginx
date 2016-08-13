@@ -16,6 +16,7 @@ use Time::HiRes qw( sleep );
 use File::Path qw(make_path);
 use File::Find qw(find);
 use File::Temp qw( tempfile :POSIX );
+use File::Copy::Recursive 'dircopy';
 use Scalar::Util qw( looks_like_number );
 use IO::Socket::INET;
 use IO::Socket::UNIX;
@@ -40,6 +41,10 @@ our $Profiling = 0;
 our $InSubprocess;
 our $RepeatEach = 1;
 our $MAX_PROCESSES = 10;
+
+our $ArchivePath = $ENV{TEST_NGINX_ARCHIVE_PATH};
+our $CurrentTestName = undef;
+our $CurrentOutput = '';
 
 our $LoadModules = $ENV{TEST_NGINX_LOAD_MODULES};
 
@@ -1670,6 +1675,8 @@ start_nginx:
                 }
             }
 
+            $CurrentTestName = $name;
+            $CurrentOutput = '';
             if ($Profiling || $UseValgrind || $UseStap) {
                 my $pid = fork();
 
@@ -2337,6 +2344,9 @@ retry:
             #warn "pid file not found";
         }
     }
+
+    return if !($ArchivePath && $CurrentTestName);
+    archive_files($CurrentTestName, $ServRoot);
 }
 
 END {
@@ -2377,6 +2387,36 @@ END {
             }
         }
     }
+}
+
+sub map_test_name_to_path($$) {
+    my ($archive_path, $name) = @_;
+    # convert t/archive.t "TEST 1: hello world" to t.archive.TEST_1:_hello_world
+    (my $file = $0) =~ s/\.[^.]+$/\./;
+    $file =~ s/\//\./g;
+    $name =~ s/\s/_/g;
+    return File::Spec->catfile($archive_path, $file.$name);
+}
+
+sub archive_files($$$) {
+    my ($name, $src) = @_;
+    my $dest = map_test_name_to_path($ArchivePath, $name);
+    dircopy($src, $dest) or warn "$name: Archive files failed: $!\n";
+
+    return if !$CurrentOutput;
+    my $out_file = File::Spec->catfile($dest, 'output');
+    if (open my $out, ">$out_file") {
+        print $out $CurrentOutput;
+        close $out;
+    }
+    else {
+        warn  "$name: Can't open $out_file for writing: $!\n";
+    }
+}
+
+sub write_response($) {
+    my $resp = shift;
+    $CurrentOutput .= $resp->as_string . "\n";
 }
 
 # check if we can run some command
