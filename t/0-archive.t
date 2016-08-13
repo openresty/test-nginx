@@ -1,8 +1,14 @@
 # Unit test for TEST_NGINX_ARCHIVE_PATH
+use Cwd qw(cwd);
+BEGIN {
+    my $pwd = cwd();
+    $ENV{TEST_NGINX_ARCHIVE_PATH} = 't/servroot';
+    $ENV{TEST_NGINX_SERVROOT} = "$pwd/t/archive";
+}
+
 use Test::Nginx::Socket;
 use File::Path 'remove_tree';
 use File::Spec::Functions 'catfile';
-use Cwd qw(cwd);
 
 repeat_each(2);
 plan tests => 8 * blocks();

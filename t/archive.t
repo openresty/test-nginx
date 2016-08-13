@@ -1,4 +1,7 @@
 # Unit test for TEST_NGINX_ARCHIVE_PATH, requires 0-archive.t runs ahead
+BEGIN {
+    $ENV{TEST_NGINX_ARCHIVE_PATH} = 't/servroot';
+}
 use Test::Nginx::Socket;
 use File::Spec::Functions 'catfile';
 

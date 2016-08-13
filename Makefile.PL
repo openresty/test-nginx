@@ -31,8 +31,7 @@ requires        ('File::Copy::Recursive');
 use_test_base();
 auto_install();
 
-tests('t/apply_moves.t t/check_response_body.t t/get_req_from_block.t
-t/parse_request.t t/pod-coverage.t t/pod.t t/resp_body_filters.t t/syntax.t');
+#tests('t/*.t t/*/*.t');
 
 WriteAll();
 

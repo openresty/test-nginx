@@ -25,5 +25,3 @@ script:
   - perl Makefile.PL
   - make -j$(JOBS)
   - make test
-  - rm -rf t/archive t/servroot
-  - TEST_NGINX_ARCHIVE_PATH=t/servroot TEST_NGINX_SERVROOT=$(pwd)/t/archive prove -lv t/0-archive.t t/archive.t
