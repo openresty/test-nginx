@@ -101,10 +101,9 @@ _EOC_
 _EOC_
         } else {
             $new_http_server_config .= <<_EOC_;
-                        sock:send('trigger dgram req')
+                    sock:send('trigger dgram req')
 _EOC_
         }
-
 
         if (defined $block->abort) {
             my $timeout = Test::Nginx::Util::parse_time($block->timeout)
@@ -123,13 +122,13 @@ _EOC_
             || defined $block->dgram_response
             || defined $block->dgram_response_like)
         {
-          $new_http_server_config .= <<_EOC_;
-              local data, err = sock:receive()
-              if not data then
-                sock:close()
-                ngx.say("receive stream response error: ", err)
-                return
-              end
+            $new_http_server_config .= <<_EOC_;
+                    local data, err = sock:receive()
+                    if not data then
+                      	sock:close()
+                      	ngx.say("receive stream response error: ", err)
+                      	return
+                    end
 _EOC_
             if (defined $block->log_dgram_response) {
                 $new_http_server_config .= <<_EOC_;
@@ -168,7 +167,7 @@ _EOC_
             }
 
             $new_http_server_config .= <<_EOC_;
-                        sock:send('trigger_dgram_req2')
+                    sock:send('trigger_dgram_req2')
 _EOC_
 
             if (defined $block->response_body
@@ -176,14 +175,14 @@ _EOC_
                 || defined $block->dgram_response
                 || defined $block->dgram_response_like)
             {
-              $new_http_server_config .= <<_EOC_;
-                  local data, err = sock:receive()
-                  if not data then
-                    sock:close()
-                    ngx.say("receive stream response error: ", err)
-                    return
-                  end
-                  ngx.print(data)
+                $new_http_server_config .= <<_EOC_;
+                    local data, err = sock:receive()
+                    if not data then
+                        sock:close()
+                        ngx.say("receive stream response error: ", err)
+                        return
+                    end
+                    ngx.print(data)
 _EOC_
             }
         }
@@ -201,24 +200,24 @@ _EOC_
             if (defined $dgram_req3) {
                 my $file = gen_data_file($dgram_req3);
                 $new_http_server_config .= <<_EOC_;
-                        local f = assert(io.open('$file', 'r'))
-                        local data = assert(f:read("*a"))
-                        assert(f:close())
-                        local bytes, err = sock:send(data)
-                        if not bytes then
-                            ngx.say("send stream request error: ", err)
-                            return
-                        end
+                    local f = assert(io.open('$file', 'r'))
+                    local data = assert(f:read("*a"))
+                    assert(f:close())
+                    local bytes, err = sock:send(data)
+                    if not bytes then
+                        ngx.say("send stream request error: ", err)
+                        return
+                    end
 _EOC_
             }
 
             $new_http_server_config .= <<_EOC_;
-                        sock:send('trigger_dgram_req3')
-                        local data, err = sock:receive()
-                        if not data then
-                            ngx.say("receive stream response error: ", err)
-                            return
-                        end
+                    sock:send('trigger_dgram_req3')
+                    local data, err = sock:receive()
+                    if not data then
+                        ngx.say("receive stream response error: ", err)
+                        return
+                    end
 _EOC_
 
             if (defined $block->response_body
@@ -227,13 +226,13 @@ _EOC_
                 || defined $block->dgram_response_like)
             {
                 $new_http_server_config .= <<_EOC_;
-                        local data, err = sock:receive()
-                        if not data then
-                          sock:close()
-                          ngx.say("receive stream response error: ", err)
-                          return
-                        end
-                        ngx.print(data)
+                    local data, err = sock:receive()
+                    if not data then
+                        sock:close()
+                        ngx.say("receive stream response error: ", err)
+                        return
+                    end
+                    ngx.print(data)
 _EOC_
             }
         }
