@@ -3602,7 +3602,24 @@ Just like C<udp_reply_delay>, but for the embedded TCP server.
 
 =head2 tcp_reply
 
-Just like C<tcp_reply>, but for the embedded TCP server.
+Just like C<udp_reply>, but for the embedded TCP server.
+
+Like the C<udp_reply> section, this section also accepts a Perl subroutine value
+that can be used to generate dynamic response packet or packets based on the actual query, for example:
+
+    --- tcp_reply eval
+    sub {
+        my $req = shift;
+        return "hello, $req";
+    }
+
+The custom Perl subroutine can also return an array reference, for example,
+
+    --- tcp_reply eval
+    sub {
+        my $req = shift;
+        return ["hello, $req", "hiya, $req"];
+    }
 
 =head2 tcp_query
 
