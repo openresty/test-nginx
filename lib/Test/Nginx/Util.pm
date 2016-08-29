@@ -1945,12 +1945,12 @@ request:
                     }
                 }
 
+                my $buf;
+
                 unless ($no_read) {
                     if ($Verbose) {
                         warn "TCP server reading request...\n";
                     }
-
-                    my $buf;
 
                     while (1) {
                         my $b;
@@ -2003,7 +2003,17 @@ request:
                             warn "TCP server writing reply...\n";
                         }
 
+                        my $ref = ref $reply;
+                        if ($ref && $ref eq 'CODE') {
+                            $reply = $reply->($buf);
+                            $ref = ref $reply;
+                        }
+
                         if (ref $reply) {
+                            if ($ref ne 'ARRAY') {
+                                bail_out('bad --- tcp_reply value');
+                            }
+
                             for my $r (@$reply) {
                                 if ($Verbose) {
                                     warn "sending reply $r";
