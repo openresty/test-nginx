@@ -3526,7 +3526,7 @@ An array value can be specified to make the embedded UDP server to send multiple
     [ "hello", "world" ]
 
 This section also accepts a Perl subroutine value that can be used to
-generate dynamic response packet or packets based on the actualactual query, for example:
+generate dynamic response packet or packets based on the actual query, for example:
 
     --- udp_reply eval
     sub {
