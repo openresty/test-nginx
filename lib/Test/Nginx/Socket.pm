@@ -46,13 +46,14 @@ our $PrevNginxPid;
 
 sub send_request ($$$$@);
 
+sub run_filter_helper($$$);
 sub run_test_helper ($$);
 sub test_stap ($$);
 
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
-sub transform_response_body ($$);
+sub transform_response_body ($$$$);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_ab_cmd_from_req ($$@);
@@ -520,6 +521,45 @@ sub quote_sh_args ($) {
     return "@$args";
 }
 
+sub run_filter_helper($$$) {
+    my ($block, $filter, $content) = @_;
+
+    my $name = $block->name;
+
+    if (ref $filter && ref $filter eq 'CODE') {
+        $content = $filter->($content);
+
+    } elsif (!ref $filter) {
+
+        for ($filter) {
+            if ($_ eq 'md5_hex') {
+                $content = Digest::MD5::md5_hex($content);
+            } elsif ($_ eq 'sha1_hex') {
+                $content = Digest::SHA::sha1_hex($content);
+            } elsif ($_ eq 'uc') {
+                $content = uc($content);
+            } elsif ($_ eq 'lc') {
+                $content = lc($content);
+            } elsif ($_ eq 'ucfirst') {
+                $content = ucfirst($content);
+            } elsif ($_ eq 'lcfirst') {
+                $content = lcfirst($content);
+            } elsif ($_ eq 'length') {
+                $content = length($content);
+            } else {
+                bail_out("$name - unknown filter, \"$filter\", "
+                         . "specified in the --- response_body_filters section");
+            }
+        }
+
+    } else {
+        bail_out("$name - the --- response_body_filters section "
+                 . "only supports subroutine reference values and string values.\n");
+    }
+
+    return $content;
+}
+
 sub run_test_helper ($$) {
     my ($block, $dry_run, $repeated_req_idx) = @_;
 
@@ -735,7 +775,7 @@ again:
             check_error_code($block, $res, $dry_run, $req_idx, $need_array);
             check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
             check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
-            transform_response_body($block, $res);
+            transform_response_body($block, $res, $req_idx, $need_array);
             check_response_body($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array);
         }
 
@@ -1230,16 +1270,16 @@ sub fmt_str ($) {
     $str;
 }
 
-sub transform_response_body ($$) {
-    my ($block, $res) = @_;
+sub transform_response_body ($$$$) {
+    my ($block, $res, $req_idx, $need_array) = @_;
 
     return unless defined $res;
 
     my $content = $res->content;
     return unless defined $content;
 
+    my $is_2d_array = 0;
     my $name = $block->name;
-
     my $response_body_filters = $block->response_body_filters;
 
     if (defined $response_body_filters) {
@@ -1250,44 +1290,38 @@ sub transform_response_body ($$) {
             $response_body_filters = [$response_body_filters];
         }
 
-        my $new = $content;
-
-        for my $filter (@$response_body_filters) {
-            if (ref $filter && ref $filter eq 'CODE') {
-                $new = $filter->($new);
-
-            } elsif (!ref $filter) {
-                for ($filter) {
-                    if ($_ eq 'md5_hex') {
-                        $new = Digest::MD5::md5_hex($new);
-                    } elsif ($_ eq 'sha1_hex') {
-                        $new = Digest::SHA::sha1_hex($new);
-                    } elsif ($_ eq 'uc') {
-                        $new = uc($new);
-                    } elsif ($_ eq 'lc') {
-                        $new = lc($new);
-                    } elsif ($_ eq 'ucfirst') {
-                        $new = ucfirst($new);
-                    } elsif ($_ eq 'lcfirst') {
-                        $new = lcfirst($new);
-                    } elsif ($_ eq 'length') {
-                        $new = length($new);
-                    } else {
-                        bail_out("$name - unknown filter, \"$filter\", "
-                                 . "specified in the --- response_body_filters section");
+        if (ref $response_body_filters eq 'ARRAY') {
+            if ((ref @$response_body_filters[0]) eq 'ARRAY') {
+                $is_2d_array = 1;
+                for my $elem (@$response_body_filters) {
+                    if (ref $elem ne "ARRAY") {
+                        bail_out("$name - the --- response_body_filters two-dimensional array "
+                           . "only be like [[uc], [lc]] not [[uc], lc] .\n");
                     }
                 }
-
-            } else {
-                bail_out("$name - the --- response_body_filters section "
-                         . "only supports subroutine reference values and string values.\n");
             }
         }
 
-        if ($new ne $content) {
-            $res->content($new);
+        my $new = $content;
+        my $filter = $response_body_filters;
+
+        if ($is_2d_array) {
+            $filter = @$response_body_filters[$req_idx];
+
+            return unless defined $filter;
         }
+
+        if (ref $filter && ref $filter eq 'ARRAY') {
+            for my $f (@$filter) {
+                $new = run_filter_helper($block, $f, $new);
+            }
+        } else {
+            $new = run_filter_helper($block, $filter, $new);
+        }
+
+        $res->content($new);
     }
+
 }
 
 sub check_response_body ($$$$$$) {
@@ -2923,7 +2957,7 @@ Multiple builtin filter names can be specified at the same time and they will be
 If the response_body_filters value can also be an array reference, mostly useful for specifying multiple Perl subroutine
 references as the filters:
 
-    === TEST 2:
+    === TEST 3:
     --- config
         location = /t {
             echo hello;
@@ -2934,6 +2968,20 @@ references as the filters:
     [\&CORE::uc, \&CORE::lc]
     --- response_body
     hello
+
+If the response_body_filters value can also be an two-dimensional array reference, it means the actual response body data will be isolatedly apply the indexed array's filters:
+    === TEST 4:
+    --- config
+        location = /t {
+            echo hello;
+        }
+    --- request eval
+        ['GET /t', 'GET /t']
+    --- response_body_filters eval
+    [[\&CORE::uc, \&CORE::lc], [\&CORE::uc]]
+    --- response_body eval
+    ['hello', 'HELLO']
+
 
 =head2 response_body
 
@@ -4144,4 +4192,3 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 =head1 SEE ALSO
 
 L<Test::Nginx::Lua>, L<Test::Nginx::Lua::Stream>, L<Test::Nginx::LWP>, L<Test::Base>.
-
