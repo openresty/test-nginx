@@ -53,7 +53,7 @@ sub test_stap ($$);
 sub error_event_handler ($);
 sub read_event_handler ($);
 sub write_event_handler ($);
-sub transform_response_body ($$$$);
+sub transform_response_body ($$$);
 sub check_response_body ($$$$$$);
 sub fmt_str ($);
 sub gen_ab_cmd_from_req ($$@);
@@ -775,7 +775,7 @@ again:
             check_error_code($block, $res, $dry_run, $req_idx, $need_array);
             check_raw_response_headers($block, $raw_headers, $dry_run, $req_idx, $need_array);
             check_response_headers($block, $res, $raw_headers, $dry_run, $req_idx, $need_array);
-            transform_response_body($block, $res, $req_idx, $need_array);
+            transform_response_body($block, $res, $req_idx);
             check_response_body($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array);
         }
 
@@ -1270,8 +1270,8 @@ sub fmt_str ($) {
     $str;
 }
 
-sub transform_response_body ($$$$) {
-    my ($block, $res, $req_idx, $need_array) = @_;
+sub transform_response_body ($$$) {
+    my ($block, $res, $req_idx) = @_;
 
     return unless defined $res;
 

@@ -26,7 +26,7 @@ for my $block (blocks) {
 
     for my $i (0 .. $len - 1) {
         my ($res, $raw_headers, $left) = Test::Nginx::Socket::parse_response("name", $raw_res, 0);
-        Test::Nginx::Socket::transform_response_body($block, $res, $i, 0);
+        Test::Nginx::Socket::transform_response_body($block, $res, $i);
         Test::Nginx::Socket::check_response_body($block, $res, undef, $i, 0, $len > 1);
     }
 }
