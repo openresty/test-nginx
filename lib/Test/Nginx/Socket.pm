@@ -2975,7 +2975,7 @@ references as the filters:
     --- response_body
     hello
 
-If the response_body_filters value can also be an two-dimensional array reference, it means the actual response body data will be isolatedly apply the indexed array's filters:
+If the response_body_filters value can also be an two-dimensional array reference, it means the actual response body data will be C<isolatedly> apply the indexed array's filters:
     === TEST 4:
     --- config
         location = /t {
