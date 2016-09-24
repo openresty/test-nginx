@@ -13,10 +13,12 @@ sub lc {
 
 for my $block (blocks) {
     my $len = 1;
+
     if (ref $block->request || ref $block->request_eval) {
         my $r_req_list =  Test::Nginx::Socket::get_req_from_block($block);
         $len = $#$r_req_list+1;
     }
+
     my $html = "<html><head><title>Google</title></head><body>Search me...</body></html>";
     my $raw_res = "HTTP/1.0 200 OK\r\n"
                 . "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n"
