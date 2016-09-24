@@ -1283,16 +1283,20 @@ sub transform_response_body ($$$) {
     my $response_body_filters = $block->response_body_filters;
 
     if (defined $response_body_filters) {
+
         if (!ref $response_body_filters) {
             $response_body_filters =~ s/^\s+|\s+$//gs;
             $response_body_filters = [split /\s+/, $response_body_filters];
+
         } elsif (ref $response_body_filters ne 'ARRAY') {
             $response_body_filters = [$response_body_filters];
         }
 
         if (ref $response_body_filters eq 'ARRAY') {
+
             if ((ref @$response_body_filters[0]) eq 'ARRAY') {
                 $is_2d_array = 1;
+
                 for my $elem (@$response_body_filters) {
                     if (ref $elem ne "ARRAY") {
                         bail_out("$name - the --- response_body_filters two-dimensional array "
@@ -1312,9 +1316,11 @@ sub transform_response_body ($$$) {
         }
 
         if (ref $filter && ref $filter eq 'ARRAY') {
+
             for my $f (@$filter) {
                 $new = run_filter_helper($block, $f, $new);
             }
+
         } else {
             $new = run_filter_helper($block, $filter, $new);
         }
