@@ -554,7 +554,7 @@ sub run_filter_helper($$$) {
 
     } else {
         bail_out("$name - the --- response_body_filters section "
-                 . "only supports subroutine reference values and string values.\n");
+                 . "only supports subroutine reference values and string values");
     }
 
     return $content;
@@ -1300,7 +1300,7 @@ sub transform_response_body ($$$) {
                 for my $elem (@$response_body_filters) {
                     if (ref $elem ne "ARRAY") {
                         bail_out("$name - the --- response_body_filters two-dimensional array "
-                           . "only be like [[uc], [lc]] not [[uc], lc] .\n");
+                           . "only be like [[uc], [lc]] not [[uc], lc]");
                     }
                 }
             }
