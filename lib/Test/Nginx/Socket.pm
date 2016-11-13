@@ -1294,7 +1294,7 @@ sub transform_response_body ($$$) {
 
         if (ref $response_body_filters eq 'ARRAY') {
 
-            if ((ref @$response_body_filters[0]) eq 'ARRAY') {
+            if (ref $response_body_filters->[0] eq 'ARRAY') {
                 $is_2d_array = 1;
 
                 for my $elem (@$response_body_filters) {
@@ -1310,9 +1310,10 @@ sub transform_response_body ($$$) {
         my $filter = $response_body_filters;
 
         if ($is_2d_array) {
-            $filter = @$response_body_filters[$req_idx];
+            $filter = $response_body_filters->[$req_idx];
 
-            return unless defined $filter;
+            bail_out("$name - the ---response_body_filters two-dimensional array "
+              . "unmatch the specified request($req_idx)") unless defined $filter;
         }
 
         if (ref $filter && ref $filter eq 'ARRAY') {
@@ -1322,6 +1323,7 @@ sub transform_response_body ($$$) {
             }
 
         } else {
+
             $new = run_filter_helper($block, $filter, $new);
         }
 
@@ -2976,6 +2978,7 @@ references as the filters:
     hello
 
 If the response_body_filters value can also be an two-dimensional array reference, it means the actual response body data will be C<isolatedly> applied by the indexed array's filters:
+
     === TEST 4:
     --- config
         location = /t {
@@ -2987,7 +2990,6 @@ If the response_body_filters value can also be an two-dimensional array referenc
     [[\&CORE::uc, \&CORE::lc], [\&CORE::uc]]
     --- response_body eval
     ['hello', 'HELLO']
-
 
 =head2 response_body
 
