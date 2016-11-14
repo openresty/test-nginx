@@ -1323,7 +1323,6 @@ sub transform_response_body ($$$) {
             }
 
         } else {
-
             $new = run_filter_helper($block, $filter, $new);
         }
 
