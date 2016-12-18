@@ -169,7 +169,7 @@ The `openresty` mailing list is for Chinese speakers: [https://groups.google.com
 
 # AUTHORS
 
-Yichun Zhang (agentzh) `<agentzh@gmail.com>`
+Yichun Zhang (agentzh) `<agentzh@gmail.com>`, OpenResty Inc.
 
 Antoine BONAVITA `<antoine.bonavita@gmail.com>`
 
@@ -177,7 +177,7 @@ Antoine BONAVITA `<antoine.bonavita@gmail.com>`
 
 # COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2016, Yichun Zhang (agentzh) `<agentzh@gmail.com>`.
+Copyright (c) 2009-2017, Yichun Zhang (agentzh) `<agentzh@gmail.com>`, OpenResty Inc.
 
 Copyright (c) 2011-2012, Antoine Bonavita `<antoine.bonavita@gmail.com>`.
 

@@ -178,13 +178,13 @@ The C<openresty> mailing list is for Chinese speakers: L<https://groups.google.c
 
 =head1 AUTHORS
 
-Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>
+Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>, OpenResty Inc.
 
 Antoine BONAVITA C<< <antoine.bonavita@gmail.com> >>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2016, Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>.
+Copyright (c) 2009-2017, Yichun Zhang (agentzh) C<< <agentzh@gmail.com> >>, OpenResty Inc.
 
 Copyright (c) 2011-2012, Antoine Bonavita C<< <antoine.bonavita@gmail.com> >>.
 

@@ -433,11 +433,11 @@ of sending it out to the stream client directly.
 
 =head1 AUTHOR
 
-Yichun "agentzh" Zhang (章亦春) C<< <agentzh@gmail.com> >>, CloudFlare Inc.
+Yichun "agentzh" Zhang (章亦春) C<< <agentzh@gmail.com> >>, OpenResty Inc.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2016, Yichun Zhang C<< <agentzh@gmail.com> >>, CloudFlare Inc.
+Copyright (c) 2016, Yichun Zhang C<< <agentzh@gmail.com> >>, OpenResty Inc.
 
 This module is licensed under the terms of the BSD license.
 
