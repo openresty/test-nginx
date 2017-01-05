@@ -63,6 +63,7 @@ sub value_contains ($$);
 
 $RunTestHelper = \&run_test_helper;
 $CheckErrorLog = \&check_error_log;
+$CheckShutdownErrorLog = \&check_shutdown_error_log;
 
 sub set_http_config_filter ($) {
     $FilterHttpConfig = shift;
@@ -1261,6 +1262,64 @@ sub check_error_log ($$$$) {
     }
 }
 
+sub check_shutdown_error_log ($$) {
+    my ($block, $dry_run) = @_;
+    my $name = $block->name;
+    my $lines;
+
+    my $pats = $block->shutdown_error_log;
+
+    if (!ref $pats) {
+        chomp $pats;
+        my @lines = split /\n+/, $pats;
+        $pats = \@lines;
+
+    } elsif (ref $pats eq 'Regexp') {
+        $pats = [$pats];
+
+    } else {
+        my @clone = @$pats;
+        $pats = \@clone;
+    }
+
+    $lines ||= error_log_data();
+    #warn "error log data: ", join "\n", @$lines;
+    for my $line (@$lines) {
+        for my $pat (@$pats) {
+            next if !defined $pat;
+
+            if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                SKIP: {
+                    skip "$name - shutdown_error_log - tests skipped due to dry_run", 1 if $dry_run;
+                    pass("$name - pattern \"$pat\" matches a line in error.log");
+                }
+                undef $pat;
+            }
+        }
+    }
+
+    for my $pat (@$pats) {
+        if (defined $pat) {
+            SKIP: {
+                skip "$name - shutdown_error_log - tests skipped due to dry_run", 1 if $dry_run;
+                fail("$name - pattern \"$pat\" should match a line in error.log");
+                #die join("", @$lines);
+            }
+        }
+    }
+
+    for my $line (@$lines) {
+        #warn "test $line\n";
+        if ($line =~ /\bAssertion .*? failed\.$/) {
+            my $tb = Test::More->builder;
+            $tb->no_ending(1);
+
+            chomp $line;
+            fail("$name - $line");
+        }
+    }
+}
+
 sub fmt_str ($) {
     my $str = shift;
     chomp $str;
@@ -2371,6 +2430,22 @@ Call this function with an integer argument before C<run_tests()> to ask the tes
 to run the specified number of duplicate requests for each test block. When it is called without argument, it returns the current setting.
 
 Default to 1.
+
+=head2 shutdown_error_log
+
+You can use this section to check the error log generated during nginx exit.
+
+For example,
+
+    --- shutdown_error_log
+    cleanup resolver
+
+or an example for using an array value,
+
+    --- error_log eval
+    ["cleanup", "resolver"]
+
+B<WARNING:> skip the shutdown_error_log tests under the HUP reload mode.
 
 =head2 env_to_nginx
 
