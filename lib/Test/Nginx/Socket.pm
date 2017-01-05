@@ -2396,6 +2396,14 @@ to run the specified number of duplicate requests for each test block. When it i
 
 Default to 1.
 
+=head2 stop_after_request
+
+By default, the nginx is not still running after the request. The error log is incompletely, missing logs after nginx shutdown.
+
+You can set this flag to ensure that you can get fully nginx error log.
+
+Because of the nginx is shutdowned, the C<repeat_each> number must be set to 1.
+
 =head2 env_to_nginx
 
 Specify additional system environmnt variables to be passed into the nginx server.
