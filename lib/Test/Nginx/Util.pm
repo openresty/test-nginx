@@ -1205,6 +1205,11 @@ sub run_test ($) {
         }
     }
 
+    if (defined $block->stop_after_request && $RepeatEach != 1){
+       bail_out("the directive \"stop_after_request\" runs once per case. the \"repeat_each\" number should be 1.");
+       die;
+   }
+
     if (!defined $config) {
         if (!$NoNginxManager) {
             # Manager without config.

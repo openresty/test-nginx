@@ -804,6 +804,30 @@ again:
 
     test_stap($block, $dry_run);
 
+    if (defined $block->stop_after_request) {
+        my $ngx_pid = get_pid_from_pidfile($name);
+        my $TestNginxSleep = sleep_time();
+
+        if (is_running($ngx_pid)) {
+            kill(SIGQUIT, $ngx_pid);
+            waitpid($ngx_pid, 0);
+
+            sleep $TestNginxSleep;
+        }
+
+        my $max_i = 15;
+        for (my $i = 1; $i <= $max_i; $i++) {
+            last unless is_running($ngx_pid);
+
+            sleep $TestNginxSleep;
+            next if $i < $max_i;
+
+            warn "WARNING: killing nginx $ngx_pid with force...";
+            kill(SIGKILL, $ngx_pid);
+            waitpid($ngx_pid, 0);
+        }
+    }
+
     check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
 }
 
@@ -3309,7 +3333,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo: 
+    x-foo:
     --- http09
 
 =head2 ignore_response
@@ -4199,4 +4223,3 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 =head1 SEE ALSO
 
 L<Test::Nginx::Lua>, L<Test::Nginx::Lua::Stream>, L<Test::Nginx::LWP>, L<Test::Base>.
-
