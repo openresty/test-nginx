@@ -815,16 +815,17 @@ again:
             sleep $TestNginxSleep;
         }
 
-        my $max_i = 15;
-        for (my $i = 1; $i <= $max_i; $i++) {
+        my $max_tries = 15;
+        for (my $i = 1; $i <= $max_tries; $i++) {
             last unless is_running($ngx_pid);
 
             sleep $TestNginxSleep;
-            next if $i < $max_i;
+            next if $i < $max_tries;
 
             warn "WARNING: killing nginx $ngx_pid with force...";
             kill(SIGKILL, $ngx_pid);
             waitpid($ngx_pid, 0);
+            sleep $TestNginxSleep;
         }
     }
 
@@ -2398,11 +2399,12 @@ Default to 1.
 
 =head2 stop_after_request
 
-By default, the nginx is not still running after the request. The error log is incompletely, missing logs after nginx stoped.
+By default, after the first request, nginx is still running until the next test case or end.
+Therefore, the error log is missing from the part generated during nginx exit.
 
-You can set this flag to ensure that you can get fully nginx error log.
+To get complete nginx error log, You can set this flag to stop nginx after the first request.
 
-Because of the nginx is stoped, the C<repeat_each> number must be set to 1.
+Because the nginx will be stopped, the C<repeat_each> number can not be set to other but 1(default).
 
 =head2 env_to_nginx
 
@@ -3341,7 +3343,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo:
+    x-foo: 
     --- http09
 
 =head2 ignore_response
@@ -4231,3 +4233,4 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 =head1 SEE ALSO
 
 L<Test::Nginx::Lua>, L<Test::Nginx::Lua::Stream>, L<Test::Nginx::LWP>, L<Test::Base>.
+

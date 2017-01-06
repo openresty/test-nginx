@@ -1206,7 +1206,7 @@ sub run_test ($) {
     }
 
     if (defined $block->stop_after_request && $RepeatEach != 1){
-       bail_out("\"stop_after_request\" flag is enable, nginx will be stoped after request. \"repeat_each\" number must be set to 1.");
+       bail_out("\"stop_after_request\" flag is enabled, nginx will be stopped after first request. \"repeat_each\" number must be set to 1(default).");
        die;
    }
 
