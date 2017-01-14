@@ -442,7 +442,7 @@ sub add_block_preprocessor(&) {
 #our ($PrevRequest)
 our $PrevConfig;
 
-our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->rel2abs('t/servroot');
+our $ServRoot = $ENV{TEST_NGINX_SERVROOT} || File::Spec->rel2abs('t/servroot');
 
 if ($Randomize) {
     $ServRoot = File::Spec->rel2abs("t/servroot_" . $ServerPort);
