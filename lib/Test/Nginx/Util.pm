@@ -226,6 +226,7 @@ our @BlockPreprocessors;
 
 sub bail_out (@);
 
+our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
 our $Workers                = 1;
 our $WorkerConnections      = 64;
@@ -233,12 +234,46 @@ our $LogLevel               = $ENV{TEST_NGINX_LOG_LEVEL} || 'debug';
 our $MasterProcessEnabled   = $ENV{TEST_NGINX_MASTER_PROCESS} || 'off';
 our $DaemonEnabled          = 'on';
 our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
-our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
+our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ServerPort || 1984;
 our $NoRootLocation         = 0;
 our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.015;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
+
+if ($Randomize) {
+    srand $$;
+
+    undef $ServerPort;
+
+    my $tries = 1000;
+    for (my $i = 0; $i < $tries; $i++) {
+        my $port = int(rand 60000) + 1025;
+
+        my $sock = IO::Socket::INET->new(
+            LocalAddr => $ServerAddr,
+            LocalPort => $port,
+            Proto => 'tcp',
+            Timeout => 0.1,
+        );
+
+        if (defined $sock) {
+            $sock->close();
+            $ServerPort = $port;
+            last;
+        }
+
+        if ($Verbose) {
+            warn "Try again, port $port is already in use: $@\n";
+        }
+    }
+
+    if (!defined $ServerPort) {
+        bail_out "Cannot find an available listening port number after $tries attempts.\n";
+    }
+
+    $ServerPortForClient = $ServerPort;
+}
 
 our $ChildPid;
 our $UdpServerPid;
@@ -435,7 +470,15 @@ sub add_block_preprocessor(&) {
 #our ($PrevRequest)
 our $PrevConfig;
 
-our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->catfile(cwd() || '.', 't/servroot');
+our $ServRoot;
+
+if ($Randomize) {
+    $ServRoot = File::Spec->rel2abs("t/servroot_" . $ServerPort);
+
+} else {
+    $ServRoot = $ENV{TEST_NGINX_SERVROOT} || File::Spec->rel2abs('t/servroot');
+}
+
 our $LogDir     = File::Spec->catfile($ServRoot, 'logs');
 our $ErrLogFile = File::Spec->catfile($LogDir, 'error.log');
 our $AccLogFile = File::Spec->catfile($LogDir, 'access.log');
@@ -548,6 +591,10 @@ sub kill_process ($$$) {
 }
 
 sub cleanup () {
+    if ($Verbose) {
+        warn "cleaning up everything";
+    }
+
     for my $hdl (@CleanupHandlers) {
        $hdl->();
     }
@@ -2326,7 +2373,7 @@ END {
 
     if ($UseStap || $UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         local $?; # to avoid confusing Test::Builder::_ending
-        if (-f $PidFile) {
+        if (defined $PidFile && -f $PidFile) {
             my $pid = get_pid_from_pidfile('');
             if (!$pid) {
                 bail_out "No pid found.";
@@ -2337,6 +2384,12 @@ END {
             } else {
                 unlink $PidFile;
             }
+        }
+    }
+
+    if ($Randomize) {
+        if (defined $ServRoot && -d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {
+            system("rm -rf $ServRoot");
         }
     }
 }

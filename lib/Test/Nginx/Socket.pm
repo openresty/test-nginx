@@ -3992,6 +3992,17 @@ only see the logs for the last test run (which you usually do not control
 except if you set C<TEST_NGINX_NO_SHUFFLE=1>). With this, you accumulate
 all logs into a single file that is never cleaned up by Test::Nginx.
 
+=head2 TEST_NGINX_RANDOMIZE
+
+When set, the test scaffold forces the use of random server listening port numbers as
+well as random C<t/servroot_XXXX/> directories. This can help test suite run in multiple
+parallel jobs via C<prove -jN> where C<N> is an integer bigger than 1. For instance,
+C<prove -j8 -r t> runs the test suite under F<t/> in 8 parallel jobs, utilizing up to
+8 (logical) CPU cores in the same machine.
+
+Note that only test suite I<without> external shared and writable service dependencies (like Memcached,
+Redis or MySQL) can run in parallel in this way, obviously.
+
 =head2 Valgrind Integration
 
 Test::Nginx has integrated support for valgrind (L<http://valgrind.org>) even though by
