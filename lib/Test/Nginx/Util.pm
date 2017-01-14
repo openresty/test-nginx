@@ -226,6 +226,7 @@ our @BlockPreprocessors;
 
 sub bail_out (@);
 
+our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
 our $Workers                = 1;
 our $WorkerConnections      = 64;
@@ -233,12 +234,18 @@ our $LogLevel               = $ENV{TEST_NGINX_LOG_LEVEL} || 'debug';
 our $MasterProcessEnabled   = $ENV{TEST_NGINX_MASTER_PROCESS} || 'off';
 our $DaemonEnabled          = 'on';
 our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
-our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
+our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ServerPort || 1984;
 our $NoRootLocation         = 0;
 our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.015;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
+
+if ($Randomize) {
+    srand $$;
+    $ServerPort = int(rand 60000) + 1025;
+    $ServerPortForClient = $ServerPort;
+}
 
 our $ChildPid;
 our $UdpServerPid;
@@ -435,7 +442,12 @@ sub add_block_preprocessor(&) {
 #our ($PrevRequest)
 our $PrevConfig;
 
-our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->catfile(cwd() || '.', 't/servroot');
+our $ServRoot   = $ENV{TEST_NGINX_SERVROOT} || File::Spec->rel2abs('t/servroot');
+
+if ($Randomize) {
+    $ServRoot = File::Spec->rel2abs("t/servroot_" . $ServerPort);
+}
+
 our $LogDir     = File::Spec->catfile($ServRoot, 'logs');
 our $ErrLogFile = File::Spec->catfile($LogDir, 'error.log');
 our $AccLogFile = File::Spec->catfile($LogDir, 'access.log');
@@ -548,6 +560,12 @@ sub kill_process ($$$) {
 }
 
 sub cleanup () {
+    if ($Randomize) {
+        if (-d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {
+            system("rm -rf $ServRoot");
+        }
+    }
+
     for my $hdl (@CleanupHandlers) {
        $hdl->();
     }
