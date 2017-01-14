@@ -560,10 +560,8 @@ sub kill_process ($$$) {
 }
 
 sub cleanup () {
-    if ($Randomize) {
-        if (-d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {
-            system("rm -rf $ServRoot");
-        }
+    if ($Verbose) {
+        warn "cleaning up everyitng";
     }
 
     for my $hdl (@CleanupHandlers) {
@@ -2355,6 +2353,12 @@ END {
             } else {
                 unlink $PidFile;
             }
+        }
+    }
+
+    if ($Randomize) {
+        if (-d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {
+            system("rm -rf $ServRoot");
         }
     }
 }
