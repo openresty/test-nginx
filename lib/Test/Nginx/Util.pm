@@ -477,8 +477,8 @@ sub bail_out (@) {
     Test::More::BAIL_OUT(@_);
 }
 
-sub kill_process ($$) {
-    my ($pid, $wait) = @_;
+sub kill_process ($$$) {
+    my ($pid, $wait, $name) = @_;
 
     if ($wait) {
         eval {
@@ -505,11 +505,12 @@ sub kill_process ($$) {
         }
 
         if ($Verbose) {
-            warn "WARNING: child process $pid timed out.\n";
+            warn "$name - WARNING: child process $pid timed out.\n";
         }
     }
 
     my $i = 1;
+    my $step = $TestNginxSleep;
     while ($i <= 20) {
         #warn "ps returns: ", system("ps -p $pid > /dev/stderr"), "\n";
         #warn "$pid is running? ", is_running($pid) ? "Y" : "N", "\n";
@@ -526,19 +527,26 @@ sub kill_process ($$) {
             warn "WARNING: failed to send term signal to the child process with PID $pid.\n";
         }
 
-        sleep $TestNginxSleep * $i;
+        $step *= 1.2;
+        $step = 0.5 if $step > 0.5;
+        sleep $step;
 
     } continue {
         $i++;
     }
 
     #system("ps aux|grep $pid > /dev/stderr");
-    warn "WARNING: killing the child process $pid with force...";
+    warn "$name - WARNING: killing the child process $pid with force...";
 
     kill(SIGKILL, $pid);
     waitpid($pid, 0);
 
-    sleep $TestNginxSleep;
+    if (is_running($pid)) {
+        local $SIG{ALRM} = sub { die "alarm\n" };
+        alarm timeout();
+        waitpid($pid, 0);
+        alarm 0;
+    }
 }
 
 sub cleanup () {
@@ -547,17 +555,17 @@ sub cleanup () {
     }
 
     if (defined $UdpServerPid) {
-        kill_process($UdpServerPid, 1);
+        kill_process($UdpServerPid, 1, "cleanup");
         undef $UdpServerPid;
     }
 
     if (defined $TcpServerPid) {
-        kill_process($TcpServerPid, 1);
+        kill_process($TcpServerPid, 1, "cleanup");
         undef $TcpServerPid;
     }
 
     if (defined $ChildPid) {
-        kill_process($ChildPid, 1);
+        kill_process($ChildPid, 1, "cleanup");
         undef $ChildPid;
     }
 }
@@ -1430,25 +1438,7 @@ sub run_test ($) {
 
                 if ($UseHup) {
                     if ($first_time) {
-                        if ($Verbose) {
-                            warn "sending QUIT signal to $pid\n";
-                        }
-
-                        if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-                            #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
-                        }
-
-                        my $max_i = 15;
-                        for (my $i = 1; $i <= $max_i; $i++) {
-                            last unless is_running($pid);
-
-                            sleep $TestNginxSleep;
-                            next if $i < $max_i;
-
-                            warn "WARNING: $name - killing nginx $pid with force...";
-                            kill(SIGKILL, $pid);
-                            waitpid($pid, 0);
-                        }
+                        kill_process($pid, 1, $name);
 
                         undef $nginx_is_running;
                         goto start_nginx;
@@ -1496,25 +1486,7 @@ sub run_test ($) {
                     }
                 }
 
-                if ($Verbose) {
-                    warn "sending QUIT signal to $pid\n";
-                }
-
-                if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-                    #warn("$name - Failed to send quit signal to the nginx process with PID $pid");
-                }
-
-                my $max_i = 15;
-                for (my $i = 1; $i <= $max_i; $i++) {
-                    last unless is_running($pid);
-
-                    sleep $TestNginxSleep;
-                    next if $i < $max_i;
-
-                    warn "WARNING: $name - killing nginx $pid with force...";
-                    kill(SIGKILL, $pid);
-                    waitpid($pid, 0);
-                }
+                kill_process($pid, 1, $name);
 
                 undef $nginx_is_running;
 
@@ -1745,15 +1717,15 @@ RUN_AGAIN:
                     if ($status == 0) {
                         warn("WARNING: $name - nginx must die but it does ",
                              "not; killing it (req $i)");
-                        my $max_i = 15;
-                        for (my $i = 1; $i <= $max_i; $i++) {
+                        my $tries = 15;
+                        for (my $i = 1; $i <= $tries; $i++) {
                             if (-f $PidFile) {
                                 last;
                             }
                             sleep $TestNginxSleep;
                         }
                         my $pid = get_pid_from_pidfile($name);
-                        kill_process($pid, 1);
+                        kill_process($pid, 1, $name);
                     }
 
                     goto RUN_AGAIN if ++$i < $RepeatEach;
@@ -1878,7 +1850,7 @@ request:
                                     }
 
                                     warn "WARNING: killing process $pid listening on target $target.\n";
-                                    kill_process($pid, 1);
+                                    kill_process($pid, 1, $name);
                                 }
                             }
                         }
@@ -2246,7 +2218,7 @@ request:
 
         if (defined $udp_socket) {
             if (defined $UdpServerPid) {
-                kill_process($UdpServerPid, 1);
+                kill_process($UdpServerPid, 1, $name);
                 undef $UdpServerPid;
             }
 
@@ -2264,7 +2236,7 @@ request:
                 if ($Verbose) {
                     warn "killing TCP server, pid $TcpServerPid\n";
                 }
-                kill_process($TcpServerPid, 1);
+                kill_process($TcpServerPid, 1, $name);
                 undef $TcpServerPid;
             }
 
@@ -2362,25 +2334,7 @@ END {
                 bail_out "No pid found.";
             }
             if (is_running($pid)) {
-                if ($Verbose) {
-                    warn "sending QUIT signal to $pid";
-                }
-
-                if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-                    #warn("Failed to send quit signal to the nginx process with PID $pid");
-                }
-
-                my $max_i = 15;
-                for (my $i = 1; $i <= $max_i; $i++) {
-                    last unless is_running($pid);
-
-                    sleep $TestNginxSleep;
-                    next if $i < $max_i;
-
-                    warn "WARNING: killing nginx $pid with force...";
-                    kill(SIGKILL, $pid);
-                    waitpid($pid, 0);
-                }
+                kill_process($pid, 1, "END");
 
             } else {
                 unlink $PidFile;
