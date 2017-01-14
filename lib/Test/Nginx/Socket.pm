@@ -4000,7 +4000,7 @@ parallel jobs via C<prove -jN> where C<N> is an integer bigger than 1. For insta
 C<prove -j8 -r t> runs the test suite under F<t/> in 8 parallel jobs, utilizing up to
 8 (logical) CPU cores in the same machine.
 
-Note that only test suite I<without> external shared service dependencies (like Memcached,
+Note that only test suite I<without> external shared and writable service dependencies (like Memcached,
 Redis or MySQL) can run in parallel in this way, obviously.
 
 =head2 Valgrind Integration
