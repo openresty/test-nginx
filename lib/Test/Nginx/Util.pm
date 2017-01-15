@@ -500,12 +500,10 @@ sub kill_process ($$$) {
             alarm 0;
         };
 
-        if (!$@) {
-            return;
-        }
-
-        if ($Verbose) {
-            warn "$name - WARNING: child process $pid timed out.\n";
+        if ($@) {
+            if ($Verbose) {
+                warn "$name - WARNING: child process $pid timed out.\n";
+            }
         }
     }
 
