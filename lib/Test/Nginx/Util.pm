@@ -243,7 +243,30 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
 
 if ($Randomize) {
     srand $$;
-    $ServerPort = int(rand 60000) + 1025;
+
+    for (my $i = 0; $i <= 1000; $i++) {
+        $ServerPort = int(rand 60000) + 1025;
+
+        my $sock = IO::Socket::INET->new(
+            PeerAddr => $ServerAddr,
+            PeerPort => $ServerPort,
+            Proto => 'tcp',
+            Timeout => 0.1,
+        );
+
+        last if !defined $sock;
+
+        $sock->close();
+
+        if ($i == 1000) {
+            bail_out "Cannot find port not in use after $i tries!\n";
+        }
+
+        if ($Verbose) {
+            warn "try again, port $ServerPort is in use!";
+        }
+    }
+
     $ServerPortForClient = $ServerPort;
 }
 
