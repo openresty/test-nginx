@@ -561,7 +561,7 @@ sub kill_process ($$$) {
 
 sub cleanup () {
     if ($Verbose) {
-        warn "cleaning up everyitng";
+        warn "cleaning up everything";
     }
 
     for my $hdl (@CleanupHandlers) {
