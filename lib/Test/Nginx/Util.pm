@@ -244,27 +244,32 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
 if ($Randomize) {
     srand $$;
 
-    for (my $i = 0; $i <= 1000; $i++) {
-        $ServerPort = int(rand 60000) + 1025;
+    undef $ServerPort;
+
+    my $tries = 1000;
+    for (my $i = 0; $i < $tries; $i++) {
+        my $port = int(rand 60000) + 1025;
 
         my $sock = IO::Socket::INET->new(
-            PeerAddr => $ServerAddr,
-            PeerPort => $ServerPort,
+            LocalAddr => $ServerAddr,
+            LocalPort => $port,
             Proto => 'tcp',
             Timeout => 0.1,
         );
 
-        last if !defined $sock;
-
-        $sock->close();
-
-        if ($i == 1000) {
-            bail_out "Cannot find port not in use after $i tries!\n";
+        if (defined $sock) {
+            $sock->close();
+            $ServerPort = $port;
+            last;
         }
 
         if ($Verbose) {
-            warn "try again, port $ServerPort is in use!";
+            warn "Try again, port $port is already in use: $@\n";
         }
+    }
+
+    if (!defined $ServerPort) {
+        bail_out "Cannot find an available listening port number after $tries attempts.\n";
     }
 
     $ServerPortForClient = $ServerPort;
@@ -2365,7 +2370,7 @@ END {
 
     if ($UseStap || $UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         local $?; # to avoid confusing Test::Builder::_ending
-        if (-f $PidFile) {
+        if (defined $PidFile && -f $PidFile) {
             my $pid = get_pid_from_pidfile('');
             if (!$pid) {
                 bail_out "No pid found.";
@@ -2380,7 +2385,7 @@ END {
     }
 
     if ($Randomize) {
-        if (-d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {
+        if (defined $ServRoot && -d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {
             system("rm -rf $ServRoot");
         }
     }
