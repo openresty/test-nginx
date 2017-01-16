@@ -38,3 +38,5 @@ Makefile.old
 MYMETA.json
 MYMETA.yml
 META.yml
+t/servroot
+t/archive

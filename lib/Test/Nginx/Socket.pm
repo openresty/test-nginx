@@ -756,6 +756,9 @@ again:
             } else {
                 ( $res, $raw_headers, $left ) = parse_response( $name, $raw_resp, $head_req );
             }
+            if ($Test::Nginx::Util::ArchivePath) {
+                Test::Nginx::Util::write_response($block, $res);
+            }
         }
 
         if (!$n) {
@@ -3991,6 +3994,18 @@ cycle for C<nginx>. All logs are removed before each restart, so you can
 only see the logs for the last test run (which you usually do not control
 except if you set C<TEST_NGINX_NO_SHUFFLE=1>). With this, you accumulate
 all logs into a single file that is never cleaned up by Test::Nginx.
+
+=head2 TEST_NGINX_ARCHIVE_PATH
+
+Archive nginx configure, nginx logs, and http response output to specific path
+for test blocks start up nginx server and run to completion.
+
+For example,
+
+    $ TEST_NGINX_ARCHIVE_PATH=t/archive prove -r t
+    ...
+    $ ls t/archive
+    t.0-archive.TEST_1_create_files_to_be_archived        t.0-archive.TEST_2_each_test_block_has_its_own_output
 
 =head2 Valgrind Integration
 

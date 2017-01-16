@@ -41,6 +41,8 @@ our $InSubprocess;
 our $RepeatEach = 1;
 our $MAX_PROCESSES = 10;
 
+our $ArchivePath = $ENV{TEST_NGINX_ARCHIVE_PATH};
+
 our $LoadModules = $ENV{TEST_NGINX_LOAD_MODULES};
 
 our $NoShuffle = $ENV{TEST_NGINX_NO_SHUFFLE} || 0;
@@ -1748,6 +1750,12 @@ RUN_AGAIN:
 
 request:
 
+    if ($ArchivePath) {
+        if (defined $block->http_response_output) {
+            bail_out "$name: http_response_output field is existed\n";
+        }
+        $block->set_value("http_response_output", '');
+    }
     if ($Verbose) {
         warn "preparing requesting...\n";
     }
@@ -2317,6 +2325,9 @@ retry:
             #warn "pid file not found";
         }
     }
+
+    return if !($ArchivePath && $block->name);
+    archive_files($ServRoot, $block);
 }
 
 END {
@@ -2338,6 +2349,57 @@ END {
                 unlink $PidFile;
             }
         }
+    }
+}
+
+sub map_test_name_to_path($$) {
+    my ($archive_path, $name) = @_;
+    # convert t/archive.t "TEST 1: hello world" to t.archive.TEST_1_hello_world
+    (my $file = $0) =~ s/\.[^.]+$/\./;
+    $file =~ s/\//\./g;
+    $name =~ s/\s/_/g;
+    $name =~ s/://g;
+    my $dest = File::Spec->catfile($archive_path, $file.$name);
+    if (-d $dest) {
+        my $order = 1;
+        my $dest_with_suffix = $dest.'.'.$order;
+        while (-d $dest_with_suffix) {
+            $order += 1;
+            $dest_with_suffix = $dest.'.'.$order;
+        }
+        return $dest_with_suffix;
+    }
+    return $dest;
+}
+
+sub archive_files($$) {
+    my ($src, $block) = @_;
+    return if ! -d $src;
+
+    my $name = $block->name;
+    my $dest = map_test_name_to_path($ArchivePath, $name);
+    if (! -d $ArchivePath) {
+        make_path($ArchivePath) or
+            bail_out "$name: Cannot create directory $ArchivePath: $!\n";
+    }
+    system("cp -R $src $dest") == 0 or
+        bail_out "$name: Archive files failed: $!\n";
+
+    return if ! defined $block->http_response_output;
+    my $out_file = File::Spec->catfile($dest, 'output');
+    if (open my $out, ">>$out_file") {
+        print $out $block->http_response_output;
+        close $out;
+    } else {
+        bail_out  "$name: Can't open $out_file for writing: $!\n";
+    }
+}
+
+sub write_response($$) {
+    my ($block, $resp) = @_;
+    if (defined $block->http_response_output) {
+        my $out = $block->http_response_output;
+        $block->set_value('http_response_output', $out.$resp->as_string."\n");
     }
 }
 
