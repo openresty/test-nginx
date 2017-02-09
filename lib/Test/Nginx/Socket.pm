@@ -63,6 +63,7 @@ sub value_contains ($$);
 
 $RunTestHelper = \&run_test_helper;
 $CheckErrorLog = \&check_error_log;
+$CheckShutDownErrorLog =\&check_shutdown_error_log;
 
 sub set_http_config_filter ($) {
     $FilterHttpConfig = shift;
@@ -1261,6 +1262,64 @@ sub check_error_log ($$$$) {
     }
 }
 
+sub check_shutdown_error_log ($) {
+    my ($block) = @_;
+    my $name = $block->name;
+    my $lines;
+
+    if (defined $block->shutdown_error_log) {
+        my $pats = $block->shutdown_error_log;
+
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        $lines ||= error_log_data();
+        #warn "error log data: ", join "\n", @$lines;
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+
+                if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        pass("$name - pattern \"$pat\" matches a line in error.log");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    fail("$name - pattern \"$pat\" should match a line in error.log");
+                    #die join("", @$lines);
+                }
+            }
+        }
+    }
+
+    for my $line (@$lines) {
+        #warn "test $line\n";
+        if ($line =~ /\bAssertion .*? failed\.$/) {
+            my $tb = Test::More->builder;
+            $tb->no_ending(1);
+
+            chomp $line;
+            fail("$name - $line");
+        }
+    }
+}
+
 sub fmt_str ($) {
     my $str = shift;
     chomp $str;
@@ -2371,6 +2430,10 @@ Call this function with an integer argument before C<run_tests()> to ask the tes
 to run the specified number of duplicate requests for each test block. When it is called without argument, it returns the current setting.
 
 Default to 1.
+
+=head2 shutdown_error_log
+
+You can use this section to check the error log generated during nginx exit.
 
 =head2 env_to_nginx
 

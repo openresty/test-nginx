@@ -420,6 +420,7 @@ our @EXPORT = qw(
     $ConfFile
     $RunTestHelper
     $CheckErrorLog
+    $CheckShutDownErrorLog
     $FilterHttpConfig
     $NoNginxManager
     $RepeatEach
@@ -459,6 +460,7 @@ sub config_preamble ($) {
 
 our $RunTestHelper;
 our $CheckErrorLog;
+our $CheckShutDownErrorLog;
 
 our $NginxVersion;
 our $NginxRawVersion;
@@ -1489,46 +1491,7 @@ sub run_test ($) {
                         goto start_nginx;
                     }
 
-                    setup_server_root();
-                    write_user_files($block);
-                    write_config_file($block, $config);
-
-                    if ($Verbose) {
-                        warn "sending USR1 signal to $pid.\n";
-                    }
-                    if (system("kill -USR1 $pid") == 0) {
-                        sleep $TestNginxSleep;
-
-                        if ($Verbose) {
-                            warn "sending HUP signal to $pid.\n";
-                        }
-
-                        if (system("kill -HUP $pid") == 0) {
-                            sleep $TestNginxSleep * 3;
-
-                            if ($Verbose) {
-                                warn "skip starting nginx from scratch\n";
-                            }
-
-                            $nginx_is_running = 1;
-
-                            if ($UseValgrind) {
-                                warn "$name\n";
-                            }
-
-                            test_config_version($name);
-
-                            goto request;
-
-                        } else {
-                            if ($Verbose) {
-                                warn "$name - Failed to send HUP signal";
-                            }
-                        }
-
-                    } else {
-                        warn "$name - Failed to send USR1 signal";
-                    }
+                    goto request;
                 }
 
                 kill_process($pid, 1, $name);
@@ -2363,6 +2326,67 @@ retry:
         } else {
             #warn "pid file not found";
         }
+    }
+
+stop_nginx:
+
+    if (-f $PidFile) {
+        my $pid = get_pid_from_pidfile($name);
+
+        if (is_running($pid)) {
+            # warn "found running nginx...";
+
+            if ($UseHup) {
+                setup_server_root();
+                write_user_files($block);
+                write_config_file($block, $config);
+
+                if ($Verbose) {
+                    warn "sending USR1 signal to $pid.\n";
+                }
+
+                if (system("kill -USR1 $pid") == 0) {
+                    sleep $TestNginxSleep;
+
+                    if ($Verbose) {
+                        warn "sending HUP signal to $pid.\n";
+                    }
+
+                    # warn "sending HUP signal";
+                    if (system("kill -HUP $pid") == 0) {
+                        sleep $TestNginxSleep * 3;
+
+                        if ($Verbose) {
+                            warn "skip starting nginx from scratch\n";
+                        }
+
+                        if ($UseValgrind) {
+                            warn "$name\n";
+                        }
+
+                        test_config_version($name);
+
+                        goto shutdown_error_log;
+
+                    } else {
+                        if ($Verbose) {
+                            warn "$name - Failed to send HUP signal";
+                        }
+                    }
+
+                } else {
+                    warn "$name - Failed to send USR1 signal";
+                }
+            }
+
+            kill_process($pid, 1, $name);
+        }
+    }
+
+shutdown_error_log:
+
+    if (defined $block->shutdown_error_log) {
+        $CheckShutDownErrorLog->($block);
     }
 }
 
