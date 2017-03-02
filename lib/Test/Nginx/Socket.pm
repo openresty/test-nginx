@@ -3316,6 +3316,12 @@ Below is an example from ngx_headers_more module's test suite:
 
 Do not attempt to parse the response or run the response related subtests.
 
+=head2 reload_fails
+
+Allows the NGINX HUP reload fails, which means that the server will still use the previous test block's nginx configuration.
+
+This only makes sense in the HUP reload testing mode.
+
 =head2 user_files
 
 With this section you can create a file that will be copied in the
