@@ -2442,7 +2442,7 @@ For example,
 
 or an example for using an array value,
 
-    --- error_log eval
+    --- shutdown_error_log eval
     ["cleanup", "resolver"]
 
 B<WARNING:> skip the shutdown_error_log tests under the HUP reload mode.
