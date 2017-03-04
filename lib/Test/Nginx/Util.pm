@@ -1517,7 +1517,7 @@ sub run_test ($) {
                                 warn "$name\n";
                             }
 
-                            if (defined $block->skip_check_config_version) {
+                            if (defined $block->reload_fails) {
                                 sleep 0.1;
 
                             } else {
