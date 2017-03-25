@@ -478,6 +478,7 @@ if ($Randomize) {
 } else {
     $ServRoot = $ENV{TEST_NGINX_SERVROOT} || File::Spec->rel2abs('t/servroot');
 }
+$ENV{TEST_NGINX_SERVER_ROOT} = $ServRoot;
 
 our $LogDir     = File::Spec->catfile($ServRoot, 'logs');
 our $ErrLogFile = File::Spec->catfile($LogDir, 'error.log');
