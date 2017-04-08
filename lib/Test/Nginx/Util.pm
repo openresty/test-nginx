@@ -2399,17 +2399,23 @@ END {
 sub can_run {
     my ($cmd) = @_;
 
-    #warn "can run: @_\n";
-    #my $_cmd = $cmd;
-    #return $_cmd if (-x $_cmd or $_cmd = MM->maybe_command($_cmd));
+    #warn "can run: $cmd\n";
+    if ($cmd =~ m{[/\\]}) {
+       if (-f $cmd && -x $cmd) {
+           return $cmd;
+        }
+
+        return undef;
+    }
 
     for my $dir ((split /$Config::Config{path_sep}/, $ENV{PATH}), '.') {
         next if $dir eq '';
-        my $abs = File::Spec->catfile($dir, $_[0]);
+        my $abs = File::Spec->catfile($dir, $cmd);
+        #warn $abs;
         return $abs if -f $abs && -x $abs;
     }
 
-    return;
+    return undef;
 }
 
 1;
