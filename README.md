@@ -148,7 +148,7 @@ If you want a commit bit, feel free to drop me a line.
 
 # DEBIAN PACKAGES
 
-António P. P. Almeida is maintaining a Debian package for this module
+AntÃ³nio P. P. Almeida is maintaining a Debian package for this module
 in his Debian repository: [http://debian.perusio.net](http://debian.perusio.net)
 
 [Back to TOC](#table-of-contents)

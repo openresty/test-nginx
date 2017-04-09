@@ -5,7 +5,7 @@ use lib 'inc';
 
 use Test::Base -Base;
 
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 use POSIX qw( SIGQUIT SIGKILL SIGTERM SIGHUP );
 use Encode;

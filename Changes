@@ -1,5 +1,46 @@
 Changes for Test::Nginx
 
+0.26 - 2017-04-09
+
+ *   feature: added new Test::Nginx::Socket::Lua::Dgram module for
+     testing UDP/datagram nginx servers.
+
+ *   feature: added new section, `--- response_body_filters`, to
+     allow custom value filters applied upon the *actual* response
+     body data before matching against the expected values. thanks
+     detailyang for the patch.
+
+ *   feature: added support for env TEST_NGINX_RANDOMIZE, which when
+     set allows parallel testing.
+
+ *   feature: added support for the `$TEST_NGINX_SERVER_ROOT` special
+     macro variable in test block specs.
+
+ *   feature: allows extracting nginx version numbers from more
+     forked versions of nginx.
+
+ *   feature: support the "SKIP" section dynamically defined by
+     subclasses of the test scaffold calsses.
+
+ *   feature: `--- tcp_reply` section: allows perl subroutines as
+     section values. thanks Robert Paprocki for the patch.
+
+ *   bugfix: fixed the TEST_NGINX_BINARY environment for specifying
+     nginx binary path. thanks Thibault Charbonnier for the patch.
+
+ *   bugfix: ensure that kill_process() still kills the process with
+     force if the process is still running after sending SIGQUIT.
+
+ *   improve: improved the nginx shut down logic. thanks Dejiang Zhu
+     for the suggestion.
+
+ *   improve: improved the test message for ARRAY-typed
+     "response_body" section values.
+
+ *   improve: improved the dry run skip message for no_error_log.
+
+ *   doc: typo fixes from Juntong Fu.
+
 0.25 - 2016-02-24
 
  *   feature: added the new test mdoule, Test::Nginx::Socket::Lua::Stream,
