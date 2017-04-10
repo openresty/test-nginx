@@ -1517,7 +1517,12 @@ sub run_test ($) {
                                 warn "$name\n";
                             }
 
-                            test_config_version($name);
+                            if (defined $block->reload_fails) {
+                                sleep 0.1;
+
+                            } else {
+                                test_config_version($name);
+                            }
 
                             goto request;
 

@@ -3316,6 +3316,10 @@ Below is an example from ngx_headers_more module's test suite:
 
 Do not attempt to parse the response or run the response related subtests.
 
+=head2 reload_fails
+
+Allow HUP reload fails, that means the server still use the previous config.
+
 =head2 user_files
 
 With this section you can create a file that will be copied in the
