@@ -896,13 +896,17 @@ sub write_config_file ($$) {
     (my $quoted_server_name = $server_name) =~ s/\\/\\\\/g;
     $quoted_server_name =~ s/'/\\'/g;
 
+    my $privilege_process_config = "";
+    if ($PrivilegeProcessEnabled eq "on") {
+        $privilege_process_config = "\nprivilege_process $PrivilegeProcessEnabled;";
+    }
+
     open my $out, ">$ConfFile" or
         bail_out "Can't open $ConfFile for writing: $!\n";
     print $out <<_EOC_;
 worker_processes  $Workers;
 daemon $DaemonEnabled;
-master_process $MasterProcessEnabled;
-privilege_process $PrivilegeProcessEnabled;
+master_process $MasterProcessEnabled;$privilege_process_config
 error_log $err_log_file $LogLevel;
 pid       $PidFile;
 env MOCKEAGAIN_VERBOSE;
