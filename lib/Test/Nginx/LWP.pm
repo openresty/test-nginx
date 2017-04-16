@@ -30,6 +30,7 @@ use Test::Nginx::Util qw(
     $RepeatEach
     worker_connections
     master_process_enabled
+    privilege_process_enabled
     master_on
     master_off
     config_preamble
@@ -47,6 +48,7 @@ $UserAgent->agent(__PACKAGE__);
 our @EXPORT = qw( plan run_tests run_test
     repeat_each config_preamble worker_connections
     master_process_enabled master_on master_off
+    privilege_process_enabled
     no_long_string no_shuffle no_root_location);
 
 sub no_long_string () {
