@@ -153,6 +153,24 @@ L<https://github.com/nginx-shib/nginx-http-shibboleth>
 
 =back
 
+=head1 INSTALLATION
+
+If you have `cpan` installed, you can simply run the command to install this module:
+
+    sudo cpan Test::Nginx
+
+If you want to install from the source code directory directly, you can run
+
+    sudo cpan .
+
+If you prefer F<cpanm> to F<cpan> (like I do!), you can replace C<cpan> in the commands above with C<cpanm>.
+
+Otherwise you can install this module in the good old way below:
+
+    perl Makefile.PL
+    make
+    sudo make install
+
 =head1 SOURCE REPOSITORY
 
 This module has a Git repository on Github, which has access for all.

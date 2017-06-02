@@ -9,6 +9,7 @@ Table of Contents
 * [DESCRIPTION](#description)
 * [User Guide](#user-guide)
 * [Nginx C modules that use Test::Nginx to drive their test suites](#nginx-c-modules-that-use-testnginx-to-drive-their-test-suites)
+* [INSTALLATION](#installation)
 * [SOURCE REPOSITORY](#source-repository)
 * [DEBIAN PACKAGES](#debian-packages)
 * [Community](#community)
@@ -133,6 +134,26 @@ You can find a comprehensive user guide on this test framework in my upcoming bo
 - ngx\_shibboleth
 
     [https://github.com/nginx-shib/nginx-http-shibboleth](https://github.com/nginx-shib/nginx-http-shibboleth)
+
+[Back to TOC](#table-of-contents)
+
+# INSTALLATION
+
+If you have \`cpan\` installed, you can simply run the command to install this module:
+
+    sudo cpan Test::Nginx
+
+If you want to install from the source code directory directly, you can run
+
+    sudo cpan .
+
+If you prefer `cpanm` to `cpan` (like I do!), you can replace `cpan` in the commands above with `cpanm`.
+
+Otherwise you can install this module in the good old way below:
+
+    perl Makefile.PL
+    make
+    sudo make install
 
 [Back to TOC](#table-of-contents)
 
