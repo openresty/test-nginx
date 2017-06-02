@@ -7,6 +7,7 @@ Table of Contents
 
 * [NAME](#name)
 * [DESCRIPTION](#description)
+* [INSTALLATION](#installation)
 * [User Guide](#user-guide)
 * [Nginx C modules that use Test::Nginx to drive their test suites](#nginx-c-modules-that-use-testnginx-to-drive-their-test-suites)
 * [INSTALLATION](#installation)
@@ -50,6 +51,14 @@ port number by setting his port number to the `TEST_NGINX_PORT` environment,
 as in
 
     export TEST_NGINX_PORT=1989
+
+# INSTALLATION
+
+```bash
+perl Makefile.PL
+make
+sudo make install
+```
 
 # User Guide
 
