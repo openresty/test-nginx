@@ -31,7 +31,7 @@ use IO::Socket;
 
 our @EXPORT = qw( env_to_nginx is_str plan run_tests run_test
   repeat_each config_preamble worker_connections
-  master_process_enabled
+  master_process_enabled privilege_process_enabled
   no_long_string workers master_on master_off
   log_level no_shuffle no_root_location
   server_name

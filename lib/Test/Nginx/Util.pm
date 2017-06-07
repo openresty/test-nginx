@@ -232,6 +232,7 @@ our $Workers                = 1;
 our $WorkerConnections      = 64;
 our $LogLevel               = $ENV{TEST_NGINX_LOG_LEVEL} || 'debug';
 our $MasterProcessEnabled   = $ENV{TEST_NGINX_MASTER_PROCESS} || 'off';
+our $PrivilegeProcessEnabled= $ENV{TEST_NGINX_PRIVILEGE_PROCESS} || 'off';
 our $DaemonEnabled          = 'on';
 our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
 our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ServerPort || 1984;
@@ -383,6 +384,18 @@ sub master_process_enabled (@) {
     }
 }
 
+sub privilege_process_enabled (@) {
+    if ($CheckLeak) {
+        return;
+    }
+
+    if (@_) {
+        $PrivilegeProcessEnabled = shift() ? 'on' : 'off';
+    } else {
+        return $PrivilegeProcessEnabled;
+    }
+}
+
 our @EXPORT = qw(
     env_to_nginx
     is_str
@@ -435,6 +448,7 @@ our @EXPORT = qw(
     config_preamble
     repeat_each
     master_process_enabled
+    privilege_process_enabled
     log_level
     no_shuffle
     no_root_location
@@ -447,8 +461,9 @@ our @EXPORT = qw(
 
 
 if ($Profiling || $UseValgrind || $UseStap) {
-    $DaemonEnabled          = 'off';
-    $MasterProcessEnabled   = 'off';
+    $DaemonEnabled           = 'off';
+    $MasterProcessEnabled    = 'off';
+    $PrivilegeProcessEnabled = 'off';
 }
 
 our $ConfigPreamble = '';
@@ -881,12 +896,17 @@ sub write_config_file ($$) {
     (my $quoted_server_name = $server_name) =~ s/\\/\\\\/g;
     $quoted_server_name =~ s/'/\\'/g;
 
+    my $privilege_process_config = "";
+    if ($PrivilegeProcessEnabled eq "on") {
+        $privilege_process_config = "\nprivilege_process $PrivilegeProcessEnabled;";
+    }
+
     open my $out, ">$ConfFile" or
         bail_out "Can't open $ConfFile for writing: $!\n";
     print $out <<_EOC_;
 worker_processes  $Workers;
 daemon $DaemonEnabled;
-master_process $MasterProcessEnabled;
+master_process $MasterProcessEnabled;$privilege_process_config
 error_log $err_log_file $LogLevel;
 pid       $PidFile;
 env MOCKEAGAIN_VERBOSE;
