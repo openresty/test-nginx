@@ -151,6 +151,10 @@ L<https://github.com/nbs-system/naxsi>
 
 L<https://github.com/nginx-shib/nginx-http-shibboleth>
 
+=item ngx_shibboleth
+
+L<https://github.com/nginx-shib/nginx-http-shibboleth>
+
 =back
 
 =head1 INSTALLATION
