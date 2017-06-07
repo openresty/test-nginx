@@ -804,6 +804,31 @@ again:
 
     test_stap($block, $dry_run);
 
+    if (defined $block->stop_after_request) {
+        my $ngx_pid = get_pid_from_pidfile($name);
+        my $TestNginxSleep = sleep_time();
+
+        if (is_running($ngx_pid)) {
+            kill(SIGQUIT, $ngx_pid);
+            waitpid($ngx_pid, 0);
+
+            sleep $TestNginxSleep;
+        }
+
+        my $max_tries = 15;
+        for (my $i = 1; $i <= $max_tries; $i++) {
+            last unless is_running($ngx_pid);
+
+            sleep $TestNginxSleep;
+            next if $i < $max_tries;
+
+            warn "WARNING: killing nginx $ngx_pid with force...";
+            kill(SIGKILL, $ngx_pid);
+            waitpid($ngx_pid, 0);
+            sleep $TestNginxSleep;
+        }
+    }
+
     check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
 }
 
@@ -2371,6 +2396,15 @@ Call this function with an integer argument before C<run_tests()> to ask the tes
 to run the specified number of duplicate requests for each test block. When it is called without argument, it returns the current setting.
 
 Default to 1.
+
+=head2 stop_after_request
+
+By default, after the first request, nginx is still running until the next test case or end.
+Therefore, the error log is missing from the part generated during nginx exit.
+
+To get complete nginx error log, You can set this flag to stop nginx after the first request.
+
+Because the nginx will be stopped, the C<repeat_each> number can not be set to other but 1(default).
 
 =head2 env_to_nginx
 
