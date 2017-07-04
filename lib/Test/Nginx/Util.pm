@@ -1304,6 +1304,10 @@ sub run_test ($) {
     my $skip_slave = $block->skip_slave;
     my ($tests_to_skip, $should_skip, $skip_reason);
 
+    if (defined $block->reload_fails) {
+        $block->set_value("no_check_leak", 1);
+    }
+
     if (($CheckLeak || $Benchmark) && defined $block->no_check_leak) {
         $should_skip = 1;
     }
