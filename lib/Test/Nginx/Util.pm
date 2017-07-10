@@ -74,6 +74,8 @@ our $StapOutFileHandle;
 our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
     '#', '@', '-', '_', '^');
 
+our $PrevBlock;
+
 our $ErrLogFilePos;
 
 if ($Benchmark) {
@@ -420,6 +422,7 @@ our @EXPORT = qw(
     $ConfFile
     $RunTestHelper
     $CheckErrorLog
+    $CheckShutdownErrorLog
     $FilterHttpConfig
     $NoNginxManager
     $RepeatEach
@@ -459,6 +462,7 @@ sub config_preamble ($) {
 
 our $RunTestHelper;
 our $CheckErrorLog;
+our $CheckShutdownErrorLog;
 
 our $NginxVersion;
 our $NginxRawVersion;
@@ -637,6 +641,29 @@ sub error_log_data () {
     return \@lines;
 }
 
+sub check_prev_block_shutdown_error_log () {
+    my $block = $PrevBlock;
+
+    if (!defined $block) {
+        return;
+    }
+
+    my $name = $block->name;
+    my $dry_run;
+
+    if (defined $block->shutdown_error_log) {
+        if ($UseHup) {
+            $dry_run = 1;
+        }
+
+        if ($ENV{TEST_NGINX_NO_CLEAN}) {
+            $dry_run = 1;
+        }
+
+        $CheckShutdownErrorLog->($block, $dry_run);
+    }
+}
+
 sub run_tests () {
     $NginxVersion = get_nginx_version();
 
@@ -652,7 +679,10 @@ sub run_tests () {
         for my $hdl (@BlockPreprocessors) {
             $hdl->($block);
         }
+
         run_test($block);
+
+        $PrevBlock = $block;
     }
 
     cleanup();
@@ -1528,6 +1558,8 @@ sub run_test ($) {
                                 test_config_version($name);
                             }
 
+                            check_prev_block_shutdown_error_log();
+
                             goto request;
 
                         } else {
@@ -1559,6 +1591,8 @@ sub run_test ($) {
         }
 
 start_nginx:
+
+        check_prev_block_shutdown_error_log();
 
         unless ($nginx_is_running) {
             if ($Verbose) {
@@ -2396,6 +2430,8 @@ END {
             }
         }
     }
+
+    check_prev_block_shutdown_error_log();
 
     if ($Randomize) {
         if (defined $ServRoot && -d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {
