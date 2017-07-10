@@ -1282,6 +1282,61 @@ sub check_shutdown_error_log ($$) {
         $pats = \@clone;
     }
 
+    if (defined $block->no_shutdown_error_log) {
+        # warn "HERE";
+        my $pats = $block->no_shutdown_error_log;
+
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        my %found;
+        $lines ||= error_log_data();
+        # warn "error log data: ", join "\n", @$lines;
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                #warn "test $pat\n";
+                if ((ref $pat && $line =~ /$pat/) || $line =~ /\Q$pat\E/) {
+                    if ($found{$pat}) {
+                        my $tb = Test::More->builder;
+                        $tb->no_ending(1);
+
+                    } else {
+                        $found{$pat} = 1;
+                    }
+
+                    SKIP: {
+                        skip "$name - no_shutdown_error_log - tests skipped due to $dry_run ($line)", 1 if $dry_run;
+                        my $ln = fmt_str($line);
+                        my $p = fmt_str($pat);
+                        fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\"");
+                    }
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            next if $found{$pat};
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - no_shutdown_error_log - tests skipped due to $dry_run", 1 if $dry_run;
+                    my $p = fmt_str($pat);
+                    pass("$name - pattern \"$p\" does not match a line in error.log");
+                }
+            }
+        }
+    }
+
     $lines ||= error_log_data();
     #warn "error log data: ", join "\n", @$lines;
     for my $line (@$lines) {
@@ -2446,6 +2501,18 @@ or an example for using an array value,
     ["cleanup", "resolver"]
 
 B<WARNING:> skip the shutdown_error_log tests under the HUP reload mode.
+
+=head2 no_shutdown_error_log
+
+Very much like the C<--- shutdown_error_log> section, but does the opposite test, i.e.,
+pass only when the specified patterns of lines do not appear in the F<error.log> file at all.
+
+Here is an example:
+
+    --- no_shutdown_error_log
+    [error]
+
+This test will fail when any of the line in the F<error.log> file contains the string C<"[error]">.
 
 =head2 env_to_nginx
 
