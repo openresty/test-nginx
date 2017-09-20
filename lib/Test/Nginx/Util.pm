@@ -28,6 +28,8 @@ our $FilterHttpConfig;
 our $NoLongString = undef;
 our $FirstTime = 1;
 
+our $UseHttp2 = $ENV{TEST_NGINX_USE_HTTP2};
+
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
 our $Verbose = $ENV{TEST_NGINX_VERBOSE};
@@ -36,6 +38,8 @@ our $LatestNginxVersion = 0.008039;
 
 our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
 our $Profiling = 0;
+
+sub use_http2 ($);
 
 our $InSubprocess;
 our $RepeatEach = 1;
@@ -386,6 +390,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT = qw(
+    use_http2
     env_to_nginx
     is_str
     check_accum_error_log
@@ -935,6 +940,12 @@ _EOC_
         print $out "env $v;\n";
     }
 
+    my $listen_opts = '';
+
+    if (use_http2($block)) {
+        $listen_opts .= " http2";
+    }
+
     print $out <<_EOC_;
 #env LUA_PATH;
 #env LUA_CPATH;
@@ -951,7 +962,7 @@ http {
 $http_config
 
     server {
-        listen          $ServerPort;
+        listen          $ServerPort$listen_opts;
         server_name     '$server_name';
 
         client_max_body_size 30M;
@@ -981,7 +992,7 @@ _EOC_
     if ($UseHup) {
         print $out <<_EOC_;
     server {
-        listen          $ServerPort;
+        listen          $ServerPort$listen_opts;
         server_name     'Test-Nginx';
 
         location = /ver {
@@ -1070,8 +1081,8 @@ sub show_all_chars ($) {
     $s;
 }
 
-sub test_config_version ($) {
-    my $name = shift;
+sub test_config_version ($$) {
+    my ($name, $block) = @_;
     my $total = 35;
     my $sleep = sleep_time();
     my $nsucc = 0;
@@ -1080,7 +1091,15 @@ sub test_config_version ($) {
 
     for (my $tries = 1; $tries <= $total; $tries++) {
 
-        my $ver = `curl -s -S -H 'Host: Test-Nginx' --connect-timeout 2 'http://$ServerAddr:$ServerPort/ver'`;
+        my $extra_curl_opts = '';
+
+        if (use_http2($block)) {
+            $extra_curl_opts .= ' --http2 --http2-prior-knowledge';
+        }
+
+        my $cmd = "curl$extra_curl_opts -sS -H 'Host: Test-Nginx' --connect-timeout 2 'http://$ServerAddr:$ServerPort/ver'";
+        #warn $cmd;
+        my $ver = `$cmd`;
         #chop $ver;
 
         if ($Verbose) {
@@ -1334,7 +1353,7 @@ sub run_test ($) {
     my $skip_slave = $block->skip_slave;
     my ($tests_to_skip, $should_skip, $skip_reason);
 
-    if (defined $block->reload_fails) {
+    if (defined $block->reload_fails || defined $block->http2) {
         $block->set_value("no_check_leak", 1);
     }
 
@@ -1555,7 +1574,7 @@ sub run_test ($) {
                                 sleep 0.1;
 
                             } else {
-                                test_config_version($name);
+                                test_config_version($name, $block);
                             }
 
                             check_prev_block_shutdown_error_log();
@@ -2460,6 +2479,59 @@ sub can_run {
         return $abs if -f $abs && -x $abs;
     }
 
+    return undef;
+}
+
+sub use_http2 ($) {
+    my $block = shift;
+
+    my $cached = $block->test_nginx_enabled_http2;
+    if (defined $cached) {
+        return $cached;
+    }
+
+    if (defined $block->http2) {
+        if ($block->raw_request) {
+            bail_out("cannot use --- http2 with --- raw_request");
+        }
+
+        if ($block->pipelined_requests) {
+            bail_out("cannot use --- http2 with --- pipelined_requests");
+        }
+
+        $block->set_value("test_nginx_enabled_http2", 1);
+        return 1;
+    }
+
+    if ($UseHttp2) {
+        if ($block->raw_request) {
+            warn "WARNING: ", $block->name, " - using raw_request HTTP/2, will not use HTTP/2\n";
+            $block->set_value("test_nginx_enabled_http2", 0);
+            return undef;
+        }
+
+        if ($block->pipelined_requests) {
+            warn "WARNING: ", $block->name, " - using pipelined_requests, will not use HTTP/2\n";
+            $block->set_value("test_nginx_enabled_http2", 0);
+            return undef;
+        }
+
+        if (!defined $block->request) {
+            $block->set_value("test_nginx_enabled_http2", 0);
+            return undef;
+        }
+
+        if (!ref $block->request && $block->request =~ m{HTTP/1\.0}s) {
+            warn "WARNING: ", $block->name, " - explicitly rquires HTTP 1.0, so will not use HTTP/2\n";
+            $block->set_value("test_nginx_enabled_http2", 0);
+            return undef;
+        }
+
+        $block->set_value("test_nginx_enabled_http2", 1);
+        return 1;
+    }
+
+    $block->set_value("test_nginx_enabled_http2", 0);
     return undef;
 }
 

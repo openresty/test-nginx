@@ -17,6 +17,7 @@ requires        ('LWP::UserAgent');
 requires        ('HTTP::Response');
 requires        ('Fcntl');
 requires        ('POSIX');
+requires        ('IPC::Run');
 requires        ('URI::Escape');
 requires        ('IO::Select');
 requires        ('File::Path');

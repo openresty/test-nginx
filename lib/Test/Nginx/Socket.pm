@@ -3,6 +3,7 @@ package Test::Nginx::Socket;
 use lib 'lib';
 use lib 'inc';
 
+use v5.10.1;
 use Test::Base -Base;
 
 our $VERSION = '0.26';
@@ -19,6 +20,7 @@ use File::Temp qw( tempfile );
 use Digest::MD5 ();
 use Digest::SHA ();
 use POSIX ":sys_wait_h";
+use IPC::Run ();
 
 use Test::Nginx::Util;
 
@@ -41,10 +43,12 @@ our @EXPORT = qw( env_to_nginx is_str plan run_tests run_test
   add_response_body_check
 );
 
+our $UseHttp2 = $Test::Nginx::Util::UseHttp2;
 our $TotalConnectingTimeouts = 0;
 our $PrevNginxPid;
 
 sub send_request ($$$$@);
+sub send_http2_req ($$$);
 
 sub run_filter_helper($$$);
 sub run_test_helper ($$);
@@ -1673,6 +1677,42 @@ sub parse_response($$$) {
     return ( $res, $raw_headers, $left );
 }
 
+sub send_http2_req ($$$) {
+    my ($block, $req, $timeout) = @_;
+
+    my $name = $block->name;
+
+    my $cmd = gen_curl_cmd_from_req($block, $req);
+
+    if ($Test::Nginx::Util::Verbose) {
+        warn "running cmd @$cmd";
+    }
+
+    my $ok = IPC::Run::run($cmd, \(my $in), \(my $out), \(my $err),
+                           IPC::Run::timeout($timeout));
+
+    if (!defined $ok) {
+        fail "failed to run curl: $?: " . ($err // '');
+        return;
+    }
+
+    if (!$out) {
+        if ($err) {
+            fail "$name - command \"@$cmd\" generates stderr output: $err";
+            return;
+        }
+
+        fail "$name - curl command \"@$cmd\" generates no stdout output";
+        return;
+    }
+
+    if ($err) {
+        warn "WARNING: $name - command \"@$cmd\" generates stderr output: $err";
+    }
+
+    return $out;
+}
+
 sub send_request ($$$$@) {
     my ( $req, $middle_delay, $timeout, $block, $tries ) = @_;
 
@@ -1758,6 +1798,10 @@ sub send_request ($$$$@) {
             #warn "Found HEAD request!\n";
             $head_req = 1;
         }
+    }
+
+    if (use_http2($block)) {
+        return send_http2_req($block, $req, $timeout), $head_req;
     }
 
     #my $flags = fcntl $sock, F_GETFL, 0
@@ -2070,11 +2114,22 @@ sub gen_curl_cmd_from_req ($$) {
 
     my @args = ('curl', '-i');
 
+    if ($Test::Nginx::Util::Verbose) {
+        push @args, "-vv";
+
+    } else {
+        push @args, '-sS';
+    }
+
+    if (use_http2($block)) {
+        push @args, '--http2', '--http2-prior-knowledge';
+    }
+
     if ($meth eq 'HEAD') {
         push @args, '-I';
 
-    } elsif ($meth ne 'GET') {
-        warn "WARNING: --- curl: request method $meth not supported yet.\n";
+    } else {
+        push @args, "-X", $meth;
     }
 
     if ($http_ver ne '1.1') {
@@ -2100,19 +2155,36 @@ sub gen_curl_cmd_from_req ($$) {
 
     #warn "headers: @headers ", scalar(@headers), "\n";
 
+    my $found_content_type;
+
     for my $h (@headers) {
         #warn "h: $h\n";
         if ($h =~ /^\s*User-Agent\s*:\s*(.*\S)/i) {
             push @args, '-A', $1;
 
         } else {
+            if ($h =~ /^\s*Content-Type\s*:/i) {
+                $found_content_type = 1;
+            }
+
             push @args, '-H', $h;
         }
     }
 
-    if ($req =~ m{\G.+}gcs) {
-        warn "WARNING: --- curl: request body not supported.\n";
+    if ($req =~ m{\G(.+)}gcsm) {
+        #warn "!! POST body data len: ", length($1);
+        if (!$found_content_type) {
+            push @args, "-H", 'Content-Type: ';
+        }
+        push @args, '--data-binary', $1;
     }
+
+    my $timeout = $block->timeout;
+    if (!$timeout) {
+        $timeout = timeout();
+    }
+
+    push @args, '--connect-timeout', $timeout;
 
     my $link;
     {
@@ -2789,6 +2861,20 @@ Performs intelligent string comparison subtests which honors both C<no_long_stri
 
 The following sections are supported:
 
+=head2 http2
+
+Enforces the test scaffold to use the HTTP/2 wire protocol to send the test request.
+
+Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
+with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
+and C<--http2-prior-knowledge> command-line options.
+
+B<WARNING:> not all the sections and features are supported when this C<--- http2> section is
+specified. For example, this section cannot be used with C<--- pipelined_requests> or
+C<--- raw_request>.
+
+See also the L<TEST_NGINX_USE_HTTP2> system environment for the "http2" test mode.
+
 =head2 config
 
 Content of this section will be included in the "server" part of the generated
@@ -3022,7 +3108,7 @@ For example,
 
 will produce the following line (to C<stderr>) while running this test block:
 
-    # curl -i -H 'X-Foo: 3' -A openresty 'http://127.0.0.1:1984/foo/bar?baz=3'
+    # curl -i -sS -H 'X-Foo: 3' -A openresty 'http://127.0.0.1:1984/foo/bar?baz=3'
 
 You need to remember to set the C<TEST_NGINX_NO_CLEAN> environment to 1 to prevent the nginx
 and other processes from quitting automatically upon test exits.
@@ -3887,6 +3973,23 @@ This section specifies the server address Test::Nginx will connect to. If server
 All environment variables starting with C<TEST_NGINX_> are expanded in the
 sections used to build the configuration of the server that tests automatically
 starts. The following environment variables are supported by this module:
+
+=head2 TEST_NGINX_USE_HTTP2
+
+Enables the "http2" test mode by enforcing using the (plain text) HTTP/2 protocol to send the
+test request.
+
+Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
+with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
+and C<--http2-prior-knowledge> command-line options.
+
+B<WARNING:> not all the sections and features are supported in the "http2" test mode. For example, the L<pipelined_requests> and
+L<raw_request> will still use the HTTP/1 protocols even in the "http2" test mode. Similarly, test blocks explicitly require
+the HTTP 1.0 protocol will still use HTTP 1.0.
+
+One can enable HTTP/2 mode for an individual test block by specifying the L<http2> section, as in
+
+    --- http2
 
 =head2 TEST_NGINX_VERBOSE
 
