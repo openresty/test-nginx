@@ -2121,11 +2121,13 @@ sub gen_curl_cmd_from_req ($$) {
         push @args, '-sS';
     }
 
-    my $isHttp2 = use_http2($block);
-    if ($isHttp2 && $isHttp2 == 1) {
+    if (use_http2($block)) {
         push @args, '--http2', '--http2-prior-knowledge';
-    } elsif ($isHttp2 && $isHttp2 == 2) {
-        push @args, '-k', '--http2', '--http2-prior-knowledge', '--resolve', "$ServerName:$ServerPortForClient:$ServerAddr",
+    }
+
+    if (use_http2($block) && defined $block->tls) {
+        my $resolve = "$ServerName:$ServerPortForClient:$ServerAddr";
+        push @args, '-k', '--resolve', $resolve;
     }
 
     if ($meth eq 'HEAD') {
@@ -2194,10 +2196,10 @@ sub gen_curl_cmd_from_req ($$) {
         my $server = $ServerAddr;
         my $port = $ServerPortForClient;
         $link = "http://$server:$port$uri";
-    }
-
-    if (use_http2($block) == 2) {
-        $link = "https://$ServerName:$ServerPortForClient$uri";
+        if (use_http2($block) && defined $block->tls) {
+            my $server_name = $ServerName;
+            $link = "https://$server_name:$port$uri";
+        }
     }
 
     push @args, $link;
@@ -2871,6 +2873,7 @@ The following sections are supported:
 =head2 http2
 
 Enforces the test scaffold to use the HTTP/2 wire protocol to send the test request.
+Also, you can set tls section using the HTTP/2 over TLS protocol and SNI(Server Name Indication).
 
 Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
 with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
@@ -3984,7 +3987,7 @@ starts. The following environment variables are supported by this module:
 =head2 TEST_NGINX_USE_HTTP2
 
 Enables the "http2" test mode by enforcing using the (plain text) HTTP/2 protocol to send the
-test request. Also, you can set sni section using the TLS HTTP/2 protocol and SNI(Server Name Indication).
+test request.
 
 Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
 with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
@@ -3998,9 +4001,9 @@ One can enable HTTP/2 mode for an individual test block by specifying the L<http
 
     --- http2
 
-Enable SNI mode for an individual test block by specifying the L<sni> section, as in
+Enable HTTP/2 over TLS mode for an individual test block by specifying the L<tls> section, as in
 
-    --- sni
+    --- tls
 
 =head2 TEST_NGINX_VERBOSE
 

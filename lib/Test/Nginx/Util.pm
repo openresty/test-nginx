@@ -942,11 +942,12 @@ _EOC_
 
     my $listen_opts = '';
 
-    my $isHttp2 = use_http2($block);
-    if ($isHttp2 && $isHttp2 == 1) {
+    if (use_http2($block) && defined $block->tls) {
+        $listen_opts .= " ssl";
+    }
+
+    if (use_http2($block)) {
         $listen_opts .= " http2";
-    } elsif ($isHttp2 && $isHttp2 == 2) {
-        $listen_opts .= " ssl http2";
     }
 
     print $out <<_EOC_;
@@ -2502,11 +2503,6 @@ sub use_http2 ($) {
             bail_out("cannot use --- http2 with --- pipelined_requests");
         }
 
-        if (defined $block->sni) {
-            $block->set_value("test_nginx_enabled_http2_sni", 1);
-            return 2;
-        }
-
         $block->set_value("test_nginx_enabled_http2", 1);
         return 1;
     }
@@ -2533,11 +2529,6 @@ sub use_http2 ($) {
             warn "WARNING: ", $block->name, " - explicitly rquires HTTP 1.0, so will not use HTTP/2\n";
             $block->set_value("test_nginx_enabled_http2", 0);
             return undef;
-        }
-
-        if ($block->sni) {
-            $block->set_value("test_nginx_enabled_http2_sni", 1);
-            return 2;
         }
 
         $block->set_value("test_nginx_enabled_http2", 1);
