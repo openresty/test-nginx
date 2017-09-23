@@ -3984,7 +3984,7 @@ starts. The following environment variables are supported by this module:
 =head2 TEST_NGINX_USE_HTTP2
 
 Enables the "http2" test mode by enforcing using the (plain text) HTTP/2 protocol to send the
-test request.
+test request. Also, you can set sni section using the TLS HTTP/2 protocol and SNI(Server Name Indication).
 
 Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
 with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
@@ -3997,6 +3997,10 @@ the HTTP 1.0 protocol will still use HTTP 1.0.
 One can enable HTTP/2 mode for an individual test block by specifying the L<http2> section, as in
 
     --- http2
+
+Enable SNI mode for an individual test block by specifying the L<sni> section, as in
+
+    --- sni
 
 =head2 TEST_NGINX_VERBOSE
 
