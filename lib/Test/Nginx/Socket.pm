@@ -2121,8 +2121,11 @@ sub gen_curl_cmd_from_req ($$) {
         push @args, '-sS';
     }
 
-    if (use_http2($block)) {
+    my $isHttp2 = use_http2($block);
+    if ($isHttp2 && $isHttp2 == 1) {
         push @args, '--http2', '--http2-prior-knowledge';
+    } elsif ($isHttp2 && $isHttp2 == 2) {
+        push @args, '-k', '--http2', '--http2-prior-knowledge', '--resolve', "$ServerName:$ServerPortForClient:$ServerAddr",
     }
 
     if ($meth eq 'HEAD') {
@@ -2191,6 +2194,10 @@ sub gen_curl_cmd_from_req ($$) {
         my $server = $ServerAddr;
         my $port = $ServerPortForClient;
         $link = "http://$server:$port$uri";
+    }
+
+    if (use_http2($block) == 2) {
+        $link = "https://$ServerName:$ServerPortForClient$uri";
     }
 
     push @args, $link;
