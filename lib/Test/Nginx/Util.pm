@@ -850,7 +850,10 @@ sub write_config_file ($$) {
     if ($UseHup) {
         master_on(); # config reload is buggy when master is off
 
-    } elsif ($UseValgrind || $UseStap) {
+    } elsif ($UseValgrind) {
+        master_off();
+
+    } elsif ($UseStap && defined $block->stap) {
         master_off();
     }
 
