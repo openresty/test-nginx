@@ -38,3 +38,12 @@ Makefile.old
 MYMETA.json
 MYMETA.yml
 META.yml
+go
+t/servroot/
+*.diff
+*.pdf
+valgrind.suppress
+*.tags
+*.sh
+*.patch
+*.ps

@@ -38,3 +38,8 @@ genmobi\.sh$
 \.sh$
 \.pdf$
 ^\.travis\.yml$
+^go$
+\.t_$
+\.ps$
+t/servroot/
+^valgrind\.suppress$
