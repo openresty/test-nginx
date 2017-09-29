@@ -24,6 +24,7 @@ use Carp qw( croak );
 
 our $ConfigVersion;
 our $FilterHttpConfig;
+my $LoadedIPCRun;
 
 our $NoLongString = undef;
 our $FirstTime = 1;
@@ -2503,6 +2504,11 @@ sub use_http2 ($) {
         }
 
         $block->set_value("test_nginx_enabled_http2", 1);
+
+        if (!$LoadedIPCRun) {
+            require IPC::Run;
+            $LoadedIPCRun = 1;
+        }
         return 1;
     }
 
@@ -2531,6 +2537,12 @@ sub use_http2 ($) {
         }
 
         $block->set_value("test_nginx_enabled_http2", 1);
+
+        if (!$LoadedIPCRun) {
+            require IPC::Run;
+            $LoadedIPCRun = 1;
+        }
+
         return 1;
     }
 

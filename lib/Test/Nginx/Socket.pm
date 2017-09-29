@@ -20,7 +20,6 @@ use File::Temp qw( tempfile );
 use Digest::MD5 ();
 use Digest::SHA ();
 use POSIX ":sys_wait_h";
-use IPC::Run ();
 
 use Test::Nginx::Util;
 
