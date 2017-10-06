@@ -2399,7 +2399,7 @@ retry:
                 sleep $TestNginxSleep;
 
                 if (-f $PidFile) {
-                    if ($i++ < 5) {
+                    if ($i++ < 10) {
                         if ($Verbose) {
                             warn "nginx not quitted, retrying...\n";
                         }
