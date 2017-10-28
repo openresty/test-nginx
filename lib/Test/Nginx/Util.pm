@@ -1786,6 +1786,7 @@ start_nginx:
                 my $i = 0;
                 $ErrLogFilePos = 0;
                 my ($exec_failed, $coredump, $exit_code);
+                my $waited = 0;
 
 RUN_AGAIN:
                 system($cmd);
@@ -1851,6 +1852,14 @@ RUN_AGAIN:
                         $dry_run = "the lack of directive $directive";
 
                     } else {
+                        $i++;
+                        my $delay = 0.1 * $i;
+                        if ($delay > 1) {
+                            $delay = 1;
+                        }
+                        sleep $delay;
+                        $waited += $delay;
+                        goto RUN_AGAIN if $waited < 30;
                         bail_out("$name - Cannot start nginx using command \"$cmd\" (status code $status).");
                     }
                 }
