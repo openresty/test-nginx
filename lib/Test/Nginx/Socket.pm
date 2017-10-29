@@ -42,6 +42,7 @@ our @EXPORT = qw( env_to_nginx is_str plan run_tests run_test
   add_response_body_check
 );
 
+our $CheckLeakCount = $ENV{TEST_NGINX_CHECK_LEAK_COUNT} // 100;
 our $UseHttp2 = $Test::Nginx::Util::UseHttp2;
 our $TotalConnectingTimeouts = 0;
 our $PrevNginxPid;
@@ -647,7 +648,7 @@ sub run_test_helper ($$) {
             }
             $PrevNginxPid = $ngx_pid;
             my @rss_list;
-            for (my $i = 0; $i < 100; $i++) {
+            for (my $i = 0; $i < $CheckLeakCount; $i++) {
                 sleep 0.02;
                 my $out = `ps -eo pid,rss|grep $ngx_pid`;
                 if ($? != 0 && !is_running($ngx_pid)) {
@@ -4079,6 +4080,12 @@ and here is an example of leaking:
 Even very small leaks can be amplified and caught easily by this
 testing mode because their slopes will usually be far above C<1.0>.
 
+One can configure the number of sample points via the L<TEST_NGINX_CHECK_LEAK_COUNT>
+system environment, for example, to sample 1000 data points, we can set
+the following environment I<before> running the test:
+
+    export TEST_NGINX_CHECK_LEAK_COUNT=1000
+
 For now, only C<GET>, C<POST>, C<PUT>, and C<HEAD> requests are supported
 (due to the limited HTTP support in both C<ab> and C<weighttp>).
 Other methods specified in the test cases will turn to C<GET> with force.
@@ -4087,6 +4094,13 @@ The tests in this mode will always succeed because this mode also
 enforces the "dry-run" mode.
 
 Test blocks carrying the "--- no_check_leak" directive will be skipped in this testing mode.
+
+=head2 TEST_NGINX_CHECK_LEAK_COUNT
+
+Takes a number value which controls how many data points to be sampled
+in the "check leak" test mode. See L<TEST_NGINX_CHECK_LEAK> for more details.
+
+Defaults to 100.
 
 =head2 TEST_NGINX_USE_HUP
 
