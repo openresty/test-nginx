@@ -13,7 +13,7 @@ use HTTP::Response;
 use Cwd qw( cwd );
 use List::Util qw( shuffle );
 use Time::HiRes qw( sleep );
-use File::Path qw(make_path);
+use File::Path qw(make_path remove_tree);
 use File::Find qw(find);
 use File::Temp qw( tempfile :POSIX );
 use Scalar::Util qw( looks_like_number );
@@ -719,24 +719,10 @@ sub setup_server_root () {
 
             # Take special care, so we won't accidentally remove
             # real user data when TEST_NGINX_SERVROOT is mis-used.
-            my $rc = system("rm -rf $ConfDir > /dev/null");
-            if ($rc != 0) {
-                if ($rc == -1) {
-                    bail_out "Cannot remove $ConfDir: $rc: $!\n";
+            remove_tree($ConfDir, $HtmlDir, $LogDir, glob "$ServRoot/*_temp");
 
-                } else {
-                    bail_out "Can't remove $ConfDir: $rc";
-                }
-            }
-
-            system("rm -rf $HtmlDir > /dev/null") == 0 or
-                bail_out "Can't remove $HtmlDir";
-            system("rm -rf $LogDir > /dev/null") == 0 or
-                bail_out "Can't remove $LogDir";
-            system("rm -rf $ServRoot/*_temp > /dev/null") == 0 or
-                bail_out "Can't remove $ServRoot/*_temp";
-            system("rmdir $ServRoot > /dev/null") == 0 or
-                bail_out "Can't remove $ServRoot (not empty?)";
+            rmdir $ServRoot or
+                bail_out "Can't remove $ServRoot (not empty?): $!";
         }
     }
     if (!-d $ServRoot) {
