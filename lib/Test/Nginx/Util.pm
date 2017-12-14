@@ -74,6 +74,11 @@ our $ServerAddr = '127.0.0.1';
 
 our $ServerName = 'localhost';
 
+our $WorkerUser = $ENV{TEST_NGINX_WORKER_USER};
+if (defined $WorkerUser && $WorkerUser !~ /^\w+(?:\s+\w+)$/) {
+    die "Bad value in the env TEST_NGINX_WORKER_USER: $WorkerUser\n";
+}
+
 our $StapOutFileHandle;
 
 our @RandStrAlphabet = ('A' .. 'Z', 'a' .. 'z', '0' .. '9',
@@ -1020,6 +1025,13 @@ env ASAN_OPTIONS;
 env MOCKNOEAGAIN_VERBOSE;
 env MOCKNOEAGAIN;
 _EOC_
+
+    if (defined $WorkerUser) {
+        print $out "user $WorkerUser;\n";
+
+    } elsif ($> == 0) {  # being root
+        print $out "user root;\n";
+    }
 
     close $out;
 }

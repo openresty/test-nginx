@@ -4275,6 +4275,20 @@ C<prove -j8 -r t> runs the test suite under F<t/> in 8 parallel jobs, utilizing 
 Note that only test suite I<without> external shared and writable service dependencies (like Memcached,
 Redis or MySQL) can run in parallel in this way, obviously.
 
+=head2 TEST_NGINX_WORKER_USER
+
+Sets the user account used to run the nginx worker processes when the master process is enabled.
+This requires root access to run the nginx master process. For instance,
+
+    export TEST_NGINX_WORKER_USER='agentzh'
+
+Defaults to the `root` when the master is run by `root` also. Otherwise defaults to the current
+user.
+
+One can also add an optional user group separated by spaces, as in
+
+    export TEST_NGINX_WORKER_USER='agentzh wheel'
+
 =head2 Valgrind Integration
 
 Test::Nginx has integrated support for valgrind (L<http://valgrind.org>) even though by
