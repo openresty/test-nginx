@@ -2653,6 +2653,14 @@ DYLD_FORCE_FLAT_NAMESPACE
 
 ASAN_OPTIONS
 
+=item *
+
+MOCKNOEAGAIN_VERBOSE
+
+=item *
+
+MOCKNOEAGAIN
+
 =back
 
 =head2 workers

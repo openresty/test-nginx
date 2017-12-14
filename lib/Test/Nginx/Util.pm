@@ -1017,6 +1017,8 @@ _EOC_
 
     print $out <<_EOC_;
 env ASAN_OPTIONS;
+env MOCKNOEAGAIN_VERBOSE;
+env MOCKNOEAGAIN;
 _EOC_
 
     close $out;
