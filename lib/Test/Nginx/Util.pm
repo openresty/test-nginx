@@ -75,7 +75,7 @@ our $ServerAddr = '127.0.0.1';
 our $ServerName = 'localhost';
 
 our $WorkerUser = $ENV{TEST_NGINX_WORKER_USER};
-if (defined $WorkerUser && $WorkerUser !~ /^\w+(?:\s+\w+)$/) {
+if (defined $WorkerUser && $WorkerUser !~ /^\w+(?:\s+\w+)?$/) {
     die "Bad value in the env TEST_NGINX_WORKER_USER: $WorkerUser\n";
 }
 
