@@ -790,6 +790,10 @@ again:
             }
 
             check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
+
+            if (!defined $block->ignore_response) {
+                check_access_log($block, $dry_run, $repeated_req_idx);
+            }
         }
 
         $req_idx++;
@@ -810,6 +814,10 @@ again:
     test_stap($block, $dry_run);
 
     check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
+
+    if (!defined $block->ignore_response) {
+        check_access_log($block, $dry_run, $repeated_req_idx);
+    }
 }
 
 
@@ -1036,6 +1044,53 @@ sub value_contains ($$) {
     }
 
     return undef;
+}
+
+sub check_access_log ($$$) {
+    my ($block, $dry_run, $repeated_req_idx) = @_;
+    my $name = $block->name;
+    my $lines;
+
+    if (defined $block->access_log) {
+        my $pats = $block->access_log;
+
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        $lines ||= access_log_data();
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        skip "$name - access_log - tests skipped due to $dry_run", 1 if $dry_run;
+                        pass("$name - pattern \"$pat\" matches a line in access.log (req $repeated_req_idx)");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - access_log - tests skipped due to $dry_run", 1 if $dry_run;
+                    fail("$name - pattern \"$pat\" should match a line in access.log (req $repeated_req_idx)");
+                    #die join("", @$lines);
+                }
+            }
+        }
+    }
 }
 
 sub check_error_log ($$$$) {
@@ -3427,6 +3482,27 @@ then the substring "abc" must appear literally in a line of F<error.log>, and th
 must also match a line in F<error.log>.
 
 By default, only the part of the error logs corresponding to the current request is checked. You can make it check accumulated error logs by calling the C<check_accum_error_log> Perl function before calling C<run_tests> in the boilerplate Perl code above the C<__DATA__> line.
+
+=head2 access_log
+
+Similar to the L<error_log> section, but for asserting appearance of patterns in the nginx access log file.
+
+Below is an example:
+
+    === TEST 1: check access log
+    --- config
+        location /t {
+            content_by_lua_block {
+                ngx.say("hello")
+            }
+        }
+
+    --- request
+    GET /t
+    --- response_body
+    hello
+    --- access_log
+    GET /t
 
 =head2 abort
 
