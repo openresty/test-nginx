@@ -415,6 +415,7 @@ our @EXPORT = qw(
     stap_out_fname
     bail_out
     add_cleanup_handler
+    access_log_data
     error_log_data
     setup_server_root
     write_config_file
@@ -629,6 +630,18 @@ sub cleanup () {
         kill_process($ChildPid, 1, "cleanup");
         undef $ChildPid;
     }
+}
+
+sub access_log_data () {
+    sleep $TestNginxSleep * 3;
+
+    open my $in, $AccLogFile or
+        return undef;
+
+    my @lines = <$in>;
+
+    close $in;
+    return \@lines;
 }
 
 sub error_log_data () {

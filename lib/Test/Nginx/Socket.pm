@@ -1101,6 +1101,47 @@ sub check_error_log ($$$$) {
         }
     }
 
+    if (defined $block->access_log) {
+        my $pats = $block->access_log;
+
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        $lines ||= access_log_data();
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        skip "$name - access_log - tests skipped due to $dry_run", 1 if $dry_run;
+                        pass("$name - pattern \"$pat\" matches a line in access.log (req $repeated_req_idx)");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - access_log - tests skipped due to $dry_run", 1 if $dry_run;
+                    fail("$name - pattern \"$pat\" should match a line in access.log (req $repeated_req_idx)");
+                    #die join("", @$lines);
+                }
+            }
+        }
+    }
+
     if (defined $block->error_log) {
         my $pats = $block->error_log;
 
