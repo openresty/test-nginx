@@ -635,8 +635,13 @@ sub cleanup () {
 sub access_log_data () {
     sleep $TestNginxSleep * 3;
 
-    open my $in, $AccLogFile or
+    open my $in, $AccLogFile or do {
+        if ($AccLogFile ne "off") {
+            die "open $AccLogFile failed: $!";
+        }
+
         return undef;
+    };
 
     my @lines = <$in>;
 
