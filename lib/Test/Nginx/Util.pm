@@ -463,7 +463,9 @@ our @EXPORT = qw(
 
 if ($Profiling || $UseValgrind || $UseStap) {
     $DaemonEnabled          = 'off';
-    $MasterProcessEnabled   = 'off';
+    if (!$UseValgrind) {
+        $MasterProcessEnabled   = 'off';
+    }
 }
 
 our $ConfigPreamble = '';
@@ -861,7 +863,7 @@ sub write_config_file ($$) {
         master_on(); # config reload is buggy when master is off
 
     } elsif ($UseValgrind) {
-        master_off();
+        #master_off();
 
     } elsif ($UseStap && defined $block->stap) {
         master_off();
