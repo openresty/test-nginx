@@ -744,7 +744,8 @@ sub setup_server_root () {
 
             # Take special care, so we won't accidentally remove
             # real user data when TEST_NGINX_SERVROOT is mis-used.
-            remove_tree($ConfDir, $HtmlDir, $LogDir, glob "$ServRoot/*_temp");
+            remove_tree($ConfDir, $HtmlDir, $LogDir, glob("$ServRoot/*_cache"),
+                        glob("$ServRoot/*_temp"));
 
             rmdir $ServRoot or
                 bail_out "Can't remove $ServRoot (not empty?): $!";
