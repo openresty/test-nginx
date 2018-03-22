@@ -1107,7 +1107,7 @@ sub show_all_chars ($) {
 
 sub test_config_version ($$) {
     my ($name, $block) = @_;
-    my $total = 35;
+    my $total = 200;
     my $sleep = sleep_time();
     my $nsucc = 0;
 
