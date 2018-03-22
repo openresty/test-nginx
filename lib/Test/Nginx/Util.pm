@@ -1170,7 +1170,8 @@ sub test_config_version ($$) {
     my $tb = Test::More->builder;
     $tb->no_ending(1);
 
-    Test::More::fail("$name - failed to reload configuration");
+    Test::More::fail("$name - failed to reload configuration after $total "
+                     .. "failed test requests");
 }
 
 sub parse_headers ($) {
