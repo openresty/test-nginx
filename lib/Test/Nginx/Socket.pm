@@ -611,10 +611,9 @@ sub run_test_helper ($$) {
         $cmd = quote_sh_args($cmd);
 
         warn "$cmd\n";
-        my $full_cmd = "unbuffer $cmd > /dev/stderr";
-        my $rc = system $full_cmd;
-        if ($rc != 0) {
-          bail_out("Failure running '${full_cmd}': return code ${rc}");
+        $cmd = "unbuffer $cmd > /dev/stderr";
+        if (system($cmd) != 0) {
+          bail_out("Failed to run '${cmd}': return code $?");
         }
     }
 
