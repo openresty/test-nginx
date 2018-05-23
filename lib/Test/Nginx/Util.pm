@@ -987,9 +987,7 @@ $http_config
     server {
         listen          $ServerPort$listen_opts;
         server_name     '$server_name';
-
 $http2_ssl_cert
-
         client_max_body_size 30M;
         #client_body_buffer_size 4k;
 
