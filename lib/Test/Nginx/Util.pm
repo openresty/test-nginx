@@ -41,6 +41,7 @@ our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
 our $Profiling = 0;
 
 sub use_http2 ($);
+sub gen_http2_cert_config ($);
 
 our $InSubprocess;
 our $RepeatEach = 1;
@@ -957,8 +958,14 @@ _EOC_
     }
 
     my $listen_opts = '';
+    my $http2_ssl_cert = '';
 
     if (use_http2($block)) {
+        $http2_ssl_cert = gen_http2_cert_config($block);
+        if ($http2_ssl_cert) {
+            $listen_opts .= " ssl";
+        }
+
         $listen_opts .= " http2";
     }
 
@@ -980,6 +987,8 @@ $http_config
     server {
         listen          $ServerPort$listen_opts;
         server_name     '$server_name';
+
+$http2_ssl_cert
 
         client_max_body_size 30M;
         #client_body_buffer_size 4k;
@@ -2579,6 +2588,32 @@ sub use_http2 ($) {
 
     $block->set_value("test_nginx_enabled_http2", 0);
     return undef;
+}
+
+sub gen_http2_cert_config ($) {
+    my $block = shift;
+
+    my $val = $block->http2;
+    if (!$val) {
+        return '';
+    }
+
+    my ($ssl_cert, $ssl_key) = split /\s+/, $val, 2;
+    chomp($ssl_cert);
+    chomp($ssl_key);
+
+    if (!$ssl_cert || !$ssl_key) {
+        bail_out "invalid SSL certificate for HTTP2";
+    }
+
+    my $http2_ssl_cert = <<_EOC_;
+    ssl_certificate $ssl_cert;
+    ssl_certificate_key $ssl_key;
+_EOC_
+
+    $http2_ssl_cert = expand_env_in_config($http2_ssl_cert);
+
+    return $http2_ssl_cert;
 }
 
 1;

@@ -2241,11 +2241,16 @@ sub gen_curl_cmd_from_req ($$) {
 
     push @args, '--connect-timeout', $timeout;
 
+    my $protocol = $block->http2 ? 'https' : 'http';
+    if ($protocol eq 'https') {
+        push @args, '-k';
+    }
+
     my $link;
     {
         my $server = $ServerAddr;
         my $port = $ServerPortForClient;
-        $link = "http://$server:$port$uri";
+        $link = "$protocol://$server:$port$uri";
     }
 
     push @args, $link;
@@ -4074,6 +4079,10 @@ the HTTP 1.0 protocol will still use HTTP 1.0.
 One can enable HTTP/2 mode for an individual test block by specifying the L<http2> section, as in
 
     --- http2
+
+Specifies the SSL certificates, we can test the HTTP/2 under SSL, for example:
+
+    --- http2: t/data/test.crt t/data/test.key
 
 =head2 TEST_NGINX_VERBOSE
 
