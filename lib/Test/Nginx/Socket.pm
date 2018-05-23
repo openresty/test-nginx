@@ -1282,7 +1282,7 @@ sub check_error_log ($$$$) {
             #warn "test $pat\n";
             if ($line =~ /\[alert\]/) {
                 my $ln = fmt_str($line);
-                warn("WARNING: $name - $ln");
+                warn("WARNING: $name - $ln\n");
             }
         }
     }
@@ -1293,7 +1293,7 @@ sub check_error_log ($$$$) {
             #warn "test $pat\n";
             if ($line =~ /\[crit\]/) {
                 my $ln = fmt_str($line);
-                warn("WARNING: $name - $ln");
+                warn("WARNING: $name - $ln\n");
             }
         }
     }
@@ -1316,7 +1316,7 @@ sub check_error_log ($$$$) {
             $tb->no_ending(1);
 
             chomp $line;
-            fail("$name - $line");
+            fail("$name - $line\n");
         }
     }
 }
@@ -4057,6 +4057,11 @@ This section specifies the server address Test::Nginx will connect to. If server
 All environment variables starting with C<TEST_NGINX_> are expanded in the
 sections used to build the configuration of the server that tests automatically
 starts. The following environment variables are supported by this module:
+
+=head2 TEST_NGINX_REUSE_PORT
+
+When this environment is set to a true value, the test scaffold would add the "resuseport"
+parameter to the "listen" directive automatically generated in F<nginx.conf>.
 
 =head2 TEST_NGINX_USE_HTTP2
 

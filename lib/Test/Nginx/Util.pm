@@ -29,6 +29,8 @@ my $LoadedIPCRun;
 our $NoLongString = undef;
 our $FirstTime = 1;
 
+our $ReusePort = $ENV{TEST_NGINX_REUSE_PORT};
+
 our $UseHttp2 = $ENV{TEST_NGINX_USE_HTTP2};
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
@@ -960,6 +962,10 @@ _EOC_
 
     if (use_http2($block)) {
         $listen_opts .= " http2";
+    }
+
+    if ($ReusePort) {
+        $listen_opts .= " reuseport";
     }
 
     print $out <<_EOC_;
