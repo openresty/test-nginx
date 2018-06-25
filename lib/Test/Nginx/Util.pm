@@ -235,6 +235,10 @@ sub no_nginx_manager () {
     $NoNginxManager = 1;
 }
 
+sub use_hup() {
+    $UseHup = 1;
+}
+
 our @CleanupHandlers;
 our @BlockPreprocessors;
 
@@ -460,6 +464,7 @@ our @EXPORT = qw(
     server_port
     server_port_for_client
     no_nginx_manager
+    use_hup
 );
 
 
