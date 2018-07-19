@@ -10,6 +10,14 @@ sub get_best_long_bracket_level ($);
 sub quote_as_lua_str ($);
 sub gen_data_file ($);
 
+my $code = $ENV{TEST_NGINX_INIT_BY_LUA};
+my $escaped_code = '';
+
+if ($code) {
+    ($escaped_code = $code) =~ s/\\/\\\\/g;
+    $escaped_code =~ s/['"]/\\$&/g;
+}
+
 my $port = $ENV{TEST_NGINX_STREAM_PORT} // ($ServerPort + 1);
 my $counter = 0;
 
@@ -29,6 +37,18 @@ add_block_preprocessor(sub {
     if (defined $stream_server_config || defined $stream_config) {
         $stream_server_config //= '';
         $stream_config //= '';
+
+        if ($code && $stream_config !~ /init_by_lua_file/) {
+            unless ($stream_config =~
+                s{(?<!\#  )(?<!\# )(?<!\#)init_by_lua\s*(['"])((?:\\.|.)*)\1\s*;}{init_by_lua $1$escaped_code$2$1;}s)
+            {
+                unless ($stream_config =~
+                s{(?<!\#  )(?<!\# )(?<!\#)init_by_lua_block\s*\{}{init_by_lua_block \{ $code }s)
+                {
+                    $stream_config .= "init_by_lua '$escaped_code';";
+                }
+            }
+        }
 
         my $new_main_config = <<_EOC_;
 stream {
