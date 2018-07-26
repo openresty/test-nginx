@@ -237,6 +237,7 @@ sub no_nginx_manager () {
 
 our @CleanupHandlers;
 our @BlockPreprocessors;
+our @GlobalInitProcessors;
 
 sub bail_out (@);
 
@@ -444,6 +445,7 @@ our @EXPORT = qw(
     $Benchmark
     $BenchmarkWarmup
     add_block_preprocessor
+    add_global_init_processor
     timeout
     worker_connections
     workers
@@ -485,6 +487,10 @@ our $NginxRawVersion;
 
 sub add_block_preprocessor(&) {
     unshift @BlockPreprocessors, shift;
+}
+
+sub add_global_init_processor(&) {
+    unshift @GlobalInitProcessors, shift;
 }
 
 #our ($PrevRequest)
@@ -706,6 +712,10 @@ sub run_tests () {
 
     if (!defined $ENV{TEST_NGINX_SERVER_PORT}) {
         $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
+    }
+
+    for my $gi (@GlobalInitProcessors) {
+        $gi->();
     }
 
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
