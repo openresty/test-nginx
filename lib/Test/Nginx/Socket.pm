@@ -1098,6 +1098,7 @@ sub check_error_log ($$$$) {
     my $name = $block->name;
     my $lines;
 
+    my $check_write_guard_message = 1;
     my $check_alert_message = 1;
     my $check_crit_message = 1;
     my $check_emerg_message = 1;
@@ -1159,6 +1160,12 @@ sub check_error_log ($$$$) {
     if (defined $block->error_log) {
         my $pats = $block->error_log;
 
+        if (value_contains($pats,
+                           "writing a global lua variable"))
+        {
+            undef $check_write_guard_message;
+        }
+
         if (value_contains($pats, "[alert")) {
             undef $check_alert_message;
         }
@@ -1213,6 +1220,12 @@ sub check_error_log ($$$$) {
     if (defined $block->no_error_log) {
         #warn "HERE";
         my $pats = $block->no_error_log;
+
+        if (value_contains($pats,
+                           "writing a global lua variable"))
+        {
+            undef $check_write_guard_message;
+        }
 
         if (value_contains($pats, "[alert")) {
             undef $check_alert_message;
@@ -1272,6 +1285,17 @@ sub check_error_log ($$$$) {
                     my $p = fmt_str($pat);
                     pass("$name - pattern \"$p\" does not match a line in error.log (req $repeated_req_idx)");
                 }
+            }
+        }
+    }
+
+    if ($check_write_guard_message && !$dry_run) {
+        $lines ||= error_log_data();
+        for my $line (@$lines) {
+            #warn "test $pat\n";
+            if ($line =~ /writing a global lua variable/) {
+                my $ln = fmt_str($line);
+                warn("WARNING: $name - $ln\n");
             }
         }
     }
