@@ -1161,7 +1161,7 @@ sub check_error_log ($$$$) {
         my $pats = $block->error_log;
 
         if (value_contains($pats,
-                           "attempting to write to the lua global variable"))
+                           "writing a global lua variable"))
         {
             undef $check_write_guard_message;
         }
@@ -1222,7 +1222,7 @@ sub check_error_log ($$$$) {
         my $pats = $block->no_error_log;
 
         if (value_contains($pats,
-                           "attempting to write to the lua global variable"))
+                           "writing a global lua variable"))
         {
             undef $check_write_guard_message;
         }
@@ -1293,7 +1293,7 @@ sub check_error_log ($$$$) {
         $lines ||= error_log_data();
         for my $line (@$lines) {
             #warn "test $pat\n";
-            if ($line =~ /attempting to write to the lua global variable/) {
+            if ($line =~ /writing a global lua variable/) {
                 my $ln = fmt_str($line);
                 warn("WARNING: $name - $ln\n");
             }
