@@ -906,7 +906,7 @@ sub write_config_file ($$) {
     if ($LoadModules) {
         my @modules = map { "load_module $_;" } grep { $_ } split /\s+/, $LoadModules;
         if (@modules) {
-            substr $main_config, 0, 0, join " ", @modules;
+            $main_config = join " ", @modules, $main_config;
         }
     }
 
