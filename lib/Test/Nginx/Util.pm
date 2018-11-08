@@ -894,7 +894,7 @@ sub write_config_file ($$) {
 
     if (defined $PostponeOutput) {
         if ($PostponeOutput !~ /^\d+$/) {
-            bail_out "Bad TEST_NGINX_POSTPOHNE_OUTPUT value: $PostponeOutput\n";
+            bail_out "Bad TEST_NGINX_POSTPONE_OUTPUT value: $PostponeOutput\n";
         }
         $extra_http_config .= "\n    postpone_output $PostponeOutput;\n";
     }
