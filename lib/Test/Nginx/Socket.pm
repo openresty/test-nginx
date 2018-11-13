@@ -34,7 +34,7 @@ our @EXPORT = qw( env_to_nginx is_str plan run_tests run_test
   repeat_each config_preamble worker_connections
   master_process_enabled
   no_long_string workers master_on master_off
-  log_level no_shuffle no_root_location
+  log_level no_shuffle no_root_location use_hup
   server_name
   server_addr server_root html_dir server_port server_port_for_client
   timeout no_nginx_manager check_accum_error_log
@@ -2611,6 +2611,11 @@ Other configuration Perl functions I<must> be called before calling this C<run_t
 
 By default, the test scaffold always shuffles the order of the test blocks automatically. Calling this function before
 calling C<run_tests> will disable the shuffling.
+
+=head2 use_hup
+
+Calling this function before calling C<run_tests> will make the current test
+scaffold behave as if C<TEST_NGINX_USE_HUP> was set to 1.
 
 =head2 no_long_string
 
