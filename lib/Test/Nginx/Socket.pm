@@ -14,7 +14,7 @@ use Encode;
 use Time::HiRes qw(sleep time);
 use Test::LongString;
 use List::MoreUtils qw( any );
-use List::Util qw( sum );
+use List::Util qw( sum min );
 use IO::Select ();
 use File::Temp qw( tempfile );
 use Digest::MD5 ();
@@ -1254,6 +1254,7 @@ sub check_error_log ($$$$) {
 
         my %found;
         $lines ||= error_log_data();
+        my $i = 0;
         for my $line (@$lines) {
             for my $pat (@$pats) {
                 next if !defined $pat;
@@ -1271,10 +1272,19 @@ sub check_error_log ($$$$) {
                         skip "$name - no_error_log - tests skipped due to $dry_run ($line)", 1 if $dry_run;
                         my $ln = fmt_str($line);
                         my $p = fmt_str($pat);
-                        fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\" (req $repeated_req_idx)");
+                        my @more_lines;
+                        for (my $j = $i + 1; $j < min($i + 10, @$lines - 1); $j++) {
+                            push @more_lines, $lines->[$j];
+                        }
+
+                        fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\" (req $repeated_req_idx)\n"
+                             . join "", @more_lines);
                     }
                 }
             }
+
+        } continue {
+            $i++;
         }
 
         for my $pat (@$pats) {
