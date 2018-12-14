@@ -1279,6 +1279,7 @@ sub check_error_log ($$$$) {
 
                         fail("$name - pattern \"$p\" should not match any line in error.log but matches line \"$ln\" (req $repeated_req_idx)\n"
                              . join "", @more_lines);
+                        warn join "", @$lines;
                     }
                 }
             }
