@@ -789,7 +789,9 @@ again:
                 sleep($block->wait);
             }
 
-            check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
+            if (!defined $block->skip_error_logs) {
+                check_error_log($block, $res, $dry_run, $repeated_req_idx, $need_array);
+            }
 
             if (!defined $block->ignore_response) {
                 check_access_log($block, $dry_run, $repeated_req_idx);
@@ -3774,6 +3776,12 @@ For example:
     --- response_body
     --- skip_nginx2
     2: < 0.8.53 and >= 0.8.41
+
+=head2 skip_error_logs
+
+Skip error log checking.
+
+For test cases that include many parallel requests, this can make testing much faster.
 
 =head2 todo
 
