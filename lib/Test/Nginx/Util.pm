@@ -728,32 +728,26 @@ sub run_tests () {
 
 sub setup_server_root () {
     if (-d $ServRoot) {
+        # Take special care, so we won't accidentally remove
+        # real user data when TEST_NGINX_SERVROOT is mis-used.
+        remove_tree($ConfDir, $HtmlDir, glob("$ServRoot/*_cache"),
+                    glob("$ServRoot/*_temp"));
+
         if ($UseHup) {
             find({ bydepth => 1, no_chdir => 1, wanted => sub {
-                 if (-d $_) {
-                     if ($_ ne $ServRoot && $_ ne $LogDir) {
-                         #warn "removing directory $_";
-                         rmdir $_ or warn "Failed to rmdir $_\n";
-                     }
+                if (! -d $_) {
+                    if ($_ =~ /\bnginx\.pid$/) {
+                        return;
+                    }
 
-                 } else {
-                     if ($_ =~ /\bnginx\.pid$/) {
-                         return;
-                     }
-
-                     #warn "removing file $_";
-                     system("rm $_") == 0 or warn "Failed to remove $_\n";
-                 }
+                    #warn "removing file $_";
+                    system("rm $_") == 0 or warn "Failed to remove $_\n";
+                }
 
             }}, $ServRoot);
 
         } else {
-
-            # Take special care, so we won't accidentally remove
-            # real user data when TEST_NGINX_SERVROOT is mis-used.
-            remove_tree($ConfDir, $HtmlDir, $LogDir, glob("$ServRoot/*_cache"),
-                        glob("$ServRoot/*_temp"));
-
+            remove_tree($LogDir);
             rmdir $ServRoot or
                 bail_out "Can't remove $ServRoot (not empty?): $!";
         }
