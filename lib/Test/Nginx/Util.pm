@@ -842,6 +842,8 @@ sub write_user_files ($) {
                 }
             }
 
+            $body = expand_env_in_text($body);
+
             open my $out, ">$path" or
                 bail_out "$name - Cannot open $path for writing: $!\n";
             binmode $out;
@@ -877,7 +879,7 @@ sub write_config_file ($$) {
         master_off();
     }
 
-    $http_config = expand_env_in_config($http_config);
+    $http_config = expand_env_in_text($http_config);
 
     if (!defined $config) {
         $config = '';
@@ -915,13 +917,13 @@ sub write_config_file ($$) {
         }
     }
 
-    $main_config = expand_env_in_config($main_config);
+    $main_config = expand_env_in_text($main_config);
 
     if (!defined $post_main_config) {
         $post_main_config = '';
     }
 
-    $post_main_config = expand_env_in_config($post_main_config);
+    $post_main_config = expand_env_in_text($post_main_config);
 
     if ($CheckLeak || $Benchmark) {
         $LogLevel = 'warn';
@@ -1205,20 +1207,20 @@ sub parse_headers ($) {
     return \%headers;
 }
 
-sub expand_env_in_config ($) {
-    my $config = shift;
+sub expand_env_in_text ($) {
+    my $text = shift;
 
-    if (!defined $config) {
+    if (!defined $text) {
         return;
     }
 
-    $config =~ s/\$(TEST_NGINX_[_A-Z0-9]+)/
+    $text =~ s/\$(TEST_NGINX_[_A-Z0-9]+)/
         if (!defined $ENV{$1}) {
             bail_out "No environment $1 defined.\n";
         }
         $ENV{$1}/eg;
 
-    $config;
+    $text;
 }
 
 sub check_if_missing_directives () {
@@ -1302,7 +1304,7 @@ sub run_test ($) {
 
     my $config = $block->config;
 
-    $config = expand_env_in_config($config);
+    $config = expand_env_in_text($config);
 
     my $dry_run = 0;
     my $should_restart = 1;
