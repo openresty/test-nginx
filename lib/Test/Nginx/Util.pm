@@ -35,6 +35,8 @@ our $UseHttp2 = $ENV{TEST_NGINX_USE_HTTP2};
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
 
+our $UseRr = $ENV{TEST_NGINX_USE_RR};
+
 our $Verbose = $ENV{TEST_NGINX_VERBOSE};
 
 our $LatestNginxVersion = 0.008039;
@@ -1071,7 +1073,8 @@ sub get_canon_version (@) {
 sub get_nginx_version () {
     my $out = `$NginxBinary -V 2>&1`;
     if (!defined $out || $? != 0) {
-        bail_out("Failed to get the version of the Nginx in PATH");
+        $out //= "";
+        bail_out("Failed to get the version of the Nginx in PATH: $out");
     }
     if ($out =~ m{(?:nginx|openresty)[^/]*/(\d+)\.(\d+)\.(\d+)}s) {
         $NginxRawVersion = "$1.$2.$3";
@@ -1671,10 +1674,15 @@ start_nginx:
             }
 
             my $cmd;
+
             if ($NginxVersion >= 0.007053) {
                 $cmd = "$NginxBinary -p $ServRoot/ -c $ConfFile > /dev/null";
             } else {
                 $cmd = "$NginxBinary -c $ConfFile > /dev/null";
+            }
+
+            if ($UseRr) {
+                $cmd = "rr record $cmd";
             }
 
             if ($UseValgrind) {
@@ -1818,6 +1826,8 @@ start_nginx:
                 my $waited = 0;
 
 RUN_AGAIN:
+
+                #warn "CMD: $cmd";
                 system($cmd);
 
                 my $status = $?;

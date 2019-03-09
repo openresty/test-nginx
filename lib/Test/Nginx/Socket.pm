@@ -4293,6 +4293,13 @@ If this environment is set to the number C<1> or any other
 non-zero numbers, then it is equivalent to taking the value
 C<--tool=memcheck --leak-check=full>.
 
+=head2 TEST_NGINX_USE_RR
+
+Uses Mozilla rr to record the execution of the nginx server run by the test
+scaffold.
+
+This feature is experimental.
+
 =head2 TEST_NGINX_USE_STAP
 
 When set to true values (like 1), the test scaffold will use systemtap to instrument the nginx
