@@ -1148,7 +1148,7 @@ sub test_config_version ($$) {
                 sleep $sleep;
             }
 
-            if ($nsucc >= 10) {
+            if ($nsucc >= 20) {
                 #warn "MATCHED!!!\n";
                 return;
             }
@@ -1607,7 +1607,7 @@ sub run_test ($) {
                             }
 
                             if (defined $block->reload_fails) {
-                                sleep 0.1;
+                                sleep 0.3;
 
                             } else {
                                 test_config_version($name, $block);
