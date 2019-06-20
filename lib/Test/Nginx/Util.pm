@@ -480,6 +480,7 @@ our $CheckShutdownErrorLog;
 
 our $NginxVersion;
 our $NginxRawVersion;
+our $OpenSSLVersion;
 
 sub add_block_preprocessor(&) {
     unshift @BlockPreprocessors, shift;
@@ -1060,19 +1061,34 @@ sub get_canon_version (@) {
     sprintf "%d.%03d%03d", $_[0], $_[1], $_[2];
 }
 
+sub get_canon_version_for_OpenSSL (@) {
+    if (defined $_[3]) {
+        return sprintf "%d.%03d%03d%03d", $_[0], $_[1], $_[2], ord($_[3]) - ord('a');
+    }
+
+    get_canon_version @_;
+}
+
 sub get_nginx_version () {
     my $out = `$NginxBinary -V 2>&1`;
     if (!defined $out || $? != 0) {
         bail_out("Failed to get the version of the Nginx in PATH");
     }
+
+    if ($out =~ m{built with OpenSSL (\d+)\.(\d+)\.(\d+)([a-z])}s) {
+        $OpenSSLVersion = get_canon_version_for_OpenSSL($1, $2, $3, $4);
+    }
+
     if ($out =~ m{(?:nginx|openresty)[^/]*/(\d+)\.(\d+)\.(\d+)}s) {
         $NginxRawVersion = "$1.$2.$3";
         return get_canon_version($1, $2, $3);
     }
+
     if ($out =~ m{\w+/(\d+)\.(\d+)\.(\d+)}s) {
         $NginxRawVersion = "$1.$2.$3";
         return get_canon_version($1, $2, $3);
     }
+
     bail_out("Failed to parse the output of \"nginx -V\": $out\n");
 }
 
@@ -1373,6 +1389,7 @@ sub run_test ($) {
 
     my $skip_nginx = $block->skip_nginx;
     my $skip_nginx2 = $block->skip_nginx2;
+    my $skip_openssl = $block->skip_openssl;
     my $skip_eval = $block->skip_eval;
     my $skip_slave = $block->skip_slave;
     my ($tests_to_skip, $should_skip, $skip_reason);
@@ -1474,6 +1491,36 @@ sub run_test ($) {
         } else {
             bail_out("$name - Invalid --- skip_slave spec: " .
                 $skip_slave);
+            die;
+        }
+    }
+
+    if (defined $skip_openssl) {
+        if ($skip_openssl =~ m{
+                ^ \s* (\d+) \s* : \s*
+                    ([<>]=?) \s* (\d+)\.(\d+)\.(\d+)([a-z])?
+                    (?: \s* : \s* (.*) )?
+                \s*$}x) {
+            $tests_to_skip = $1;
+            my ($op, $ver1, $ver2, $ver3, $ver4) = ($2, $3, $4, $5, $6);
+            $skip_reason = $7;
+            if (!$skip_reason) {
+                if (defined $ver4) {
+                    $skip_reason = "OpenSSL version $op $ver1.$ver2.$ver3$ver4";
+
+                } else {
+                    $skip_reason = "OpenSSL version $op $ver1.$ver2.$ver3";
+                }
+            }
+
+            my $ver = get_canon_version_for_OpenSSL($ver1, $ver2, $ver3, $ver4);
+            if (!defined $OpenSSLVersion or eval "$OpenSSLVersion $op $ver") {
+                $should_skip = 1;
+            }
+
+        } else {
+            bail_out("$name - Invalid --- skip_openssl spec: " .
+                $skip_openssl);
             die;
         }
     }

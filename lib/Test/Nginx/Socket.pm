@@ -2529,8 +2529,10 @@ This is definitely one of the most useful and frequently used features.
 =item C<--- SKIP>
 
 Skips the surrounding test block unconditionally. You can use C<--- skip_nginx>
-and C<--- skip_nginx2> providied this module (see their documentation below)
-to conditionally skip tests according to the current NGINX server versions.
+and C<--- skip_nginx2> providied by this module (see their documentation below)
+to conditionally skip tests according to the current NGINX server versions. You
+can also use C<--- skip_openssl> (see its documentation below) to conditionally
+skip tests according to the current OpenSSL version.
 
 =back
 
@@ -3735,6 +3737,36 @@ For example:
     --- response_body
     --- skip_nginx2
     2: < 0.8.53 and >= 0.8.41
+
+=head2 skip_openssl
+
+Skip the specified number of subtests (in the current test block)
+for the specified version range of OpenSSL.
+
+The format for this section is
+
+    --- skip_openssl
+    <subtest-count>: <op> <version>
+
+The <subtest-count> value must be a positive integer.
+The <op> value could be either C<< > >>, C<< >= >>, C<< < >>, or C<< <= >>.
+The <version> part is a valid OpenSSL version number, like C<1.1.1> or C<1.1.0h>.
+
+An example is
+
+    === TEST 1: sample
+    --- config
+        location /t { echo hello; }
+    --- request
+        GET /t
+    --- response_body
+    --- skip_openssl
+    2: < 1.1.1
+
+That is, skipping 2 subtests in this test block for OpenSSL versions older than 1.1.1.
+
+This C<skip_openssl> section only allows you to specify one boolean expression as
+the skip condition.
 
 =head2 todo
 
