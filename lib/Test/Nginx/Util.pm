@@ -1505,7 +1505,10 @@ sub run_test ($) {
             my ($op, $ver1, $ver2, $ver3, $ver4) = ($2, $3, $4, $5, $6);
             $skip_reason = $7;
             if (!$skip_reason) {
-                if (defined $ver4) {
+                if (!defined $OpenSSLVersion) {
+                    $skip_reason = "Not built with OpenSSL";
+
+                } elsif (defined $ver4) {
                     $skip_reason = "OpenSSL version $op $ver1.$ver2.$ver3$ver4";
 
                 } else {
