@@ -1734,6 +1734,8 @@ sub parse_response($$$) {
 
     my $enc = $res->header('Transfer-Encoding');
     my $len = $res->header('Content-Length');
+    my @trailers = $res->header('Trailer');
+    # warn "trailers: @trailers";
 
     if ($code && $code !~ /^\d+$/) {
        undef $code;
@@ -1754,7 +1756,37 @@ sub parse_response($$$) {
 
         my $decoded = '';
         while (1) {
-            if ( $raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx ) {
+            if (@trailers == 0 && $raw =~ /\G 0 [\ \t]* \r\n \r\n /gcsx ) {
+                if ( $raw =~ /\G (.+) /gcsx ) {
+                    $left = $1;
+                }
+
+                last;
+
+            } elsif (@trailers > 0 && $raw =~ /\G 0 [\ \t]* \r\n /gcsx) {
+                # skip HTTP Trailer
+                for my $trailer (@trailers) {
+                    if ( $raw !~ /\G($trailer:\ [^\n]*\r\n)/gcs ) {
+                        my $tb = Test::More->builder;
+                        $tb->no_ending(1);
+
+                        fail(
+                            "$name - invalid trailer data received (expected $trailer)."
+                        );
+                        return;
+                    }
+                }
+
+                if ($raw !~ /\G\r\n/gcs ) {
+                    my $tb = Test::More->builder;
+                    $tb->no_ending(1);
+
+                    fail(
+                        "$name - invalid chunked data received (expected CRLF)."
+                    );
+                    return;
+                }
+
                 if ( $raw =~ /\G (.+) /gcsx ) {
                     $left = $1;
                 }
