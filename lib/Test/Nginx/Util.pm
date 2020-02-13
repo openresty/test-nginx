@@ -733,13 +733,13 @@ sub setup_server_root () {
     if (-d $ServRoot) {
         # Take special care, so we won't accidentally remove
         # real user data when TEST_NGINX_SERVROOT is mis-used.
-        remove_tree($ConfDir, $HtmlDir, glob("$ServRoot/*_cache"),
+        remove_tree($ConfDir, glob("$ServRoot/*_cache"),
                     glob("$ServRoot/*_temp"));
 
         if ($UseHup) {
             find({ bydepth => 1, no_chdir => 1, wanted => sub {
                 if (! -d $_) {
-                    if ($_ =~ /\bnginx\.pid$/) {
+                    if ($_ =~ /(?:\bnginx\.pid|\.sock|\.crt|\.key)$/) {
                         return;
                     }
 
@@ -750,7 +750,7 @@ sub setup_server_root () {
             }}, $ServRoot);
 
         } else {
-            remove_tree($LogDir);
+            remove_tree($HtmlDir, $LogDir);
             rmdir $ServRoot or
                 bail_out "Can't remove $ServRoot (not empty?): $!";
         }
@@ -763,8 +763,10 @@ sub setup_server_root () {
         mkdir $LogDir or
             bail_out "Failed to do mkdir $LogDir\n";
     }
-    mkdir $HtmlDir or
-        bail_out "Failed to do mkdir $HtmlDir\n";
+    if (!-d $HtmlDir) {
+        mkdir $HtmlDir or
+            bail_out "Failed to do mkdir $HtmlDir\n";
+    }
 
     my $index_file = "$HtmlDir/index.html";
 
