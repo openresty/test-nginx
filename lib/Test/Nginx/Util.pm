@@ -1200,7 +1200,7 @@ sub test_config_version ($$) {
     $tb->no_ending(1);
 
     Test::More::fail("$name - failed to reload configuration after $total "
-                     .. "failed test requests");
+                     . "failed test requests");
 }
 
 sub parse_headers ($) {
