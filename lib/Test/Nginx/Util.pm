@@ -729,7 +729,9 @@ sub run_tests () {
     cleanup();
 }
 
-sub setup_server_root () {
+sub setup_server_root ($) {
+    my $first_time = shift;
+
     if (-d $ServRoot) {
         # Take special care, so we won't accidentally remove
         # real user data when TEST_NGINX_SERVROOT is mis-used.
@@ -740,7 +742,7 @@ sub setup_server_root () {
             find({ bydepth => 1, no_chdir => 1, wanted => sub {
                 if (! -d $_) {
                     if ($_ =~ /(?:\bnginx\.pid|\.sock|\.crt|\.key)$/) {
-                        return;
+                        return unless $first_time;
                     }
 
                     #warn "removing file $_";
@@ -1631,7 +1633,7 @@ sub run_test ($) {
                         goto start_nginx;
                     }
 
-                    setup_server_root();
+                    setup_server_root($first_time);
                     write_user_files($block);
                     write_config_file($block, $config);
 
@@ -1709,7 +1711,7 @@ start_nginx:
             #system("killall -9 nginx");
 
             #warn "*** Restarting the nginx server...\n";
-            setup_server_root();
+            setup_server_root($first_time);
             write_user_files($block);
             write_config_file($block, $config);
             #warn "nginx binary: $NginxBinary";
