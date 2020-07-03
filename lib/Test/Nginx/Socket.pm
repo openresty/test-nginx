@@ -6,7 +6,7 @@ use lib 'inc';
 use v5.10.1;
 use Test::Base -Base;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 use POSIX qw( SIGQUIT SIGKILL SIGTERM SIGHUP );
 use Encode;
@@ -3662,7 +3662,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo: 
+    x-foo:
     --- http09
 
 =head2 ignore_response
