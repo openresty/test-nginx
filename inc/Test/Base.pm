@@ -1,6 +1,6 @@
 #line 1
 package Test::Base;
-our $VERSION = '0.88';
+our $VERSION = '0.89';
 
 use Spiffy -Base;
 use Spiffy ':XXX';
@@ -287,6 +287,7 @@ sub run(&;$) {
 
 my $name_error = "Can't determine section names";
 sub _section_names {
+    return unless defined $self->spec;
     return @_ if @_ == 2;
     my $block = $self->first_block
       or croak $name_error;
@@ -308,6 +309,7 @@ sub END {
 
 sub run_compare() {
     (my ($self), @_) = find_my_self(@_);
+    return unless defined $self->spec;
     $self->_assert_plan;
     my ($x, $y) = $self->_section_names(@_);
     local $Test::Builder::Level = $Test::Builder::Level + 1;
@@ -413,6 +415,7 @@ sub run_is_deep() {
 
 sub _pre_eval {
     my $spec = shift;
+    return unless defined $spec;
     return $spec unless $spec =~
       s/\A\s*<<<(.*?)>>>\s*$//sm;
     my $eval_code = $1;
@@ -423,6 +426,7 @@ sub _pre_eval {
 
 sub _block_list_init {
     my $spec = $self->spec;
+    return [] unless defined $spec;
     $spec = $self->_pre_eval($spec);
     my $cd = $self->block_delim;
     my @hunks = ($spec =~ /^(\Q${cd}\E.*?(?=^\Q${cd}\E|\z))/msg);
@@ -514,11 +518,11 @@ sub _spec_init {
         close FILE;
     }
     else {
-        $spec = do {
-            package main;
-            no warnings 'once';
-            <DATA>;
-        };
+        require Scalar::Util;
+        my $handle = Scalar::Util::openhandle( \*main::DATA );
+        if ($handle) {
+            $spec = <$handle>;
+        }
     }
     return $spec;
 }
