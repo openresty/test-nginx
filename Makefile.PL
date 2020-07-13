@@ -27,6 +27,7 @@ requires        ('List::Util');
 requires        ('Encode');
 requires        ('File::Find');
 requires        ('IO::Socket::INET');
+test_requires   ('Test2::Util');
 
 use_test_base();
 auto_install();
