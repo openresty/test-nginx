@@ -18,9 +18,10 @@ sub _carp {
     return warn @_, " at $file line $line\n";
 }
 
-our $VERSION = '1.302171';
+our $VERSION = '1.001014';
+$VERSION = eval $VERSION;    ## no critic (BuiltinFunctions::ProhibitStringyEval)
 
-use Test::Builder::Module;
+use Test::Builder::Module 0.99;
 our @ISA    = qw(Test::Builder::Module);
 our @EXPORT = qw(ok use_ok require_ok
   is isnt like unlike is_deeply
@@ -37,7 +38,7 @@ our @EXPORT = qw(ok use_ok require_ok
   BAIL_OUT
 );
 
-#line 166
+#line 163
 
 sub plan {
     my $tb = Test::More->builder;
@@ -53,21 +54,11 @@ sub import_extra {
 
     my @other = ();
     my $idx   = 0;
-    my $import;
     while( $idx <= $#{$list} ) {
         my $item = $list->[$idx];
 
         if( defined $item and $item eq 'no_diag' ) {
             $class->builder->no_diag(1);
-        }
-        elsif( defined $item and $item eq 'import' ) {
-            if ($import) {
-                push @$import, @{$list->[ ++$idx ]};
-            }
-            else {
-                $import = $list->[ ++$idx ];
-                push @other, $item, $import;
-            }
         }
         else {
             push @other, $item;
@@ -78,29 +69,17 @@ sub import_extra {
 
     @$list = @other;
 
-    if ($class eq __PACKAGE__ && (!$import || grep $_ eq '$TODO', @$import)) {
-        my $to = $class->builder->exported_to;
-        no strict 'refs';
-        *{"$to\::TODO"} = \our $TODO;
-        if ($import) {
-            @$import = grep $_ ne '$TODO', @$import;
-        }
-        else {
-            push @$list, import => [grep $_ ne '$TODO', @EXPORT];
-        }
-    }
-
     return;
 }
 
-#line 245
+#line 216
 
 sub done_testing {
     my $tb = Test::More->builder;
     $tb->done_testing(@_);
 }
 
-#line 317
+#line 288
 
 sub ok ($;$) {
     my( $test, $name ) = @_;
@@ -109,7 +88,7 @@ sub ok ($;$) {
     return $tb->ok( $test, $name );
 }
 
-#line 400
+#line 371
 
 sub is ($$;$) {
     my $tb = Test::More->builder;
@@ -126,7 +105,7 @@ sub isnt ($$;$) {
 *isn't = \&isnt;
 # ' to unconfuse syntax higlighters
 
-#line 445
+#line 416
 
 sub like ($$;$) {
     my $tb = Test::More->builder;
@@ -134,7 +113,7 @@ sub like ($$;$) {
     return $tb->like(@_);
 }
 
-#line 460
+#line 431
 
 sub unlike ($$;$) {
     my $tb = Test::More->builder;
@@ -142,7 +121,7 @@ sub unlike ($$;$) {
     return $tb->unlike(@_);
 }
 
-#line 506
+#line 477
 
 sub cmp_ok($$$;$) {
     my $tb = Test::More->builder;
@@ -150,7 +129,7 @@ sub cmp_ok($$$;$) {
     return $tb->cmp_ok(@_);
 }
 
-#line 541
+#line 512
 
 sub can_ok ($@) {
     my( $proto, @methods ) = @_;
@@ -184,7 +163,7 @@ sub can_ok ($@) {
     return $ok;
 }
 
-#line 607
+#line 578
 
 sub isa_ok ($$;$) {
     my( $thing, $class, $thing_name ) = @_;
@@ -266,7 +245,7 @@ WHOA
     return $ok;
 }
 
-#line 708
+#line 679
 
 sub new_ok {
     my $tb = Test::More->builder;
@@ -291,14 +270,16 @@ sub new_ok {
     return $obj;
 }
 
-#line 805
+#line 765
 
 sub subtest {
+    my ($name, $subtests) = @_;
+
     my $tb = Test::More->builder;
     return $tb->subtest(@_);
 }
 
-#line 827
+#line 789
 
 sub pass (;$) {
     my $tb = Test::More->builder;
@@ -312,7 +293,7 @@ sub fail (;$) {
     return $tb->ok( 0, @_ );
 }
 
-#line 880
+#line 842
 
 sub require_ok ($) {
     my($module) = shift;
@@ -357,17 +338,14 @@ sub _is_module_name {
 }
 
 
-#line 974
+#line 936
 
 sub use_ok ($;@) {
     my( $module, @imports ) = @_;
     @imports = () unless @imports;
     my $tb = Test::More->builder;
 
-    my %caller;
-    @caller{qw/pack file line sub args want eval req strict warn/} = caller(0);
-
-    my ($pack, $filename, $line, $warn) = @caller{qw/pack file line warn/};
+    my( $pack, $filename, $line ) = caller;
     $filename =~ y/\n\r/_/; # so it doesn't run off the "#line $line $f" line
 
     my $code;
@@ -376,7 +354,7 @@ sub use_ok ($;@) {
         # for it to work with non-Exporter based modules.
         $code = <<USE;
 package $pack;
-BEGIN { \${^WARNING_BITS} = \$args[-1] if defined \$args[-1] }
+
 #line $line $filename
 use $module $imports[0];
 1;
@@ -385,14 +363,14 @@ USE
     else {
         $code = <<USE;
 package $pack;
-BEGIN { \${^WARNING_BITS} = \$args[-1] if defined \$args[-1] }
+
 #line $line $filename
 use $module \@{\$args[0]};
 1;
 USE
     }
 
-    my ($eval_result, $eval_error) = _eval($code, \@imports, $warn);
+    my( $eval_result, $eval_error ) = _eval( $code, \@imports );
     my $ok = $tb->ok( $eval_result, "use $module;" );
 
     unless($ok) {
@@ -428,7 +406,7 @@ sub _eval {
 }
 
 
-#line 1092
+#line 1037
 
 our( @Data_Stack, %Refs_Seen );
 my $DNE = bless [], 'Does::Not::Exist';
@@ -528,14 +506,14 @@ sub _type {
 
     return '' if !ref $thing;
 
-    for my $type (qw(Regexp ARRAY HASH REF SCALAR GLOB CODE VSTRING)) {
+    for my $type (qw(Regexp ARRAY HASH REF SCALAR GLOB CODE)) {
         return $type if UNIVERSAL::isa( $thing, $type );
     }
 
     return '';
 }
 
-#line 1252
+#line 1197
 
 sub diag {
     return Test::More->builder->diag(@_);
@@ -545,26 +523,23 @@ sub note {
     return Test::More->builder->note(@_);
 }
 
-#line 1278
+#line 1223
 
 sub explain {
     return Test::More->builder->explain(@_);
 }
 
-#line 1344
+#line 1289
 
 ## no critic (Subroutines::RequireFinalReturn)
 sub skip {
     my( $why, $how_many ) = @_;
     my $tb = Test::More->builder;
 
-    # If the plan is set, and is static, then skip needs a count. If the plan
-    # is 'no_plan' we are fine. As well if plan is undefined then we are
-    # waiting for done_testing.
-    unless (defined $how_many) {
-        my $plan = $tb->has_plan;
+    unless( defined $how_many ) {
+        # $how_many can only be avoided when no_plan is in use.
         _carp "skip() needs to know \$how_many tests are in the block"
-            if $plan && $plan =~ m/^\d+$/;
+          unless $tb->has_plan eq 'no_plan';
         $how_many = 1;
     }
 
@@ -582,7 +557,7 @@ sub skip {
     last SKIP;
 }
 
-#line 1431
+#line 1373
 
 sub todo_skip {
     my( $why, $how_many ) = @_;
@@ -603,7 +578,7 @@ sub todo_skip {
     last TODO;
 }
 
-#line 1486
+#line 1428
 
 sub BAIL_OUT {
     my $reason = shift;
@@ -612,7 +587,7 @@ sub BAIL_OUT {
     $tb->BAIL_OUT($reason);
 }
 
-#line 1525
+#line 1467
 
 #'#
 sub eq_array {
@@ -752,7 +727,7 @@ WHOA
     }
 }
 
-#line 1672
+#line 1614
 
 sub eq_hash {
     local @Data_Stack = ();
@@ -787,7 +762,7 @@ sub _eq_hash {
     return $ok;
 }
 
-#line 1731
+#line 1673
 
 sub eq_set {
     my( $a1, $a2 ) = @_;
@@ -812,6 +787,6 @@ sub eq_set {
     );
 }
 
-#line 1995
+#line 1946
 
 1;

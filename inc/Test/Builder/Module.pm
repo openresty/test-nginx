@@ -3,20 +3,19 @@ package Test::Builder::Module;
 
 use strict;
 
-use Test::Builder;
+use Test::Builder 1.00;
 
 require Exporter;
 our @ISA = qw(Exporter);
 
-our $VERSION = '1.302171';
+our $VERSION = '1.001014';
+$VERSION = eval $VERSION;      ## no critic (BuiltinFunctions::ProhibitStringyEval)
 
 
-#line 73
+#line 74
 
 sub import {
     my($class) = shift;
-
-    Test2::API::test2_load() unless Test2::API::test2_in_preload();
 
     # Don't run all this when loading ourself.
     return 1 if $class eq 'Test::Builder::Module';
@@ -32,8 +31,7 @@ sub import {
 
     $test->plan(@_);
 
-    local $Exporter::ExportLevel = $Exporter::ExportLevel + 1;
-    $class->Exporter::import(@imports);
+    $class->export_to_level( 1, $class, @imports );
 }
 
 sub _strip_imports {
@@ -62,16 +60,14 @@ sub _strip_imports {
     return @imports;
 }
 
-#line 139
+#line 137
 
 sub import_extra { }
 
-#line 169
+#line 167
 
 sub builder {
     return Test::Builder->new;
 }
-
-#line 180
 
 1;
