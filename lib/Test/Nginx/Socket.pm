@@ -1843,13 +1843,13 @@ sub send_request ($$$$@) {
                     my $tb = Test::More->builder;
                     $tb->no_ending(1);
 
-                    fail("$name - Can't connect to $ServerAddr:$ServerPortForClient: $errcode (aborted)\n");
+                    fail("$name - Can't connect to $server_addr:$ServerPortForClient: $errcode (aborted)\n");
                     return;
                 }
             }
 
             if ($wait >= 0.6) {
-                warn "$name - Can't connect to $ServerAddr:$ServerPortForClient: $!\n";
+                warn "$name - Can't connect to $server_addr:$ServerPortForClient: $!\n";
                 if ($tries + 1 <= $total_tries) {
                     warn "\tRetry connecting after $wait sec\n";
                 }
@@ -1862,7 +1862,7 @@ sub send_request ($$$$@) {
 
         }
 
-        my $msg = "$name - Can't connect to $ServerAddr:$ServerPortForClient: $! (aborted)\n";
+        my $msg = "$name - Can't connect to $server_addr:$ServerPortForClient: $! (aborted)\n";
         if (++$TotalConnectingTimeouts < 3) {
             my $tb = Test::More->builder;
             $tb->no_ending(1);
@@ -2276,8 +2276,15 @@ sub gen_curl_cmd_from_req ($$) {
     push @args, '--connect-timeout', $timeout;
 
     my $link;
+
+    my $server_addr = $block->server_addr_for_client;
+
+    if (!defined $server_addr) {
+        $server_addr = $ServerAddr;
+    }
+
     {
-        my $server = $ServerAddr;
+        my $server = $server_addr;
         my $port = $ServerPortForClient;
         $link = "http://$server:$port$uri";
     }
@@ -2394,8 +2401,15 @@ sub gen_ab_cmd_from_req ($$@) {
     }
 
     my $link;
+
+    my $server_addr = $block->server_addr_for_client;
+
+    if (!defined $server_addr) {
+        $server_addr = $ServerAddr;
+    }
+
     {
-        my $server = $ServerAddr;
+        my $server = $server_addr;
         my $port = $ServerPortForClient;
         $link = "http://$server:$port$uri";
     }
@@ -3662,7 +3676,7 @@ Below is an example from ngx_headers_more module's test suite:
     --- response_headers
     ! X-Foo
     --- response_body
-    x-foo: 
+    x-foo:
     --- http09
 
 =head2 ignore_response
