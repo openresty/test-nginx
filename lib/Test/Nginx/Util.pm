@@ -306,6 +306,9 @@ if ($Randomize) {
     }
 
     $ServerPortForClient = $ServerPort;
+
+} else {
+    $UsedPort{$ServerPort} = 1;
 }
 
 our $ChildPid;
