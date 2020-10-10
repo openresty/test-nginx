@@ -78,8 +78,6 @@ our $ServerAddr = '127.0.0.1';
 
 our $ServerName = 'localhost';
 
-our %UsedPort;
-
 our $WorkerUser = $ENV{TEST_NGINX_WORKER_USER};
 if (defined $WorkerUser && $WorkerUser !~ /^\w+(?:\s+\w+)?$/) {
     die "Bad value in the env TEST_NGINX_WORKER_USER: $WorkerUser\n";
@@ -176,16 +174,17 @@ sub gen_rand_str {
     return $s;
 }
 
-sub gen_rand_port (;$) {
-    my $tries = shift // 1000;
-    my $rand_port;
+sub gen_rand_port (;$$) {
+    my ($tries, $used_ports) = @_;
 
-    srand $$;
+    $used_ports //= {};
+
+    my $rand_port;
 
     for (my $i = 0; $i < $tries; $i++) {
         my $port = int(rand 63550) + 1985;
 
-        next if $UsedPort{$port};
+        next if $used_ports->{$port};
 
         my $sock = IO::Socket::INET->new(
             LocalAddr => $ServerAddr,
@@ -197,7 +196,7 @@ sub gen_rand_port (;$) {
         if (defined $sock) {
             $sock->close();
             $rand_port = $port;
-            $UsedPort{$port} = 1;
+            $used_ports->{$port} = 1;
             last;
         }
 
@@ -295,6 +294,7 @@ our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.015;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
+srand $$;
 
 if ($Randomize) {
     my $tries = 1000;
@@ -306,9 +306,6 @@ if ($Randomize) {
     }
 
     $ServerPortForClient = $ServerPort;
-
-} else {
-    $UsedPort{$ServerPort} = 1;
 }
 
 our $ChildPid;
@@ -859,7 +856,7 @@ sub write_user_files ($) {
                 }
             }
 
-            $body = expand_env_in_text($body);
+            $body = expand_env_in_text($body, $name);
 
             open my $out, ">$path" or
                 bail_out "$name - Cannot open $path for writing: $!\n";
@@ -880,6 +877,7 @@ sub write_user_files ($) {
 sub write_config_file ($$) {
     my ($block, $config) = @_;
 
+    my $name = $block->name;
     my $http_config = $block->http_config;
     my $main_config = $block->main_config;
     my $post_main_config = $block->post_main_config;
@@ -896,7 +894,7 @@ sub write_config_file ($$) {
         master_off();
     }
 
-    $http_config = expand_env_in_text($http_config);
+    $http_config = expand_env_in_text($http_config, $name);
 
     if (!defined $config) {
         $config = '';
@@ -934,13 +932,13 @@ sub write_config_file ($$) {
         }
     }
 
-    $main_config = expand_env_in_text($main_config);
+    $main_config = expand_env_in_text($main_config, $name);
 
     if (!defined $post_main_config) {
         $post_main_config = '';
     }
 
-    $post_main_config = expand_env_in_text($post_main_config);
+    $post_main_config = expand_env_in_text($post_main_config, $name);
 
     if ($CheckLeak || $Benchmark) {
         $LogLevel = 'warn';
@@ -1240,8 +1238,8 @@ sub parse_headers ($) {
     return \%headers;
 }
 
-sub expand_env_in_text ($) {
-    my $text = shift;
+sub expand_env_in_text ($$) {
+    my ($text, $name) = @_;
 
     if (!defined $text) {
         return;
@@ -1253,14 +1251,14 @@ sub expand_env_in_text ($) {
                 my $rand_port = gen_rand_port;
 
                 if (!defined $rand_port) {
-                    bail_out "Cannot find an available listening port number for $1.\n";
+                    bail_out "$name - Cannot find an available listening port number for $1.\n";
                 }
 
                 $ENV{$1} = $rand_port;
             }
 
         } elsif (!defined $ENV{$1}) {
-            bail_out "No environment $1 defined.\n";
+            bail_out "$name - No environment $1 defined.\n";
         }
         $ENV{$1}/eg;
 
@@ -1348,7 +1346,7 @@ sub run_test ($) {
 
     my $config = $block->config;
 
-    $config = expand_env_in_text($config);
+    $config = expand_env_in_text($config, $name);
 
     my $dry_run = 0;
     my $should_restart = 1;
