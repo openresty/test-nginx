@@ -78,6 +78,8 @@ our $ServerAddr = '127.0.0.1';
 
 our $ServerName = 'localhost';
 
+our %UsedPort;
+
 our $WorkerUser = $ENV{TEST_NGINX_WORKER_USER};
 if (defined $WorkerUser && $WorkerUser !~ /^\w+(?:\s+\w+)?$/) {
     die "Bad value in the env TEST_NGINX_WORKER_USER: $WorkerUser\n";
@@ -174,6 +176,39 @@ sub gen_rand_str {
     return $s;
 }
 
+sub gen_rand_port (;$) {
+    my $tries = shift // 1000;
+    my $rand_port;
+
+    srand $$;
+
+    for (my $i = 0; $i < $tries; $i++) {
+        my $port = int(rand 64510) + 1025;
+
+        next if $UsedPort{$port};
+
+        my $sock = IO::Socket::INET->new(
+            LocalAddr => $ServerAddr,
+            LocalPort => $port,
+            Proto => 'tcp',
+            Timeout => 0.1,
+        );
+
+        if (defined $sock) {
+            $sock->close();
+            $rand_port = $port;
+            $UsedPort{$port} = 1;
+            last;
+        }
+
+        if ($Verbose) {
+            warn "Try again, port $port is already in use: $@\n";
+        }
+    }
+
+    return $rand_port;
+}
+
 sub no_long_string () {
     $NoLongString = 1;
 }
@@ -262,31 +297,9 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
 
 if ($Randomize) {
-    srand $$;
-
-    undef $ServerPort;
-
     my $tries = 1000;
-    for (my $i = 0; $i < $tries; $i++) {
-        my $port = int(rand 60000) + 1025;
 
-        my $sock = IO::Socket::INET->new(
-            LocalAddr => $ServerAddr,
-            LocalPort => $port,
-            Proto => 'tcp',
-            Timeout => 0.1,
-        );
-
-        if (defined $sock) {
-            $sock->close();
-            $ServerPort = $port;
-            last;
-        }
-
-        if ($Verbose) {
-            warn "Try again, port $port is already in use: $@\n";
-        }
-    }
+    $ServerPort = gen_rand_port $tries;
 
     if (!defined $ServerPort) {
         bail_out "Cannot find an available listening port number after $tries attempts.\n";
@@ -1232,7 +1245,18 @@ sub expand_env_in_text ($) {
     }
 
     $text =~ s/\$(TEST_NGINX_[_A-Z0-9]+)/
-        if (!defined $ENV{$1}) {
+        if ($1 =~ m{^TEST_NGINX_RANDOM_PORT[0-9]+$}) {
+            if (!defined $ENV{$1}) {
+                my $rand_port = gen_rand_port;
+
+                if (!defined $rand_port) {
+                    bail_out "Cannot find an available listening port number for $1.\n";
+                }
+
+                $ENV{$1} = $rand_port;
+            }
+
+        } elsif (!defined $ENV{$1}) {
             bail_out "No environment $1 defined.\n";
         }
         $ENV{$1}/eg;
