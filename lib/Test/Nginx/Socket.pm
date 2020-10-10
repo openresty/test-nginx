@@ -4448,6 +4448,11 @@ C<prove -j8 -r t> runs the test suite under F<t/> in 8 parallel jobs, utilizing 
 Note that only test suite I<without> external shared and writable service dependencies (like Memcached,
 Redis or MySQL) can run in parallel in this way, obviously.
 
+=head2 TEST_NGINX_RANDOM_PORT[0-9]+
+
+Variables like C<TEST_NGINX_RANDOM_PORT[0-9]+> are expanded to random, unused
+ports to build the configuration of the server.
+
 =head2 TEST_NGINX_WORKER_USER
 
 Sets the user account used to run the nginx worker processes when the master process is enabled.
