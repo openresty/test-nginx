@@ -1245,10 +1245,12 @@ sub expand_env_in_text ($$) {
         return;
     }
 
+    my $used_ports = { $ServerPort => 1 };
+
     $text =~ s/\$(TEST_NGINX_[_A-Z0-9]+)/
-        if ($1 =~ m{^(TEST_NGINX_RANDOM_PORT[0-9]+)$}) {
+        if ($1 =~ m{^(TEST_NGINX_RAND_PORT_[0-9]+)$}) {
             if (!defined $ENV{$1}) {
-                my $rand_port = gen_rand_port;
+                my $rand_port = gen_rand_port 1000, $used_ports;
 
                 if (!defined $rand_port) {
                     bail_out "$name - Cannot find an available listening port number for $1.\n";
