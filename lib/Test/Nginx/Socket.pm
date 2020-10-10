@@ -4451,7 +4451,10 @@ Redis or MySQL) can run in parallel in this way, obviously.
 =head2 TEST_NGINX_RANDOM_PORT[0-9]+
 
 Variables like C<TEST_NGINX_RANDOM_PORT[0-9]+> are expanded to random, unused
-ports to build the configuration of the server.
+ports to build the configuration of the server, where C<[0-9]+> is an integer.
+For instance, C<TEST_NGINX_RANDOM_PORT1> will be expanded to an integer port,
+such as 1986, and C<TEST_NGINX_RANDOM_PORT2> will be expanded to another integer
+port, such as 65535.
 
 =head2 TEST_NGINX_WORKER_USER
 
