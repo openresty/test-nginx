@@ -183,7 +183,7 @@ sub gen_rand_port (;$) {
     srand $$;
 
     for (my $i = 0; $i < $tries; $i++) {
-        my $port = int(rand 64510) + 1025;
+        my $port = int(rand 63550) + 1985;
 
         next if $UsedPort{$port};
 
@@ -1245,7 +1245,7 @@ sub expand_env_in_text ($) {
     }
 
     $text =~ s/\$(TEST_NGINX_[_A-Z0-9]+)/
-        if ($1 =~ m{^TEST_NGINX_RANDOM_PORT[0-9]+$}) {
+        if ($1 =~ m{^(TEST_NGINX_RANDOM_PORT[0-9]+)$}) {
             if (!defined $ENV{$1}) {
                 my $rand_port = gen_rand_port;
 
