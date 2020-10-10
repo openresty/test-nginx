@@ -4448,14 +4448,6 @@ C<prove -j8 -r t> runs the test suite under F<t/> in 8 parallel jobs, utilizing 
 Note that only test suite I<without> external shared and writable service dependencies (like Memcached,
 Redis or MySQL) can run in parallel in this way, obviously.
 
-=head2 TEST_NGINX_RANDOM_PORT[0-9]+
-
-Variables like C<TEST_NGINX_RANDOM_PORT[0-9]+> are expanded to random, unused
-ports to build the configuration of the server, where C<[0-9]+> is an integer.
-For instance, C<TEST_NGINX_RANDOM_PORT1> will be expanded to an integer port,
-such as 1986, and C<TEST_NGINX_RANDOM_PORT2> will be expanded to another integer
-port, such as 65535.
-
 =head2 TEST_NGINX_WORKER_USER
 
 Sets the user account used to run the nginx worker processes when the master process is enabled.
@@ -4469,6 +4461,18 @@ user.
 One can also add an optional user group separated by spaces, as in
 
     export TEST_NGINX_WORKER_USER='agentzh wheel'
+
+=head2 Special Variables
+
+=head3 TEST_NGINX_RAND_PORT_XXX
+
+Variables like C<TEST_NGINX_RAND_PORT_XXX> are expanded to random and unused
+unprivileged ports numbers (from 1985 to 65535) to build the configuration of
+the server, where C<XXX> is an integer.
+
+For instance, C<TEST_NGINX_RAND_PORT_1> will be expanded to an integer port,
+such as 1986, and C<TEST_NGINX_RAND_PORT_2> will be expanded to another integer
+port, such as 65535.
 
 =head2 Valgrind Integration
 
