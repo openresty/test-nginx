@@ -196,7 +196,6 @@ sub gen_rand_port (;$$) {
         if (defined $sock) {
             $sock->close();
             $rand_port = $port;
-            $used_ports->{$port} = 1;
             last;
         }
 
@@ -1257,6 +1256,7 @@ sub expand_env_in_text ($$) {
                 }
 
                 $ENV{$1} = $rand_port;
+                $used_ports->{$rand_port} = 1;
             }
 
         } elsif (!defined $ENV{$1}) {
