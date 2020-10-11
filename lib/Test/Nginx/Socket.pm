@@ -4470,9 +4470,9 @@ Variables like C<TEST_NGINX_RAND_PORT_XXX> are expanded to random and unused
 unprivileged ports numbers to build the configuration of the server,
 where C<XXX> is an integer from 1985 to 65535.
 
-For instance, C<TEST_NGINX_RAND_PORT_1> will be expanded to an integer port,
-such as 1986, and C<TEST_NGINX_RAND_PORT_2> will be expanded to another integer
-port, such as 65535.
+For instance, C<TEST_NGINX_RAND_PORT_1> will be expanded to an port number,
+such as 1986, and C<TEST_NGINX_RAND_PORT_2> will be expanded to another port
+number, such as 65535.
 
 =head2 Valgrind Integration
 

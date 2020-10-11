@@ -177,6 +177,7 @@ sub gen_rand_str {
 sub gen_rand_port (;$$) {
     my ($tries, $used_ports) = @_;
 
+    $tries //= 1000;
     $used_ports //= {};
 
     my $rand_port;
