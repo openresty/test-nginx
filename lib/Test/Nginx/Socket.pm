@@ -4462,6 +4462,18 @@ One can also add an optional user group separated by spaces, as in
 
     export TEST_NGINX_WORKER_USER='agentzh wheel'
 
+=head2 Special Variables
+
+=head3 TEST_NGINX_RAND_PORT_XXX
+
+Variables like C<TEST_NGINX_RAND_PORT_XXX> are expanded to random and unused
+unprivileged ports numbers to build the configuration of the server,
+where C<XXX> is an integer from 1985 to 65535.
+
+For instance, C<TEST_NGINX_RAND_PORT_1> will be expanded to an port number,
+such as 1986, and C<TEST_NGINX_RAND_PORT_2> will be expanded to another port
+number, such as 65535.
+
 =head2 Valgrind Integration
 
 Test::Nginx has integrated support for valgrind (L<http://valgrind.org>) even though by
