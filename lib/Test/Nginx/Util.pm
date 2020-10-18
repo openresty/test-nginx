@@ -1251,7 +1251,8 @@ sub expand_env_in_text ($$$) {
     };
 
     $text =~ s/\$(TEST_NGINX_[_A-Z0-9]+)/
-        my $repl;
+        my $expanded_env;
+
         if ($1 =~ m{^(TEST_NGINX_RAND_PORT_[0-9]+)$}) {
             if (!defined $rand_ports->{$1}) {
                 my $rand_port = gen_rand_port 1000, $used_ports;
@@ -1262,18 +1263,19 @@ sub expand_env_in_text ($$$) {
 
                 $rand_ports->{$1} = $rand_port;
                 $used_ports->{$rand_port} = 1;
-                $repl = $rand_port;
+                $expanded_env = $rand_port;
 
             } else {
-                $repl = $rand_ports->{$1};
+                $expanded_env = $rand_ports->{$1};
             }
         } else {
             if (!defined $ENV{$1}) {
                 bail_out "$name - No environment $1 defined.\n";
             }
-            $repl = $ENV{$1};
+            $expanded_env = $ENV{$1};
         }
-        $repl/eg;
+        $expanded_env;
+    /eg;
 
     $text;
 }
