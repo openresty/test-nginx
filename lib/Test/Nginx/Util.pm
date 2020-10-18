@@ -797,7 +797,7 @@ sub setup_server_root ($) {
 }
 
 sub write_user_files ($$) {
-    my ($block, $rand_ports) = shift;
+    my ($block, $rand_ports) = @_;
 
     my $name = $block->name;
 
