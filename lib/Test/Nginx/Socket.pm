@@ -4280,7 +4280,7 @@ Defaults to 100.
 
 When set to 1, the test scaffold will try to send C<HUP> signal to the
 Nginx master process to reload the config file between
-successive test blocks (but not successive C<repeast_each>
+successive test blocks (but not successive C<repeat_each>
 sub-tests within the same test block). When this environment is set
 to 1, it will also enforce the "master_process on" config line
 in the F<nginx.conf> file,
