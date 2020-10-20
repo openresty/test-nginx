@@ -2297,7 +2297,7 @@ sub gen_curl_cmd_from_req ($$) {
 sub gen_ab_cmd_from_req ($$@) {
     my ($block, $req, $nreqs, $concur) = @_;
 
-    $nreqs ||= 100000;
+    $nreqs ||= 100000000;
     $concur ||= 2;
 
     if ($nreqs < $concur) {
