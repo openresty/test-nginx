@@ -3,7 +3,7 @@ package Test::Nginx;
 use strict;
 use warnings;
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 __END__
 
