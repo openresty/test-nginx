@@ -2555,7 +2555,7 @@ retry:
                         warn "sending KILL signal to $pid";
                     }
 
-                    kill(SIGKILL, $pid);
+                    kill(SIGKILL, -$pid);
                     waitpid($pid, 0);
 
                     if (!unlink($PidFile) && -f $PidFile) {
