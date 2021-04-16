@@ -2543,7 +2543,7 @@ retry:
                 sleep $TestNginxSleep;
 
                 if (-f $PidFile) {
-                    if ($i++ < 20) {
+                    if ($i++ < 80) {
                         if ($Verbose) {
                             warn "nginx not quitted, retrying...\n";
                         }
