@@ -621,7 +621,13 @@ sub kill_process ($$$) {
     #system("ps aux|grep $pid > /dev/stderr");
     warn "$name - WARNING: killing the child process $pid with force...";
 
-    kill(SIGKILL, $pid);
+    if (getpgrp($pid) == $pid) {
+        kill(SIGKILL, -$pid);
+
+    } else {
+        kill(SIGKILL, $pid);
+    }
+
     waitpid($pid, 0);
 
     if (is_running($pid)) {
@@ -1897,6 +1903,7 @@ start_nginx:
                     # child process
                     #my $rc = system($cmd);
 
+                    setpgrp;
                     my $tb = Test::More->builder;
                     $tb->no_ending(1);
 
@@ -2555,7 +2562,8 @@ retry:
                         warn "sending KILL signal to $pid";
                     }
 
-                    kill(SIGKILL, $pid);
+                    # kill process group, including children
+                    kill(SIGKILL, -$pid);
                     waitpid($pid, 0);
 
                     if (!unlink($PidFile) && -f $PidFile) {
