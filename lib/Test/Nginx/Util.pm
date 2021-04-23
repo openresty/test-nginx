@@ -2562,7 +2562,7 @@ retry:
                         warn "sending KILL signal to $pid";
                     }
 
-                    # kill process group, include child
+                    # kill process group, including children
                     kill(SIGKILL, -$pid);
                     waitpid($pid, 0);
 
