@@ -1,6 +1,6 @@
 # Unit tests for Test::Nginx::Socket::get_req_from_block
 use lib 'lib';
-use Test::Nginx::Socket tests => 7;
+use Test::Nginx::Socket tests => 8;
 
 my @block_list = blocks();
 my $i = 0;  # Use $i to make copy/paste of tests easier.
@@ -12,8 +12,8 @@ is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
             ."\r\nContent-Length: 15\r\n\r\nvalue=N%3A12345"}]],
           $block_list[$i++]->name);
 is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
-          [[{ value => "HEAD /foo HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n".
-            "GET /bar HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"}]],
+          [[{ value => "HEAD /foo HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n"},
+            { value => "GET /bar HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"}]],
           $block_list[$i++]->name);
 is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
           [[{ value => "POST /foo HTTP/1.1\r
@@ -37,6 +37,10 @@ is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
             {value =>"value=N%3A12345", delay_before => 3}],
            [{value =>"GET "},
             {value =>"/foo HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"}]],
+          $block_list[$i++]->name);
+is_deeply(Test::Nginx::Socket::get_req_from_block($block_list[$i]),
+          [[{value =>"GET /foo HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n"},
+            {value =>"GET /bar HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",delay_before => 3}]],
           $block_list[$i++]->name);
 __DATA__
 
@@ -73,3 +77,6 @@ rub my face in the dirt"
 --- request eval
 [["POST /foo\r\n", {value => "value=N%3A12345", delay_before =>3}],
  [{value => "GET "}, {value => "/foo"}]]
+=== pipelined_requests: an array of requests with delays.
+--- pipelined_requests eval
+["GET /foo", [{value => "GET /bar", delay_before =>3}]]

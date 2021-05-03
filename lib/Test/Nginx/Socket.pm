@@ -376,7 +376,7 @@ sub get_req_from_block ($) {
                     "$name - invalid entries in --- pipelined_requests");
             }
             my $i = 0;
-            my $prq = "";
+            my @prq = ();
             for my $request (@$reqs) {
                 my $conn_type;
                 if ($i == @$reqs - 1) {
@@ -399,15 +399,56 @@ sub get_req_from_block ($) {
                 } else {
                     ($hdr, $is_chunked)  = parse_more_headers($more_headers);
                 }
+                
+                if (!ref $request) {
+                    # This request is a good old string.
+                    my $r_br = build_request_from_packets($name, $hdr,
+                                          $is_chunked, $conn_type,
+                                          [$request] );
 
-                my $r_br = build_request_from_packets($name, $hdr,
-                                      $is_chunked, $conn_type,
-                                      [$request] );
-                $prq .= $$r_br[0];
+                    push @prq, {value => $$r_br[0]};
+
+                } elsif (ref $request eq 'ARRAY') {
+                    # Request expressed as a serie of packets
+                    my @packet_array = ();
+                    for my $one_packet (@$request) {
+                        if (!ref $one_packet) {
+                            # Packet is a string.
+                            push @packet_array, $one_packet;
+                        } elsif (ref $one_packet eq 'HASH'){
+                            # Packet is a hash with a value...
+                            push @packet_array, $one_packet->{value};
+                        } else {
+                            bail_out "$name - Invalid syntax. $one_packet should be a string or hash with value.";
+                        }
+                    }
+
+                    my $transformed_packet_array = build_request_from_packets($name, $hdr,
+                                                $is_chunked, $conn_type,
+                                                \@packet_array);
+                    my @transformed_req = ();
+                    my $idx = 0;
+                    for my $one_transformed_packet (@$transformed_packet_array) {
+                        if (!ref $$request[$idx]) {
+                            # it is a string
+                            push @transformed_req, {value => $one_transformed_packet};
+                        } else {
+                            # Is a HASH (checked above as $one_packet)
+                            $$request[$idx]->{value} = $one_transformed_packet;
+                            push @transformed_req, $$request[$idx];
+                        }
+                        $idx++;
+                    }
+
+                    push @prq, @transformed_req
+                } else {
+                    bail_out "$name - Invalid syntax. $request should be a string or an array of packets.";
+                }
+
                 $i++;
             }
-            push @req_list, [{value =>$prq}];
 
+            push @req_list, \@prq;
         } else {
             my ($is_chunked, $hdr);
 
