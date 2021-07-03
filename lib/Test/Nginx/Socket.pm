@@ -48,7 +48,7 @@ our $TotalConnectingTimeouts = 0;
 our $PrevNginxPid;
 
 sub send_request ($$$$@);
-sub send_http2_req ($$$);
+sub send_http_req_by_curl ($$$);
 
 sub run_filter_helper($$$);
 sub run_test_helper ($$);
@@ -1772,7 +1772,7 @@ sub parse_response($$$) {
     return ( $res, $raw_headers, $left );
 }
 
-sub send_http2_req ($$$) {
+sub send_http_req_by_curl ($$$) {
     my ($block, $req, $timeout) = @_;
 
     my $name = $block->name;
@@ -1813,7 +1813,21 @@ sub send_request ($$$$@) {
 
     my $name = $block->name;
 
-    #warn "connecting...\n";
+    my @req_bits = ref $req ? @$req : ($req);
+
+    my $head_req = 0;
+    {
+        my $req = join '', map { $_->{value} } @req_bits;
+        #warn "Request: $req\n";
+        if ($req =~ /^\s*HEAD\s+/) {
+            #warn "Found HEAD request!\n";
+            $head_req = 1;
+        }
+    }
+
+    if (use_http2($block) || use_http3($block)) {
+        return send_http_req_by_curl($block, $req, $timeout), $head_req;
+    }
 
     my $server_addr = $block->server_addr_for_client;
 
@@ -1831,6 +1845,7 @@ sub send_request ($$$$@) {
         Timeout   => $timeout,
     );
 
+    #warn "connecting...\n";
     if (!defined $sock) {
         $tries ||= 1;
         my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
@@ -1882,22 +1897,6 @@ sub send_request ($$$$@) {
     }
 
     #warn "connected";
-
-    my @req_bits = ref $req ? @$req : ($req);
-
-    my $head_req = 0;
-    {
-        my $req = join '', map { $_->{value} } @req_bits;
-        #warn "Request: $req\n";
-        if ($req =~ /^\s*HEAD\s+/) {
-            #warn "Found HEAD request!\n";
-            $head_req = 1;
-        }
-    }
-
-    if (use_http2($block)) {
-        return send_http2_req($block, $req, $timeout), $head_req;
-    }
 
     #my $flags = fcntl $sock, F_GETFL, 0
     #or die "Failed to get flags: $!\n";
@@ -2209,6 +2208,11 @@ sub gen_curl_cmd_from_req ($$) {
 
     my @args = ('curl', '-i');
 
+    my $curl_protocol = $block->curl_protocol;
+    if (!defined $curl_protocol) {
+        $curl_protocol = "http";
+    }
+
     if ($Test::Nginx::Util::Verbose) {
         push @args, "-vv";
 
@@ -2216,7 +2220,11 @@ sub gen_curl_cmd_from_req ($$) {
         push @args, '-sS';
     }
 
-    if (use_http2($block)) {
+    if (use_http3($block)) {
+        push @args, '--http3';
+        $curl_protocol = "https";
+
+    } elsif (use_http2($block)) {
         push @args, '--http2', '--http2-prior-knowledge';
     }
 
@@ -2287,11 +2295,6 @@ sub gen_curl_cmd_from_req ($$) {
 
     if (!defined $server_addr) {
         $server_addr = $ServerAddr;
-    }
-
-    my $curl_protocol = $block->curl_protocol;
-    if (!defined $curl_protocol) {
-        $curl_protocol = "http";
     }
 
     {
@@ -4197,6 +4200,31 @@ the HTTP 1.0 protocol will still use HTTP 1.0.
 One can enable HTTP/2 mode for an individual test block by specifying the L<http2> section, as in
 
     --- http2
+
+=head2 TEST_NGINX_USE_HTTP3
+
+Enables the "http3" test mode by enforcing using the HTTP/3 protocol to send the
+test request.
+
+Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
+with the NGINX server. The `curl` utility must be recent enough to support both the C<--http3>
+command-line options.
+
+B<WARNING:> not all the sections and features are supported in the "http3" test mode. For example, the L<pipelined_requests> and
+L<raw_request> will still use the HTTP/1 protocols even in the "http3" test mode. Similarly, test blocks explicitly require
+the HTTP 1.0 protocol will still use HTTP 1.0.
+
+One can enable HTTP/3 mode for an individual test block by specifying the L<http3> section, as in
+
+    --- http3
+
+=head2 TEST_NGINX_HTTP3_CRT
+
+when running in http3 mode, you need to specify the default certificate.
+
+=head2 TEST_NGINX_HTTP3_KEY
+
+when running in http3 mode, you need to specify the default key.
 
 =head2 TEST_NGINX_VERBOSE
 
