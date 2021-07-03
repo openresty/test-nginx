@@ -48,7 +48,7 @@ our $TotalConnectingTimeouts = 0;
 our $PrevNginxPid;
 
 sub send_request ($$$$@);
-sub send_http2_req ($$$);
+sub send_http_req_by_curl ($$$);
 
 sub run_filter_helper($$$);
 sub run_test_helper ($$);
@@ -1766,7 +1766,7 @@ sub parse_response($$$) {
     return ( $res, $raw_headers, $left );
 }
 
-sub send_http2_req ($$$) {
+sub send_http_req_by_curl ($$$) {
     my ($block, $req, $timeout) = @_;
 
     my $name = $block->name;
@@ -1807,7 +1807,21 @@ sub send_request ($$$$@) {
 
     my $name = $block->name;
 
-    #warn "connecting...\n";
+    my @req_bits = ref $req ? @$req : ($req);
+
+    my $head_req = 0;
+    {
+        my $req = join '', map { $_->{value} } @req_bits;
+        #warn "Request: $req\n";
+        if ($req =~ /^\s*HEAD\s+/) {
+            #warn "Found HEAD request!\n";
+            $head_req = 1;
+        }
+    }
+
+    if (use_http2($block) || use_http3($block)) {
+        return send_http_req_by_curl($block, $req, $timeout), $head_req;
+    }
 
     my $server_addr = $block->server_addr_for_client;
 
@@ -1825,6 +1839,7 @@ sub send_request ($$$$@) {
         Timeout   => $timeout,
     );
 
+    #warn "connecting...\n";
     if (!defined $sock) {
         $tries ||= 1;
         my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
@@ -1876,22 +1891,6 @@ sub send_request ($$$$@) {
     }
 
     #warn "connected";
-
-    my @req_bits = ref $req ? @$req : ($req);
-
-    my $head_req = 0;
-    {
-        my $req = join '', map { $_->{value} } @req_bits;
-        #warn "Request: $req\n";
-        if ($req =~ /^\s*HEAD\s+/) {
-            #warn "Found HEAD request!\n";
-            $head_req = 1;
-        }
-    }
-
-    if (use_http2($block)) {
-        return send_http2_req($block, $req, $timeout), $head_req;
-    }
 
     #my $flags = fcntl $sock, F_GETFL, 0
     #or die "Failed to get flags: $!\n";
@@ -2202,6 +2201,7 @@ sub gen_curl_cmd_from_req ($$) {
     }
 
     my @args = ('curl', '-i');
+    my $http_scheme = "http";
 
     if ($Test::Nginx::Util::Verbose) {
         push @args, "-vv";
@@ -2210,7 +2210,11 @@ sub gen_curl_cmd_from_req ($$) {
         push @args, '-sS';
     }
 
-    if (use_http2($block)) {
+    if (use_http3($block)) {
+        push @args, '--http3';
+        $http_scheme = "https";
+
+    } elsif (use_http2($block)) {
         push @args, '--http2', '--http2-prior-knowledge';
     }
 
@@ -2286,7 +2290,7 @@ sub gen_curl_cmd_from_req ($$) {
     {
         my $server = $server_addr;
         my $port = $ServerPortForClient;
-        $link = "http://$server:$port$uri";
+        $link = "$http_scheme://$server:$port$uri";
     }
 
     push @args, $link;

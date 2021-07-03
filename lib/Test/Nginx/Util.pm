@@ -31,6 +31,8 @@ our $FirstTime = 1;
 
 our $ReusePort = $ENV{TEST_NGINX_REUSE_PORT};
 
+our $UseHttp3 = $ENV{TEST_NGINX_USE_HTTP3};
+
 our $UseHttp2 = $ENV{TEST_NGINX_USE_HTTP2};
 
 our $UseHup = $ENV{TEST_NGINX_USE_HUP};
@@ -45,6 +47,7 @@ our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
 our $Profiling = 0;
 
 sub use_http2 ($);
+sub use_http3 ($);
 
 our $InSubprocess;
 our $RepeatEach = 1;
@@ -77,6 +80,29 @@ our $CheckAccumErrLog = $ENV{TEST_NGINX_CHECK_ACCUM_ERR_LOG};
 our $ServerAddr = '127.0.0.1';
 
 our $ServerName = 'localhost';
+
+our $Http3SSLCrt;
+our $Http3SSLCrtKey;
+
+our $Http3TempDir;
+
+if ($UseHttp2 && $UseHttp3) {
+    die "Ambiguous: both TEST_NGINX_USE_HTTP3 and TEST_NGINX_USE_HTTP2 are set.\n";
+}
+
+sub bail_out (@);
+
+if ($UseHttp3 && (!defined $Http3SSLCrt || !defined $Http3SSLCrtKey)) {
+    $Http3TempDir = Cwd::abs_path(File::Temp::tempdir("TEST_HTTP3_XXXXXX", cleanup => 1));
+    $Http3SSLCrt = "$Http3TempDir/http3_cert.pem";
+    $Http3SSLCrtKey = "$Http3TempDir/http3_cert_key.pem";
+
+    my $cmd = "openssl req -x509 -newkey rsa:4096 -keyout $Http3SSLCrtKey -out $Http3SSLCrt -days 7 -nodes -subj '/CN=localhost' 2> /dev/null";
+    system($cmd) == 0 or
+        bail_out "Failed to run shell command: $cmd\n";
+}
+
+our $ServerConfigHttp3 = '';
 
 our $WorkerUser = $ENV{TEST_NGINX_WORKER_USER};
 if (defined $WorkerUser && $WorkerUser !~ /^\w+(?:\s+\w+)?$/) {
@@ -278,8 +304,6 @@ sub use_hup() {
 our @CleanupHandlers;
 our @BlockPreprocessors;
 
-sub bail_out (@);
-
 our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
 our $Workers                = 1;
@@ -418,6 +442,7 @@ sub master_process_enabled (@) {
 
 our @EXPORT = qw(
     use_http2
+    use_http3
     env_to_nginx
     is_str
     check_accum_error_log
@@ -988,7 +1013,23 @@ _EOC_
 
     my $listen_opts = '';
 
-    if (use_http2($block)) {
+    $ServerConfigHttp3 = '';
+    if (use_http3($block)) {
+        $listen_opts .= " http3";
+
+        if ($UseHttp3 && !defined $block->http3) {
+            $ServerConfigHttp3 = "\n        ssl_protocols TLSv1.3;\n";
+
+            if (defined $Http3SSLCrt) {
+                $ServerConfigHttp3 .= "        ssl_certificate $Http3SSLCrt;\n";
+            }
+
+            if (defined $Http3SSLCrtKey) {
+                $ServerConfigHttp3 .= "        ssl_certificate_key $Http3SSLCrtKey;\n";
+            }
+        }
+
+    } elsif (use_http2($block)) {
         $listen_opts .= " http2";
     }
 
@@ -1017,6 +1058,7 @@ $http_config
 
         client_max_body_size 30M;
         #client_body_buffer_size 4k;
+$ServerConfigHttp3
 
         # Begin preamble config...
 $ConfigPreamble
@@ -1167,12 +1209,18 @@ sub test_config_version ($$) {
     for (my $tries = 1; $tries <= $total; $tries++) {
 
         my $extra_curl_opts = '';
+        my $http_protocol = "http";
 
         if (use_http2($block)) {
             $extra_curl_opts .= ' --http2 --http2-prior-knowledge';
         }
 
-        my $cmd = "curl$extra_curl_opts -sS -H 'Host: Test-Nginx' --connect-timeout 2 'http://$ServerAddr:$ServerPort/ver'";
+        if (use_http3($block)) {
+            $extra_curl_opts .= ' --http3';
+            $http_protocol = "https";
+        }
+
+        my $cmd = "curl$extra_curl_opts -sS -H 'Host: Test-Nginx' --connect-timeout 2 '$http_protocol://$ServerAddr:$ServerPort/ver'";
         #warn $cmd;
         my $ver = `$cmd`;
         #chop $ver;
@@ -2688,6 +2736,12 @@ sub use_http2 ($) {
             return undef;
         }
 
+        if (defined $block->http3) {
+            warn "WARNING: ", $block->name, " - explicitly rquires HTTP/3, so will not use HTTP/2\n";
+            $block->set_value("test_nginx_enabled_http2", 0);
+            return undef;
+        }
+
         $block->set_value("test_nginx_enabled_http2", 1);
 
         if (!$LoadedIPCRun) {
@@ -2699,6 +2753,80 @@ sub use_http2 ($) {
     }
 
     $block->set_value("test_nginx_enabled_http2", 0);
+    return undef;
+}
+
+
+sub use_http3 ($) {
+    my $block = shift;
+    my $cached = $block->test_nginx_enabled_http3;
+
+    if (defined $cached) {
+        return $cached;
+    }
+
+    if (defined $block->http3) {
+        if ($block->raw_request) {
+            bail_out("cannot use --- http3 with --- raw_request");
+        }
+
+        if ($block->pipelined_requests) {
+            bail_out("cannot use --- http3 with --- pipelined_requests");
+        }
+
+        if (defined $block->http2) {
+            bail_out("cannot use --- http3 with --- http2");
+        }
+
+        $block->set_value("test_nginx_enabled_http3", 1);
+
+        if (!$LoadedIPCRun) {
+            require IPC::Run;
+            $LoadedIPCRun = 1;
+        }
+        return 1;
+    }
+
+    if ($UseHttp3) {
+        if ($block->raw_request) {
+            warn "WARNING: ", $block->name, " - using raw_request HTTP/2, will not use HTTP/3\n";
+            $block->set_value("test_nginx_enabled_http3", 0);
+            return undef;
+        }
+
+        if ($block->pipelined_requests) {
+            warn "WARNING: ", $block->name, " - using pipelined_requests, will not use HTTP/3\n";
+            $block->set_value("test_nginx_enabled_http3", 0);
+            return undef;
+        }
+
+        if (!defined $block->request) {
+            $block->set_value("test_nginx_enabled_http3", 0);
+            return undef;
+        }
+
+        if (!ref $block->request && $block->request =~ m{HTTP/1\.0}s) {
+            warn "WARNING: ", $block->name, " - explicitly rquires HTTP 1.0, so will not use HTTP/3\n";
+            $block->set_value("test_nginx_enabled_http3", 0);
+            return undef;
+        }
+
+        if (defined $block->http2) {
+            warn "WARNING: ", $block->name, " - explicitly rquires HTTP/2, so will not use HTTP/3\n";
+            $block->set_value("test_nginx_enabled_http3", 0);
+            return undef;
+        }
+
+        $block->set_value("test_nginx_enabled_http3", 1);
+
+        if (!$LoadedIPCRun) {
+            require IPC::Run;
+            $LoadedIPCRun = 1;
+        }
+        return 1;
+    }
+
+    $block->set_value("test_nginx_enabled_http3", 0);
     return undef;
 }
 
