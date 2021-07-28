@@ -22,6 +22,7 @@ use Digest::SHA ();
 use POSIX ":sys_wait_h";
 
 use Test::Nginx::Util;
+use Test::Nginx::CustomFilter qw(json_sort arg_sort m3u8_sort);
 
 #use Smart::Comments::JSON '###';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
@@ -537,7 +538,13 @@ sub run_filter_helper($$$) {
     } elsif (!ref $filter) {
 
         for ($filter) {
-            if ($_ eq 'md5_hex') {
+            if ($_ eq 'json_sort') {
+                $content = json_sort($content);
+            } elsif ($_ eq 'arg_sort') {
+                $content = arg_sort($content);
+            }  elsif ($_ eq 'm3u8_sort') {
+                $content = m3u8_sort($content);
+            } elsif ($_ eq 'md5_hex') {
                 $content = Digest::MD5::md5_hex($content);
             } elsif ($_ eq 'sha1_hex') {
                 $content = Digest::SHA::sha1_hex($content);

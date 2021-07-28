@@ -2,6 +2,7 @@ lib/Test/Nginx.pm
 lib/Test/Nginx/LWP.pm
 lib/Test/Nginx/Socket.pm
 lib/Test/Nginx/Util.pm
+lib/Test/Nginx/CustomFilter.pm
 Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
@@ -34,6 +35,7 @@ t/get_req_from_block.t
 t/parse_request.t
 t/check_response_body.t
 t/resp_body_filters.t
+t/resp_body_json_filters.t
 lib/Test/Nginx/Socket/Lua.pm
 lib/Test/Nginx/Socket/Lua/Stream.pm
 lib/Test/Nginx/Socket/Lua/Dgram.pm
