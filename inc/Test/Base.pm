@@ -292,7 +292,7 @@ sub _section_names {
     my $block = $self->first_block
       or croak $name_error;
     my @names = grep {
-        $_ !~ /^(ONLY|LAST|SKIP)$/;
+        $_ !~ /^(ONLY|FIRST|LAST|SKIP)$/;
     } @{$block->{_section_order}[0] || []};
     croak "$name_error. Need two sections in first block"
       unless @names == 2;
@@ -442,6 +442,16 @@ sub _block_list_init {
 
 sub _choose_blocks {
     my $blocks = [];
+    my $has_first = 0;
+
+    for my $hunk (@_) {
+        my $block = $self->_make_block($hunk);
+        if (exists $block->{FIRST}) {
+            $has_first = 1;
+            last;
+        }
+    }
+
     for my $hunk (@_) {
         my $block = $self->_make_block($hunk);
         if (exists $block->{ONLY}) {
@@ -449,7 +459,16 @@ sub _choose_blocks {
                 unless $self->_no_diag_on_only;
             return [$block];
         }
+
         next if exists $block->{SKIP};
+        if ($has_first) {
+            if (exists $block->{FIRST}) {
+                $has_first = 0;
+            } else {
+                next;
+            }
+        }
+
         push @$blocks, $block;
         if (exists $block->{LAST}) {
             return $blocks;
