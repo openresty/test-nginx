@@ -460,8 +460,9 @@ sub _choose_blocks {
         if ($has_first) {
             if (exists $block->{FIRST}) {
                 $has_first = 0;
+            } else {
+                next;
             }
-            next;
         }
 
         push @$blocks, $block;
