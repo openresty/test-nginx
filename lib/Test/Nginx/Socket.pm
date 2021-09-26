@@ -2283,10 +2283,20 @@ sub gen_curl_cmd_from_req ($$) {
         $server_addr = $ServerAddr;
     }
 
+    my $curl_protocol = $block->curl_protocol;
+    if (!defined $curl_protocol) {
+        $curl_protocol = "http";
+    }
+
     {
         my $server = $server_addr;
         my $port = $ServerPortForClient;
-        $link = "http://$server:$port$uri";
+        $link = "$curl_protocol://$server:$port$uri";
+    }
+
+    my $curl_options = $block->curl_options;
+    if (defined $curl_options) {
+        push @args, $curl_options;
     }
 
     push @args, $link;
@@ -2992,6 +3002,23 @@ specified. For example, this section cannot be used with C<--- pipelined_request
 C<--- raw_request>.
 
 See also the L<TEST_NGINX_USE_HTTP2> system environment for the "http2" test mode.
+
+=head2 curl_protocol
+
+Set protocol (such as http/https) when sending request using 'curl'.
+
+=head2 curl_options
+
+Add extra command line options when using 'curl' to send request.
+
+Below example will send https request via curl:
+
+    --- http2
+    --- curl_options: -k
+    --- curl_protocol: https
+    --- request
+        GET /ping
+
 
 =head2 config
 
