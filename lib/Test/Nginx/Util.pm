@@ -989,6 +989,10 @@ _EOC_
 
     my $listen_opts = '';
 
+    if (use_http2($block) && defined $block->tls) {
+        $listen_opts .= " ssl";
+    }
+
     if (use_http2($block)) {
         $listen_opts .= " http2";
     }

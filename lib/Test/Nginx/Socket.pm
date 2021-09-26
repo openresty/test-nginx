@@ -2214,6 +2214,11 @@ sub gen_curl_cmd_from_req ($$) {
         push @args, '--http2', '--http2-prior-knowledge';
     }
 
+    if (use_http2($block) && defined $block->tls) {
+        my $resolve = "$ServerName:$ServerPortForClient:$ServerAddr";
+        push @args, '-k', '--resolve', $resolve;
+    }
+
     if ($meth eq 'HEAD') {
         push @args, '-I';
 
@@ -2287,6 +2292,10 @@ sub gen_curl_cmd_from_req ($$) {
         my $server = $server_addr;
         my $port = $ServerPortForClient;
         $link = "http://$server:$port$uri";
+        if (use_http2($block) && defined $block->tls) {
+            my $server_name = $ServerName;
+            $link = "https://$server_name:$port$uri";
+        }
     }
 
     push @args, $link;
@@ -2982,6 +2991,7 @@ The following sections are supported:
 =head2 http2
 
 Enforces the test scaffold to use the HTTP/2 wire protocol to send the test request.
+Also, you can set tls section using the HTTP/2 over TLS protocol and SNI(Server Name Indication).
 
 Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
 with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
@@ -4164,6 +4174,10 @@ the HTTP 1.0 protocol will still use HTTP 1.0.
 One can enable HTTP/2 mode for an individual test block by specifying the L<http2> section, as in
 
     --- http2
+
+Enable HTTP/2 over TLS mode for an individual test block by specifying the L<tls> section, as in
+
+    --- tls
 
 =head2 TEST_NGINX_VERBOSE
 
