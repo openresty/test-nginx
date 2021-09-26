@@ -740,6 +740,7 @@ sub run_tests () {
             $hdl->($block);
         }
 
+        $block->set_value("name", $0 . " " . $block->name);
         run_test($block);
 
         $PrevBlock = $block;
