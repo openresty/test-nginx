@@ -3011,7 +3011,7 @@ Set protocol (such as http/https) when sending request using 'curl'.
 
 Add extra command line options when using 'curl' to send request.
 
-Below example will send https request via curl:
+Below is an example for sending an insecure https request using 'curl':
 
     --- http2
     --- curl_options: -k
