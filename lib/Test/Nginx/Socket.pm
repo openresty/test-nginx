@@ -1112,6 +1112,12 @@ sub check_error_log ($$$$) {
         } else {
             $grep_pat = $grep_pats;
         }
+
+    } else {
+        my $grep_error_log_out = $block->grep_error_log_out;
+        if (defined $grep_error_log_out) {
+            bail_out("$name - No --- grep_error_log defined but --- grep_error_log_out is defined");
+        }
     }
 
     if (defined $grep_pat) {
