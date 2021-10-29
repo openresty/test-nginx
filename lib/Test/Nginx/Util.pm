@@ -1111,7 +1111,7 @@ sub get_nginx_version () {
         bail_out("Failed to get the version of the Nginx in PATH: $out");
     }
 
-    if ($out =~ m{built with OpenSSL (\d+)\.(\d+)\.(\d+)([a-z])}s) {
+    if ($out =~ m{built with OpenSSL (\d+)\.(\d+)\.(\d+)([a-z])?}s) {
         $OpenSSLVersion = get_canon_version_for_OpenSSL($1, $2, $3, $4);
     }
 
