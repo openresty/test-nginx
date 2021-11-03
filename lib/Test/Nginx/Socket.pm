@@ -3677,7 +3677,6 @@ Below is an example:
     --- no_access_log
     GET /p
 
-
 =head2 abort
 
 Makes the test scaffold not to treat C<--- timeout> expiration as a test failure.
