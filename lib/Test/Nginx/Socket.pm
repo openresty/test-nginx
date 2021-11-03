@@ -3656,6 +3656,28 @@ Below is an example:
     --- access_log
     GET /t
 
+=head2 no_access_log
+
+Similar to the L<no_error_log> section, but for asserting appearance of patterns in the nginx access log file.
+
+Below is an example:
+
+    === TEST 1: check access log
+    --- config
+        location /t {
+            content_by_lua_block {
+                ngx.say("hello")
+            }
+        }
+
+    --- request
+    GET /t
+    --- response_body
+    hello
+    --- no_access_log
+    GET /p
+
+
 =head2 abort
 
 Makes the test scaffold not to treat C<--- timeout> expiration as a test failure.
