@@ -1091,6 +1091,70 @@ sub check_access_log ($$$) {
             }
         }
     }
+
+    if (defined $block->no_access_log) {
+        #warn "HERE";
+        my $pats = $block->no_access_log;
+
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
+
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
+
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
+
+        my %found;
+        $lines ||= access_log_data();
+        my $i = 0;
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+                #warn "test $pat\n";
+                if ((ref $pat && $line =~ /$pat/) || $line =~ /\Q$pat\E/) {
+                    if ($found{$pat}) {
+                        my $tb = Test::More->builder;
+                        $tb->no_ending(1);
+
+                    } else {
+                        $found{$pat} = 1;
+                    }
+
+                    SKIP: {
+                        skip "$name - no_access_log - tests skipped due to $dry_run ($line)", 1 if $dry_run;
+                        my $ln = fmt_str($line);
+                        my $p = fmt_str($pat);
+                        my @more_lines;
+                        for (my $j = $i + 1; $j < min($i + 10, @$lines - 1); $j++) {
+                            push @more_lines, $lines->[$j];
+                        }
+
+                        fail("$name - pattern \"$p\" should not match any line in access.log but matches line \"$ln\" (req $repeated_req_idx)\n"
+                             . join "", @more_lines);
+                    }
+                }
+            }
+
+        } continue {
+            $i++;
+        }
+
+        for my $pat (@$pats) {
+            next if $found{$pat};
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - no_access_log - tests skipped due to $dry_run", 1 if $dry_run;
+                    my $p = fmt_str($pat);
+                    pass("$name - pattern \"$p\" does not match a line in access.log (req $repeated_req_idx)");
+                }
+            }
+        }
+    }
 }
 
 sub check_error_log ($$$$) {
