@@ -1795,6 +1795,17 @@ sub send_http_req_by_curl ($$$) {
 
     if (!$out) {
         if ($err) {
+            my $curl_err = $block->curl_error;
+            if (defined $curl_err) {
+                if ((ref $curl_err && $err =~ /$curl_err/) || $err !~ /\Q$curl_err\E/) {
+                    return;
+
+                } else {
+                    fail "$name - command \"@$cmd\" generates stderr output: $err";
+                    return;
+                }
+            }
+
             fail "$name - command \"@$cmd\" generates stderr output: $err";
             return;
         }
@@ -3037,6 +3048,10 @@ Below is an example for sending an insecure https request using 'curl':
     --- request
         GET /ping
 
+=head2 curl_error
+
+The expected curl error.
+    --- curl_error
 
 =head2 config
 
