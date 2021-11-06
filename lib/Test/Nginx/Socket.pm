@@ -2186,22 +2186,6 @@ sub read_event_handler ($) {
     return undef;
 }
 
-sub parse_more_headers_curl ($$) {
-    my ($args, $in) = @_;
-    my @headers = split /\n+/, $in;
-    my $is_chunked;
-    for my $header (@headers) {
-        next if $header =~ /^\s*\#/;
-        my ($key, $val) = split /:\s*/, $header, 2;
-        if (lc($key) eq 'transfer-encoding' and $val eq 'chunked') {
-            $is_chunked = 1;
-        }
-
-        push @$args, '-H', $header;
-    }
-    return $is_chunked;
-}
-
 sub gen_curl_cmd_from_req ($$) {
     my ($block, $req) = @_;
 
@@ -2238,24 +2222,6 @@ sub gen_curl_cmd_from_req ($$) {
 
     } else {
         push @args, '-sS';
-    }
-
-    my $more_headers = $block->more_headers;
-    my $is_chunked;
-    if (defined($more_headers)) {
-        if (ref $more_headers eq 'ARRAY') {
-            warn "Found ", scalar @$more_headers, " entries in --- more_headers.";
-            my $i = 0;
-            my $hdr = $more_headers->[$i]; # TODO for pipeline
-            if (!defined $hdr) {
-                bail_out("--- more_headers lacks data for the $i pipelined request");
-            }
-            $is_chunked = parse_more_headers_curl(\@args, $hdr);
-            die "does not support pipeline";
-
-        } else {
-            $is_chunked  = parse_more_headers_curl(\@args, $more_headers);
-        }
     }
 
     if (use_http3($block)) {
@@ -2317,7 +2283,11 @@ sub gen_curl_cmd_from_req ($$) {
         if (!$found_content_type) {
             push @args, "-H", 'Content-Type: ';
         }
-        push @args, '--data-binary', $1;
+        my $filename = html_dir() . "/curl.data.bin";
+        push @args, '--data-binary', '@' . $filename;
+        open my $fh, ">", $filename or die("Could not open file. $!");
+        print $fh $1;
+        close $fh;
     }
 
     my $timeout = $block->timeout;
