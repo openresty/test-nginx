@@ -2206,7 +2206,9 @@ sub gen_curl_cmd_from_req ($$) {
         bail_out "$name - cannot parse the status line in the request: $req";
     }
 
-    my @args = ('curl', '-i');
+    # remove 'user-agent' and 'accept' request headers from curl
+    # because test-nginx does not send these header by default
+    my @args = ('curl', '-i', '-H', 'user-agent:', '-H', 'accept:');
 
     my $curl_protocol = $block->curl_protocol;
     if (!defined $curl_protocol) {
@@ -2288,6 +2290,7 @@ sub gen_curl_cmd_from_req ($$) {
     }
 
     push @args, '--connect-timeout', $timeout;
+    push @args, '--max-time', $timeout;
 
     my $link;
 

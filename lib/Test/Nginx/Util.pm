@@ -1014,8 +1014,6 @@ _EOC_
 
     $ServerConfigHttp3 = '';
     if (use_http3($block)) {
-        $listen_opts .= " http3";
-
         if ($UseHttp3 && !defined $block->http3) {
             $ServerConfigHttp3 = "\n        ssl_protocols TLSv1.3;\n";
 
@@ -1053,6 +1051,16 @@ $http_config
 
     server {
         listen          $ServerPort$listen_opts;
+_EOC_
+
+    # when using http3, wo both listen on tcp for http and udp for http3
+    if (use_http3($block)) {
+        print $out <<_EOC_;
+        listen          $ServerPort$listen_opts http3;
+_EOC_
+    }
+
+    print $out <<_EOC_;
         server_name     '$server_name';
 
         client_max_body_size 30M;
