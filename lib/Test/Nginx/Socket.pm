@@ -1797,13 +1797,15 @@ sub send_http_req_by_curl ($$$) {
         if ($err) {
             my $curl_err = $block->curl_error;
             if (defined $curl_err) {
-                if ((ref $curl_err && $err =~ /$curl_err/) || $err !~ /\Q$curl_err\E/) {
+                if (ref $curl_err && $err =~ /$curl_err/) {
                     return;
 
-                } else {
-                    fail "$name - command \"@$cmd\" generates stderr output: $err";
+                } elsif ($err =~ /\Q$curl_err\E/) {
                     return;
                 }
+
+                fail "$name - command \"@$cmd\" generates stderr output: $err";
+                return;
             }
 
             fail "$name - command \"@$cmd\" generates stderr output: $err";
