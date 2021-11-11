@@ -1783,11 +1783,10 @@ sub send_http_req_by_curl ($$$) {
         warn "running cmd @$cmd";
     }
 
-
     my $ok = IPC::Run::run($cmd, \(my $in), \(my $out), \(my $err),
                            IPC::Run::timeout($timeout));
 
-    my @cmd_copy = @$cmd;
+    #my @cmd_copy = @$cmd;
     #warn "running cmd ", quote_sh_args(\@cmd_copy);
 
     if (!defined $ok) {
@@ -2292,10 +2291,11 @@ sub gen_curl_cmd_from_req ($$) {
         if (!$found_content_type) {
             push @args, "-H", 'Content-Type: ';
         }
+        my $body = $1;
         my $filename = html_dir() . "/curl.data.bin";
         push @args, '--data-binary', '@' . $filename;
-        open my $fh, ">", $filename or die("Could not open file. $!");
-        print $fh $1;
+        open my $fh, ">", $filename or die "Could not open file. $!";
+        print $fh $body;
         close $fh;
     }
 
@@ -2305,6 +2305,9 @@ sub gen_curl_cmd_from_req ($$) {
     }
 
     push @args, '--connect-timeout', $timeout;
+
+    # http3 use udp, the connect-timeout does not take effect
+    # so use the max-time instead.
     push @args, '--max-time', $timeout;
 
     my $link;
@@ -4242,11 +4245,11 @@ One can enable HTTP/3 mode for an individual test block by specifying the L<http
 
 =head2 TEST_NGINX_HTTP3_CRT
 
-when running in http3 mode, you need to specify the default certificate.
+When running in http3 mode, you need to specify the default certificate.
 
 =head2 TEST_NGINX_HTTP3_KEY
 
-when running in http3 mode, you need to specify the default key.
+When running in http3 mode, you need to specify the default key.
 
 =head2 TEST_NGINX_VERBOSE
 

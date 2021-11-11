@@ -2744,7 +2744,7 @@ sub use_http2 ($) {
         }
 
         if (defined $block->http3) {
-            warn "WARNING: ", $block->name, " - explicitly rquires HTTP/3, so will not use HTTP/2\n";
+            warn "WARNING: ", $block->name, " - explicitly requires HTTP/3, so will not use HTTP/2\n";
             $block->set_value("test_nginx_enabled_http2", 0);
             return undef;
         }
@@ -2791,6 +2791,7 @@ sub use_http3 ($) {
             require IPC::Run;
             $LoadedIPCRun = 1;
         }
+
         return 1;
     }
 
@@ -2813,13 +2814,13 @@ sub use_http3 ($) {
         }
 
         if (!ref $block->request && $block->request =~ m{HTTP/1\.0}s) {
-            warn "WARNING: ", $block->name, " - explicitly rquires HTTP 1.0, so will not use HTTP/3\n";
+            warn "WARNING: ", $block->name, " - explicitly requires HTTP 1.0, so will not use HTTP/3\n";
             $block->set_value("test_nginx_enabled_http3", 0);
             return undef;
         }
 
         if (defined $block->http2) {
-            warn "WARNING: ", $block->name, " - explicitly rquires HTTP/2, so will not use HTTP/3\n";
+            warn "WARNING: ", $block->name, " - explicitly requires HTTP/2, so will not use HTTP/3\n";
             $block->set_value("test_nginx_enabled_http3", 0);
             return undef;
         }
