@@ -1783,10 +1783,12 @@ sub send_http_req_by_curl ($$$) {
         warn "running cmd @$cmd";
     }
 
-    #warn "running cmd @$cmd";
 
     my $ok = IPC::Run::run($cmd, \(my $in), \(my $out), \(my $err),
                            IPC::Run::timeout($timeout));
+
+    my @cmd_copy = @$cmd;
+    #warn "running cmd ", quote_sh_args(\@cmd_copy);
 
     if (!defined $ok) {
         fail "failed to run curl: $?: " . ($err // '');
@@ -2223,7 +2225,8 @@ sub gen_curl_cmd_from_req ($$) {
 
     # remove 'user-agent' and 'accept' request headers from curl
     # because test-nginx does not send these header by default
-    my @args = ('curl', '-i', '-H', 'user-agent:', '-H', 'accept:');
+    my @args = ('curl', '-i', '-H', 'User-Agent:', '-H', 'Accept:',
+        '-H', 'Host:');
 
     my $curl_protocol = $block->curl_protocol;
     if (!defined $curl_protocol) {
@@ -2264,8 +2267,6 @@ sub gen_curl_cmd_from_req ($$) {
             #warn "raw headers: $headers\n";
             @headers = grep {
                 !/^Connection\s*:/i
-                && !/^Host: \Q$ServerName\E$/i
-                && !/^Content-Length\s*:/i
             } split /\r\n/, $headers;
 
         } else {
@@ -2279,16 +2280,11 @@ sub gen_curl_cmd_from_req ($$) {
 
     for my $h (@headers) {
         #warn "h: $h\n";
-        if ($h =~ /^\s*User-Agent\s*:\s*(.*\S)/i) {
-            push @args, '-A', $1;
-
-        } else {
-            if ($h =~ /^\s*Content-Type\s*:/i) {
-                $found_content_type = 1;
-            }
-
-            push @args, '-H', $h;
+        if ($h =~ /^\s*Content-Type\s*:/i) {
+            $found_content_type = 1;
         }
+
+        push @args, '-H', $h;
     }
 
     if ($req =~ m{\G(.+)}gcsm) {
