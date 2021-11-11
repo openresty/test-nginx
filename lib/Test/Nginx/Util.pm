@@ -1055,8 +1055,13 @@ _EOC_
 
     # when using http3, wo both listen on tcp for http and udp for http3
     if (use_http3($block)) {
+        my $h3_listen_opts = $listen_opts;
+        if ($h3_listen_opts !~ /\breuseport\b/) {
+            $h3_listen_opts .= " reuseport";
+        }
+
         print $out <<_EOC_;
-        listen          $ServerPort$listen_opts http3;
+        listen          $ServerPort$h3_listen_opts http3;
 _EOC_
     }
 
