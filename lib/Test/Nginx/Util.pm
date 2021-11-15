@@ -1237,11 +1237,7 @@ sub test_config_version ($$) {
             $extra_curl_opts .= ' --http2 --http2-prior-knowledge';
         }
 
-        if (use_http3($block)) {
-            #$extra_curl_opts .= ' --http3';
-            #$http_protocol = "https";
-            #server Test-Nginx only listen on http when http3 is enabled
-        }
+        #server Test-Nginx only listen on http(tcp port) when http3 is enabled
 
         my $cmd = "curl$extra_curl_opts -sS -H 'Host: Test-Nginx' --connect-timeout 2 '$http_protocol://$ServerAddr:$ServerPort/ver'";
         #warn $cmd;
