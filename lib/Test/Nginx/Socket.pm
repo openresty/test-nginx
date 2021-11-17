@@ -4336,6 +4336,17 @@ When running in http3 mode, you need to specify the default certificate.
 
 When running in http3 mode, you need to specify the default key.
 
+=head2 TEST_NGINX_QUIC_IDLE_TIMEOUT
+
+HTTP3 connections are not closed when the requests finished. When reload nginx,
+the older nginx will not exit unitl the older connections idle timeout reach.
+The default idle timeout is 60 seconds which is too long for the test scaffold.
+
+Change the idle timeout value by environment var TEST_NGINX_QUIC_IDLE_TIMEOUT.
+Default idle timeout value is 0.6s if not set.
+
+    export TEST_NGINX_QUIC_IDLE_TIMEOUT=0.1
+
 =head2 TEST_NGINX_VERBOSE
 
 Controls whether to output verbose debugging messages in Test::Nginx. Default to empty.

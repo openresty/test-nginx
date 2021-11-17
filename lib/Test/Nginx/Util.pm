@@ -69,6 +69,8 @@ our $PostponeOutput = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
 
 our $Timeout = $ENV{TEST_NGINX_TIMEOUT} || 3;
 
+our $QuicIdleTimeout = $ENV{TEST_NGINX_QUIC_IDLE_TIMEOUT} || 0.6;
+
 our $CheckLeak = $ENV{TEST_NGINX_CHECK_LEAK} || 0;
 
 our $Benchmark = $ENV{TEST_NGINX_BENCHMARK} || 0;
@@ -305,7 +307,7 @@ our @BlockPreprocessors;
 our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
 our $Workers                = 1;
-our $WorkerConnections      = 64;
+our $WorkerConnections      = $ENV{TEST_NGINX_USE_HTTP3} ? 1024 : 64;
 our $LogLevel               = $ENV{TEST_NGINX_LOG_LEVEL} || 'debug';
 our $MasterProcessEnabled   = $ENV{TEST_NGINX_MASTER_PROCESS} || 'off';
 our $DaemonEnabled          = 'on';
@@ -1055,6 +1057,13 @@ _EOC_
 
     # when using http3, wo both listen on tcp for http and udp for http3
     if (use_http3($block)) {
+        my $quic_max_idle_timeout = ${QuicIdleTimeout};
+        if ($block->quic_max_idle_timeout) {
+            $quic_max_idle_timeout = $block->quic_max_idle_timeout;
+        }
+
+        $quic_max_idle_timeout = int($quic_max_idle_timeout * 1000);
+
         my $h3_listen_opts = $listen_opts;
         if ($h3_listen_opts !~ /\breuseport\b/) {
             $h3_listen_opts .= " reuseport";
@@ -1062,6 +1071,7 @@ _EOC_
 
         print $out <<_EOC_;
         listen          $ServerPort$h3_listen_opts http3;
+        quic_max_idle_timeout ${quic_max_idle_timeout}ms;
 _EOC_
     }
 
@@ -1227,10 +1237,7 @@ sub test_config_version ($$) {
             $extra_curl_opts .= ' --http2 --http2-prior-knowledge';
         }
 
-        if (use_http3($block)) {
-            $extra_curl_opts .= ' --http3';
-            $http_protocol = "https";
-        }
+        #server Test-Nginx only listen on http(tcp port) when http3 is enabled
 
         my $cmd = "curl$extra_curl_opts -sS -H 'Host: Test-Nginx' --connect-timeout 2 '$http_protocol://$ServerAddr:$ServerPort/ver'";
         #warn $cmd;
@@ -1758,6 +1765,17 @@ sub run_test ($) {
                         if (system("kill -HUP $pid") == 0) {
                             sleep $TestNginxSleep * 3;
 
+                            # wait for http3 connections to timeout
+                            # so older nginx can exit
+                            if (use_http3($block)) {
+                                my $idle_time = $QuicIdleTimeout;
+                                if ($block->quic_max_idle_timeout) {
+                                    $idle_time = $block->quic_max_idle_timeout;
+                                }
+
+                                sleep (0.1 + $idle_time);
+                            }
+
                             if ($Verbose) {
                                 warn "skip starting nginx from scratch\n";
                             }
@@ -2090,7 +2108,7 @@ request:
         #warn "Use hup: $UseHup, i: $i\n";
 
         if ($Verbose) {
-            warn "Run the test block...\n";
+            warn "Run the test block ", $block->name, " ...\n";
         }
 
         if (($CheckLeak || $Benchmark) && defined $block->tcp_listen) {
