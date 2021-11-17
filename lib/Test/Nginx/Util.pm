@@ -2108,7 +2108,7 @@ request:
         #warn "Use hup: $UseHup, i: $i\n";
 
         if ($Verbose) {
-            warn "Run the test block...\n";
+            warn "Run the test block ", $block->name, " ...\n";
         }
 
         if (($CheckLeak || $Benchmark) && defined $block->tcp_listen) {
