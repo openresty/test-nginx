@@ -591,29 +591,28 @@ sub kill_process ($$$) {
     my ($pid, $wait, $name) = @_;
 
     if ($wait) {
-        eval {
-            if (defined $pid) {
-                if ($Verbose) {
-                    warn "sending QUIT signal to $pid";
-                }
-
-                kill(SIGQUIT, $pid);
-            }
-
+        if (defined $pid) {
             if ($Verbose) {
-                warn "waitpid timeout: ", timeout();
+                warn "sending QUIT signal to $pid";
             }
 
-            local $SIG{ALRM} = sub { die "alarm\n" };
-            alarm timeout();
-            waitpid($pid, 0);
-            alarm 0;
-        };
+            kill(SIGQUIT, $pid);
+        }
 
-        if ($@) {
-            if ($Verbose) {
-                warn "$name - WARNING: child process $pid timed out.\n";
-            }
+        if ($Verbose) {
+            warn "waitpid timeout: ", timeout();
+        }
+
+        # Afer fork, we call setpgrp so nginx is not a subprocess of the
+        # current process. But waitpid() can only wait for the subprocess.
+        my $timeout_val = timeout();
+        while ($timeout_val > 0 && is_running($pid)) {
+            sleep 0.05;
+            $timeout_val -= 0.05;
+        }
+
+        if (is_running($pid)) {
+            warn "$name - timeout when waiting for the process $pid to exit";
         }
     }
 
