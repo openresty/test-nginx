@@ -21,6 +21,7 @@ use IO::Socket::INET;
 use IO::Socket::UNIX;
 use Test::LongString;
 use Carp qw( croak );
+use String::Escape qw( printable );
 
 our $ConfigVersion;
 our $FilterHttpConfig;
@@ -184,7 +185,14 @@ if ($UseValgrind) {
 
 sub is_running ($) {
     my $pid = shift;
-    return kill 0, $pid;
+    my $running = kill(0, $pid);
+    
+    if (($^O eq 'MSWin32') && ($running)) {
+        # on Windows OS, we use 'wmic' to check the process status
+        my $reply = `wmic PROCESS where "ProcessId=$pid" 2>NUL | find /I "nginx.exe" 2>NUL`;
+        return $reply;
+    }
+    return $running;
 }
 
 sub gen_rand_str {
@@ -301,8 +309,15 @@ sub use_hup() {
     $UseHup = 1;
 }
 
+sub encode_c_string($) {
+    my $input = shift;
+    return printable($input)
+}
+
 our @CleanupHandlers;
 our @BlockPreprocessors;
+
+sub bail_out (@);
 
 our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
@@ -630,8 +645,16 @@ sub kill_process ($$$) {
             warn "WARNING: killing the child process $pid.\n";
         }
 
-        if (kill(SIGTERM, $pid) == 0) { # send term signal
-            warn "WARNING: failed to send term signal to the child process with PID $pid.\n";
+        if ($^O eq 'MSWin32') {
+            # On windows OS, we use 'nginx.exe -s stop' to stop.
+            # NOTE: use 'nginx.exe -s quit' might let process get hang.
+            if (0 != system("$NginxBinary -s stop -p $ServRoot/ 2>nul")) {
+                warn "WARNING: failed to send term signal to the child process with PID $pid.\n";
+            }
+        } else {
+            if (kill(SIGTERM, $pid) == 0) { # send term signal
+                warn "WARNING: failed to send term signal to the child process with PID $pid.\n";
+            }
         }
 
         $step *= 1.2;
@@ -645,9 +668,11 @@ sub kill_process ($$$) {
     #system("ps aux|grep $pid > /dev/stderr");
     warn "$name - WARNING: killing the child process $pid with force...";
 
-    if (getpgrp($pid) == $pid) {
+    if ($^O eq 'MSWin32') {
+        # On windows OS, we use 'TASKKILL' to kill process.
+        system("TASKKILL /F /PID $pid /T 2>nul");
+    } elsif (getpgrp($pid) == $pid) {
         kill(SIGKILL, -$pid);
-
     } else {
         kill(SIGKILL, $pid);
     }
@@ -989,12 +1014,18 @@ sub write_config_file ($$$) {
 
     open my $out, ">$ConfFile" or
         bail_out "Can't open $ConfFile for writing: $!\n";
+
+    # encodes the file path text. avoid the text like '\t' be treat as tab symbol on Windows OS
+    my $c_literal_err_log_file = encode_c_string($err_log_file);
+    my $c_literal_PidFile      = encode_c_string($PidFile);
+    my $c_literal_AccLogFile   = encode_c_string($AccLogFile);
+    my $c_literal_HtmlDir      = encode_c_string($HtmlDir);
     print $out <<_EOC_;
 worker_processes  $Workers;
 daemon $DaemonEnabled;
 master_process $MasterProcessEnabled;
-error_log $err_log_file $LogLevel;
-pid       $PidFile;
+error_log $c_literal_err_log_file $LogLevel;
+pid       $c_literal_PidFile;
 env MOCKEAGAIN_VERBOSE;
 env MOCKEAGAIN;
 env MOCKEAGAIN_WRITE_TIMEOUT_PATTERN;
@@ -1026,7 +1057,6 @@ _EOC_
                 $ServerConfigHttp3 .= "        ssl_certificate_key $Http3SSLCrtKey;\n";
             }
         }
-
     } elsif (use_http2($block)) {
         $listen_opts .= " http2";
     }
@@ -1042,7 +1072,7 @@ _EOC_
 $main_config
 
 http {
-    access_log $AccLogFile;
+    access_log $c_literal_AccLogFile;
     #access_log off;
 
     default_type text/plain;
@@ -1094,7 +1124,7 @@ _EOC_
     if (! $NoRootLocation) {
         print $out <<_EOC_;
         location / {
-            root $HtmlDir;
+            root $c_literal_HtmlDir;
             index index.html index.htm;
         }
 _EOC_
@@ -1144,11 +1174,14 @@ env MOCKNOEAGAIN_VERBOSE;
 env MOCKNOEAGAIN;
 _EOC_
 
-    if (defined $WorkerUser) {
-        print $out "user $WorkerUser;\n";
 
-    } elsif ($> == 0) {  # being root
-        print $out "user root;\n";
+    # we won't append the nginx user directive on Windows OS. 
+    if ($^O ne 'MSWin32') {
+        if (defined $WorkerUser) {
+            print $out "user $WorkerUser;\n";
+        } elsif ($> == 0) {  # being root
+            print $out "user root;\n";
+        }
     }
 
     close $out;
@@ -1854,10 +1887,19 @@ start_nginx:
 
             my $cmd;
 
-            if ($NginxVersion >= 0.007053) {
-                $cmd = "$NginxBinary -p $ServRoot/ -c $ConfFile > /dev/null";
+            if ($^O eq 'MSWin32') {
+                # on Windows OS, use 'start /B nginx.exe ...' to start server in background mode.
+                if ($NginxVersion >= 0.007053) {
+                    $cmd = "start /B $NginxBinary -p $ServRoot/ -c $ConfFile >nul";
+                } else {
+                    $cmd = "start /B $NginxBinary -c $ConfFile >nul";
+                }
             } else {
-                $cmd = "$NginxBinary -c $ConfFile > /dev/null";
+                if ($NginxVersion >= 0.007053) {
+                    $cmd = "$NginxBinary -p $ServRoot/ -c $ConfFile > /dev/null";
+                } else {
+                    $cmd = "$NginxBinary -c $ConfFile > /dev/null";
+                }
             }
 
             if ($UseRr) {

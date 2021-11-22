@@ -2241,7 +2241,10 @@ sub read_event_handler ($) {
         my $bytes = sysread( $ctx->{sock}, $read_buf, $ctx->{buf_size} );
 
         if ( !defined $bytes ) {
-            if ( $! == EAGAIN ) {
+            # on Windows OS, always get POSIX::WSAEWOULDBLOCK rather then EAGAIN
+            $^E = POSIX::WSAEWOULDBLOCK;
+
+            if (( $! == EAGAIN ) || ( $! == POSIX::WSAEWOULDBLOCK ) || ( $! eq $^E )) {
 
                 #warn "read again...";
                 #sleep 0.002;
