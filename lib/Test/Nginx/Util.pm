@@ -1773,6 +1773,19 @@ sub run_test ($) {
                                 }
 
                                 sleep (0.1 + $idle_time);
+                                my $remain = 1.0;
+                                while ($remain >= 0) {
+                                    my $shutting = `pgrep -P $pid | xargs -n1 ps --noheader -o cmd -p | grep shutting`;
+                                    if ($shutting eq "") {
+                                        last;
+                                    }
+
+                                    $remain -= 0.1;
+                                }
+
+                                if ($remain <= 0.0) {
+                                    warn "$name - nginx shutting down timeout.\n";
+                                }
                             }
 
                             if ($Verbose) {
