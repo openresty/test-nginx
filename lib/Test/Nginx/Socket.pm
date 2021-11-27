@@ -1847,6 +1847,17 @@ sub send_http_req_by_curl ($$$) {
         warn "running cmd @$cmd";
     }
 
+    my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
+    while ($total_tries-- > 0) {
+        my $ports = `sudo netstat -uplna | grep -w $ServerPortForClient`;
+        if ($ports ne '') {
+            last;
+        }
+
+        warn "$name - waiting for nginx to listen on port $ServerPortForClient, Retry connecting after 1 sec\n";
+        sleep 1;
+    }
+
     my $ok = IPC::Run::run($cmd, \(my $in), \(my $out), \(my $err),
                            IPC::Run::timeout($timeout));
 
