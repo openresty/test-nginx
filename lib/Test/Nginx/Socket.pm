@@ -46,6 +46,7 @@ our $CheckLeakCount = $ENV{TEST_NGINX_CHECK_LEAK_COUNT} // 100;
 our $UseHttp2 = $Test::Nginx::Util::UseHttp2;
 our $TotalConnectingTimeouts = 0;
 our $PrevNginxPid;
+our $UseValgrind = $ENV{TEST_NGINX_USE_VALGRIND};
 
 sub send_request ($$$$@);
 sub send_http_req_by_curl ($$$);
@@ -1847,15 +1848,17 @@ sub send_http_req_by_curl ($$$) {
         warn "running cmd @$cmd";
     }
 
-    my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
-    while ($total_tries-- > 0) {
-        my $ports = `sudo netstat -uplna | grep -w $ServerPortForClient`;
-        if ($ports ne '') {
-            last;
-        }
+    if (use_http3($block)) {
+        my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
+        while ($total_tries-- > 0) {
+            my $ports = `sudo netstat -uplna | grep -w $ServerPortForClient`;
+            if ($ports ne '') {
+                last;
+            }
 
-        warn "$name - waiting for nginx to listen on port $ServerPortForClient, Retry connecting after 1 sec\n";
-        sleep 1;
+            warn "$name - waiting for nginx to listen on port $ServerPortForClient, Retry connecting after 1 sec\n";
+            sleep 1;
+        }
     }
 
     my $ok = IPC::Run::run($cmd, \(my $in), \(my $out), \(my $err),

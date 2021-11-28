@@ -20,6 +20,7 @@ use Scalar::Util qw( looks_like_number );
 use IO::Socket::INET;
 use IO::Socket::UNIX;
 use Test::LongString;
+use POSIX ":sys_wait_h";
 use Carp qw( croak );
 
 our $ConfigVersion;
@@ -607,12 +608,21 @@ sub kill_process ($$$) {
         # current process. But waitpid() can only wait for the subprocess.
         my $timeout_val = timeout();
         while ($timeout_val > 0 && is_running($pid)) {
+            waitpid($pid, WNOHANG);
             sleep 0.05;
             $timeout_val -= 0.05;
         }
 
         if (is_running($pid)) {
             warn "$name - timeout when waiting for the process $pid to exit";
+            if (getpgrp($pid) == $pid) {
+                kill(SIGKILL, -$pid);
+                sleep 0.05;
+
+            } else {
+                kill(SIGKILL, $pid);
+                waitpid($pid, 0);
+            }
         }
     }
 
@@ -647,12 +657,13 @@ sub kill_process ($$$) {
 
     if (getpgrp($pid) == $pid) {
         kill(SIGKILL, -$pid);
+        sleep 0.05;
 
     } else {
         kill(SIGKILL, $pid);
+        waitpid($pid, 0);
     }
 
-    waitpid($pid, 0);
 
     if (is_running($pid)) {
         local $SIG{ALRM} = sub { die "alarm\n" };
@@ -1059,6 +1070,10 @@ _EOC_
         my $quic_max_idle_timeout = ${QuicIdleTimeout};
         if ($block->quic_max_idle_timeout) {
             $quic_max_idle_timeout = $block->quic_max_idle_timeout;
+        }
+
+        if ($UseValgrind) {
+            $quic_max_idle_timeout += 0.3;
         }
 
         $quic_max_idle_timeout = int($quic_max_idle_timeout * 1000);
@@ -1772,7 +1787,24 @@ sub run_test ($) {
                                     $idle_time = $block->quic_max_idle_timeout;
                                 }
 
+                                if ($UseValgrind) {
+                                    $idle_time += 0.3;
+                                }
+
                                 sleep (0.1 + $idle_time);
+                                my $remain = 1.0;
+                                while ($remain >= 0) {
+                                    my $shutting = `pgrep -P $pid | xargs -n1 ps --noheader -o cmd -p | grep shutting`;
+                                    if ($shutting eq "") {
+                                        last;
+                                    }
+
+                                    $remain -= 0.1;
+                                }
+
+                                if ($remain <= 0.0) {
+                                    warn "$name - nginx shutting down timeout.\n";
+                                }
                             }
 
                             if ($Verbose) {
@@ -2649,6 +2681,19 @@ retry:
 
                 } else {
                     #warn "nginx killed";
+                    waitpid($pid, WNOHANG);
+                    my $timeout_val = 1.0;
+                    while ($timeout_val > 0 && is_running($pid)) {
+                        waitpid($pid, WNOHANG);
+                        sleep 0.05;
+                        $timeout_val -= 0.05;
+                    }
+
+                    if (is_running($pid)) {
+                        warn "$name - timeout when waiting for the process $pid to exit";
+                        kill(SIGKILL, $pid);
+                        sleep 0.05;
+                    }
                 }
 
             } else {
