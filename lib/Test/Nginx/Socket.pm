@@ -1893,6 +1893,8 @@ sub send_request ($$$$@) {
 
     my $name = $block->name;
 
+    server_port_for_client($block->server_port_for_client);
+
     my @req_bits = ref $req ? @$req : ($req);
 
     my $head_req = 0;
@@ -4283,6 +4285,27 @@ This directive is handled before checking C<TEST_NGINX_IGNORE_MISSING_DIRECTIVES
 
 This section specifies the server address Test::Nginx will connect to. If server_addr_for_client is not set, then 127.0.0.1 is used.
 
+=head2 server_port_for_client
+
+set server port which request will send to in each test.
+
+Below is an example:
+
+    === TEST 1: set server port for client 
+    --- http_config 
+    server {
+        listen 2234;
+    
+        location /ping{
+            echo pong;
+        }
+    }
+    --- config
+    --- server_port_for_client: 2234
+    --- request
+        GET /ping
+    --- response_body
+    pong
 =head1 Environment variables
 
 All environment variables starting with C<TEST_NGINX_> are expanded in the
