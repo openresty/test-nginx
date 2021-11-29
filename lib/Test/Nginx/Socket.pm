@@ -329,6 +329,14 @@ sub get_req_from_block ($) {
 
     my @req_list = ();
 
+    if (defined $block->use_cmd) {
+        # push a place holder request
+        my @rr_list = ();
+        push @rr_list, {value => "place holder"};
+        push @req_list, \@rr_list;
+        return \@req_list;
+    }
+
     if (defined $block->raw_request) {
 
         # Should be deprecated.
@@ -578,11 +586,6 @@ sub run_test_helper ($$) {
         bail_out("$name - request empty");
     }
 
-    if (defined $block->curl) {
-        my $req = $r_req_list->[0];
-        my $cmd = gen_curl_cmd_from_req($block, $req);
-        warn "# ", quote_sh_args($cmd), "\n";
-    }
 
     if ($CheckLeak) {
         $dry_run = "the \"check leak\" testing mode";
@@ -1841,17 +1844,23 @@ sub send_http_req_by_curl ($$$) {
 
     my $name = $block->name;
 
-    my $cmd = gen_curl_cmd_from_req($block, $req);
+    my $cmd = (); 
 
-    if ($Test::Nginx::Util::Verbose) {
-        warn "running cmd @$cmd";
+    if (defined $block->cmd) {
+        my @cmd_array = qw( bash -c );
+        push @cmd_array , $block->cmd;
+        $cmd = \@cmd_array;
+    } else {
+        $cmd = gen_curl_cmd_from_req($block, $req);
+    }
+
+    if (defined $block->curl) {
+        my @cmd_copy = @$cmd;
+        warn "running cmd ", quote_sh_args(\@cmd_copy);
     }
 
     my $ok = IPC::Run::run($cmd, \(my $in), \(my $out), \(my $err),
                            IPC::Run::timeout($timeout));
-
-    #my @cmd_copy = @$cmd;
-    #warn "running cmd ", quote_sh_args(\@cmd_copy);
 
     if (!defined $ok) {
         fail "failed to run curl: $?: " . ($err // '');
@@ -1905,9 +1914,9 @@ sub send_request ($$$$@) {
         }
     }
 
-    if (use_http2($block) || use_http3($block)) {
+    if (use_cmd($block) || use_http2($block) || use_http3($block)) {
         return send_http_req_by_curl($block, $req, $timeout), $head_req;
-    }
+    } 
 
     my $server_addr = $block->server_addr_for_client;
 
@@ -4282,6 +4291,29 @@ This directive is handled before checking C<TEST_NGINX_IGNORE_MISSING_DIRECTIVES
 =head2 server_addr_for_client
 
 This section specifies the server address Test::Nginx will connect to. If server_addr_for_client is not set, then 127.0.0.1 is used.
+
+
+=head2 use_cmd 
+
+use cmd declared via cmd directive to send curl request.
+
+=head2 cmd 
+
+send curl request via this directive, notice that you must use curl with -i options.
+
+Below is an example:
+
+    === TEST 1: sanity
+    --- config
+        location /echo {
+            echo hello;
+        }
+    --- curl
+    --- http2
+    --- use_cmd
+    --- cmd: curl -i -sS --http2 --http2-prior-knowledge -X GET  http://127.0.0.1:1984/echo
+    --- response_body
+    hello
 
 =head1 Environment variables
 

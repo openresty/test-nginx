@@ -46,6 +46,7 @@ our $LatestNginxVersion = 0.008039;
 our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
 our $Profiling = 0;
 
+sub use_cmd ($);
 sub use_http2 ($);
 sub use_http3 ($);
 
@@ -441,6 +442,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT = qw(
+    use_cmd
     use_http2
     use_http3
     env_to_nginx
@@ -2712,6 +2714,18 @@ sub can_run {
         return $abs if -f $abs && -x $abs;
     }
 
+    return undef;
+}
+
+sub use_cmd ($) {
+    my $block = shift;
+    if (defined $block->use_cmd) {
+        if (!$LoadedIPCRun) {
+            require IPC::Run;
+            $LoadedIPCRun = 1;
+        }
+        return 1;
+    }
     return undef;
 }
 
