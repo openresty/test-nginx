@@ -237,7 +237,7 @@ sub gen_rand_port (;$$) {
     return $rand_port;
 }
 
-sub is_udp_port_open($) {
+sub is_udp_port_opened($) {
     my $port = shift;
     my $filename = "/proc/net/udp";
 
