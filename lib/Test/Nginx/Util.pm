@@ -87,6 +87,8 @@ our $ServerName = 'localhost';
 our $Http3SSLCrt = $ENV{TEST_NGINX_HTTP3_CRT};
 our $Http3SSLCrtKey = $ENV{TEST_NGINX_HTTP3_KEY};;
 
+our $ValgrindExtraTimeout = 0.3;
+
 if ($UseHttp2 && $UseHttp3) {
     die "Ambiguous: both TEST_NGINX_USE_HTTP3 and TEST_NGINX_USE_HTTP2 are set.\n";
 }
@@ -233,6 +235,27 @@ sub gen_rand_port (;$$) {
     }
 
     return $rand_port;
+}
+
+sub is_udp_port_open($) {
+    $port = shift;
+    my $filename = "/proc/net/udp";
+
+    open my $fh, $filename or die "Could not open $filename. $!";
+    while (<$fh>) {
+        my $line = $_;
+        if $line =~ /^\d+: [0-9A-F]+:([0-0A-F]+) / {
+            my $local_port = hex($1);
+            $local_port = pack("S", unpack("n", $local_port));
+            if ($port == $local_port) {
+                close $fh;
+                return 1;
+            }
+        }
+    }
+
+    close $fh;
+    return 0;
 }
 
 sub no_long_string () {
@@ -506,6 +529,7 @@ our @EXPORT = qw(
     server_port_for_client
     no_nginx_manager
     use_hup
+    is_udp_port_opened
 );
 
 
@@ -604,8 +628,6 @@ sub kill_process ($$$) {
             warn "waitpid timeout: ", timeout();
         }
 
-        # Afer fork, we call setpgrp so nginx is not a subprocess of the
-        # current process. But waitpid() can only wait for the subprocess.
         my $timeout_val = timeout();
         while ($timeout_val > 0 && is_running($pid)) {
             waitpid($pid, WNOHANG);
@@ -1073,7 +1095,7 @@ _EOC_
         }
 
         if ($UseValgrind) {
-            $quic_max_idle_timeout += 0.3;
+            $quic_max_idle_timeout += $ValgrindExtraTimeout;
         }
 
         $quic_max_idle_timeout = int($quic_max_idle_timeout * 1000);
@@ -1788,7 +1810,7 @@ sub run_test ($) {
                                 }
 
                                 if ($UseValgrind) {
-                                    $idle_time += 0.3;
+                                    $idle_time += $ValgrindExtraTimeout;
                                 }
 
                                 sleep (0.1 + $idle_time);

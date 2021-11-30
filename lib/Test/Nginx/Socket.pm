@@ -1852,7 +1852,7 @@ sub send_http_req_by_curl ($$$) {
         my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
         while ($total_tries-- > 0) {
             my $ports = `sudo netstat -uplna | grep -w $ServerPortForClient`;
-            if ($ports ne '') {
+            if (is_udp_port_opened($ServerPortForClient)) {
                 last;
             }
 
