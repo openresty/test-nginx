@@ -244,10 +244,8 @@ sub is_udp_port_opened($) {
     open my $fh, $filename or die "Could not open $filename. $!";
     while (<$fh>) {
         my $line = $_;
-        if ($line =~ /^\d+: [0-9A-F]+:([0-0A-F]+) /) {
-            my $local_port = hex($1);
-            $local_port = pack("S", unpack("n", $local_port));
-            if ($port == $local_port) {
+        if ($line =~ /^ *\d+: [0-9A-F]+:([0-9A-F]+) /) {
+            if ($port == hex($1)) {
                 close $fh;
                 return 1;
             }
