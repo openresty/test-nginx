@@ -2836,6 +2836,14 @@ sub use_http2 ($) {
             return undef;
         }
 
+        if (defined $block->config) {
+            if ($block->config =~ m{:\$server_port}) {
+                warn "WARNING: ", $block->name, " - proxy_pass to self, so will not use HTTP/2\n";
+                $block->set_value("test_nginx_enabled_http2", 0);
+                return undef;
+            }
+        }
+
         $block->set_value("test_nginx_enabled_http2", 1);
 
         if (!$LoadedIPCRun) {
