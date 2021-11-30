@@ -238,13 +238,13 @@ sub gen_rand_port (;$$) {
 }
 
 sub is_udp_port_open($) {
-    $port = shift;
+    my $port = shift;
     my $filename = "/proc/net/udp";
 
     open my $fh, $filename or die "Could not open $filename. $!";
     while (<$fh>) {
         my $line = $_;
-        if $line =~ /^\d+: [0-9A-F]+:([0-0A-F]+) / {
+        if ($line =~ /^\d+: [0-9A-F]+:([0-0A-F]+) /) {
             my $local_port = hex($1);
             $local_port = pack("S", unpack("n", $local_port));
             if ($port == $local_port) {

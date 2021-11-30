@@ -1851,12 +1851,12 @@ sub send_http_req_by_curl ($$$) {
     if (use_http3($block)) {
         my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
         while ($total_tries-- > 0) {
-            my $ports = `sudo netstat -uplna | grep -w $ServerPortForClient`;
             if (is_udp_port_opened($ServerPortForClient)) {
                 last;
             }
 
-            warn "$name - waiting for nginx to listen on port $ServerPortForClient, Retry connecting after 1 sec\n";
+            warn "$name - waiting for nginx to listen on port "
+                . "$ServerPortForClient, Retry connecting after 1 sec\n";
             sleep 1;
         }
     }
