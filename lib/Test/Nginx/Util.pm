@@ -2913,6 +2913,10 @@ sub use_http3 ($) {
         return $cached;
     }
 
+    if (defined $block->no_http2) {
+        return undef;
+    }
+
     if (defined $block->http3) {
         if ($block->raw_request) {
             bail_out("cannot use --- http3 with --- raw_request");

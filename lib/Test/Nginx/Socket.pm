@@ -4340,6 +4340,10 @@ One can enable HTTP/2 mode for an individual test block by specifying the L<http
 
     --- http2
 
+One can disable HTTP/2 mode for an individual test block by specifying the L<no_http2> section, as in
+
+    --- no_http2
+
 =head2 TEST_NGINX_USE_HTTP3
 
 Enables the "http3" test mode by enforcing using the HTTP/3 protocol to send the
@@ -4356,6 +4360,10 @@ the HTTP 1.0 protocol will still use HTTP 1.0.
 One can enable HTTP/3 mode for an individual test block by specifying the L<http3> section, as in
 
     --- http3
+
+One can disable HTTP/3 mode for an individual test block by specifying the L<no_http3> section, as in
+
+    --- no_http3
 
 =head2 TEST_NGINX_HTTP3_CRT
 
