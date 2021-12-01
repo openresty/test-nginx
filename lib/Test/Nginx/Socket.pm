@@ -1848,6 +1848,19 @@ sub send_http_req_by_curl ($$$) {
         warn "running cmd @$cmd";
     }
 
+    if (use_http2($block)) {
+        my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
+        while ($total_tries-- > 0) {
+            if (is_tcp_port_used($ServerPortForClient)) {
+                last;
+            }
+
+            warn "$name - waiting for nginx to listen on port "
+                . "$ServerPortForClient, Retry connecting after 1 sec\n";
+            sleep 1;
+        }
+    }
+
     if (use_http3($block)) {
         my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
         while ($total_tries-- > 0) {
@@ -2329,7 +2342,9 @@ sub gen_curl_cmd_from_req ($$) {
         push @args, '-I';
 
     } else {
-        push @args, "-X", $meth;
+        if ($meth ne 'GET') {
+            push @args, "-X", $meth;
+        }
     }
 
     if ($http_ver ne '1.1') {

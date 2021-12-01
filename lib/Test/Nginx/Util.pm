@@ -256,6 +256,25 @@ sub is_udp_port_used($) {
     return 0;
 }
 
+sub is_tcp_port_used($) {
+    my $port = shift;
+    my $filename = "/proc/net/tcp";
+
+    open my $fh, $filename or die "Could not open $filename. $!";
+    while (<$fh>) {
+        my $line = $_;
+        if ($line =~ /^ *\d+: [0-9A-F]+:([0-9A-F]+) /) {
+            if ($port == hex($1)) {
+                close $fh;
+                return 1;
+            }
+        }
+    }
+
+    close $fh;
+    return 0;
+}
+
 sub no_long_string () {
     $NoLongString = 1;
 }
@@ -528,6 +547,7 @@ our @EXPORT = qw(
     no_nginx_manager
     use_hup
     is_udp_port_used
+    is_tcp_port_used
 );
 
 
@@ -2788,6 +2808,10 @@ sub use_http2 ($) {
         return $cached;
     }
 
+    if (defined $block->no_http2) {
+        return undef;
+    }
+
     if (defined $block->http2) {
         if ($block->raw_request) {
             bail_out("cannot use --- http2 with --- raw_request");
@@ -2834,6 +2858,36 @@ sub use_http2 ($) {
             warn "WARNING: ", $block->name, " - explicitly requires HTTP/3, so will not use HTTP/2\n";
             $block->set_value("test_nginx_enabled_http2", 0);
             return undef;
+        }
+
+        my $pat = qr{(proxy_pass .*:\$(server_port|TEST_NGINX_SERVER_PORT)
+                    | ngx.req.raw_header
+                    | lua_check_client_abort
+                    | ngx.location.capture
+                    | ngx.req.socket
+                    | ngx.req.read_body)}x;
+        if (defined $block->config) {
+            if ($block->config =~ $pat) {
+                warn "WARNING: ", $block->name, " - $1 does not support in HTTP/2\n";
+                $block->set_value("test_nginx_enabled_http2", 0);
+                return undef;
+            }
+        }
+
+        if (defined $block->user_files) {
+            if ($block->user_files =~ $pat) {
+                warn "WARNING: ", $block->name, " - $1 does not support HTTP/2\n";
+                $block->set_value("test_nginx_enabled_http2", 0);
+                return undef;
+            }
+        }
+
+        if (defined $block->http_config) {
+            if ($block->http_config=~ $pat) {
+                warn "WARNING: ", $block->name, " - can not listen on HTTP and HTTP/2 at the same time, so will no use HTTP2\n";
+                $block->set_value("test_nginx_enabled_http2", 0);
+                return undef;
+            }
         }
 
         $block->set_value("test_nginx_enabled_http2", 1);
