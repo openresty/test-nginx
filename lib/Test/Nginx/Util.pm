@@ -1047,14 +1047,14 @@ _EOC_
     $ServerConfigHttp3 = '';
     if (use_http3($block)) {
         if ($UseHttp3 && !defined $block->http3) {
-            $ServerConfigHttp3 = "\n        ssl_protocols TLSv1.3;\n";
+            $ServerConfigHttp3 = "ssl_protocols TLSv1.3;";
 
             if (defined $Http3SSLCrt) {
-                $ServerConfigHttp3 .= "        ssl_certificate $Http3SSLCrt;\n";
+                $ServerConfigHttp3 .= "ssl_certificate $Http3SSLCrt;";
             }
 
             if (defined $Http3SSLCrtKey) {
-                $ServerConfigHttp3 .= "        ssl_certificate_key $Http3SSLCrtKey;\n";
+                $ServerConfigHttp3 .= "ssl_certificate_key $Http3SSLCrtKey;";
             }
         }
 
@@ -1080,7 +1080,6 @@ http {
     keepalive_timeout  68;
 
 $http_config
-
     server {
         listen          $ServerPort$listen_opts;
 _EOC_
@@ -1104,17 +1103,19 @@ _EOC_
         }
 
         print $out <<_EOC_;
-        listen          $ServerPort$h3_listen_opts http3;
-        quic_max_idle_timeout ${quic_max_idle_timeout}ms;
+        listen          $ServerPort$h3_listen_opts http3; quic_max_idle_timeout ${quic_max_idle_timeout}ms;
+_EOC_
+    } else {
+    print $out <<_EOC_;
+        #placeholder
 _EOC_
     }
 
     print $out <<_EOC_;
         server_name     '$server_name';
-
+        $ServerConfigHttp3
         client_max_body_size 30M;
         #client_body_buffer_size 4k;
-$ServerConfigHttp3
 
         # Begin preamble config...
 $ConfigPreamble
