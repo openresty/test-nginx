@@ -1106,7 +1106,7 @@ _EOC_
         listen          $ServerPort$h3_listen_opts http3; quic_max_idle_timeout ${quic_max_idle_timeout}ms;
 _EOC_
     } else {
-    print $out <<_EOC_;
+        print $out <<_EOC_;
         #placeholder
 _EOC_
     }
