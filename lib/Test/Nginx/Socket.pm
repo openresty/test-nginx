@@ -1851,7 +1851,7 @@ sub send_http_req_by_curl ($$$) {
     if (use_http3($block)) {
         my $total_tries = $TotalConnectingTimeouts ? 20 : 50;
         while ($total_tries-- > 0) {
-            if (is_udp_port_opened($ServerPortForClient)) {
+            if (is_udp_port_used($ServerPortForClient)) {
                 last;
             }
 

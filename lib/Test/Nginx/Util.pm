@@ -237,7 +237,7 @@ sub gen_rand_port (;$$) {
     return $rand_port;
 }
 
-sub is_udp_port_opened($) {
+sub is_udp_port_used($) {
     my $port = shift;
     my $filename = "/proc/net/udp";
 
@@ -527,7 +527,7 @@ our @EXPORT = qw(
     server_port_for_client
     no_nginx_manager
     use_hup
-    is_udp_port_opened
+    is_udp_port_used
 );
 
 
