@@ -2935,7 +2935,7 @@ For example,
 
 =head2 add_cleanup_handler
 
-Rigister custom cleanup handler for the current perl/prove process by specifying a Perl subroutine object as the argument.
+Register custom cleanup handler for the current perl/prove process by specifying a Perl subroutine object as the argument.
 
 For example,
 
