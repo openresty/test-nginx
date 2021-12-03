@@ -325,6 +325,7 @@ sub use_hup() {
 
 our @CleanupHandlers;
 our @BlockPreprocessors;
+our @BeforeStartHandlers;
 
 our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
@@ -510,6 +511,7 @@ our @EXPORT = qw(
     $Benchmark
     $BenchmarkWarmup
     add_block_preprocessor
+    add_before_start_handler
     timeout
     worker_connections
     workers
@@ -554,6 +556,10 @@ our $OpenSSLVersion;
 
 sub add_block_preprocessor(&) {
     unshift @BlockPreprocessors, shift;
+}
+
+sub add_before_start_handler(&) {
+    unshift @BeforeStartHandlers, shift;
 }
 
 #our ($PrevRequest)
@@ -1787,6 +1793,11 @@ sub run_test ($) {
                     write_user_files($block, $rand_ports);
                     write_config_file($block, $config, $rand_ports);
 
+                    #before_start
+                    for my $hdl (@BeforeStartHandlers) {
+                        $hdl->($block);
+                    }
+
                     if ($Verbose) {
                         warn "sending USR1 signal to $pid.\n";
                     }
@@ -1893,6 +1904,12 @@ start_nginx:
             write_user_files($block, $rand_ports);
             write_config_file($block, $config, $rand_ports);
             #warn "nginx binary: $NginxBinary";
+
+            #before_start
+            for my $hdl (@BeforeStartHandlers) {
+                $hdl->($block);
+            }
+
             if (!can_run($NginxBinary)) {
                 bail_out("$name - Cannot find the nginx executable in the PATH environment");
                 die;

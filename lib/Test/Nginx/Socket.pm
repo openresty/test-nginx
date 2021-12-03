@@ -39,7 +39,7 @@ our @EXPORT = qw( env_to_nginx is_str plan run_tests run_test
   server_addr server_root html_dir server_port server_port_for_client
   timeout no_nginx_manager check_accum_error_log
   add_block_preprocessor bail_out add_cleanup_handler
-  add_response_body_check
+  add_before_start_handler add_response_body_check
 );
 
 our $CheckLeakCount = $ENV{TEST_NGINX_CHECK_LEAK_COUNT} // 100;
@@ -2943,6 +2943,18 @@ For example,
         kill INT => $my_own_child_pid;
         $my_own_socket->close()
     });
+
+=head2 add_before_start_handler
+
+Register custom handler before each start of the Nginx process by specifying a Perl subroutine object as the argument.
+
+For example,
+
+    add_before_start_handler(sub {
+        my $block = shift;
+
+        # generate the files needed to start the Nginx process according to the block content.
+    })
 
 =head2 add_block_preprocessor
 
