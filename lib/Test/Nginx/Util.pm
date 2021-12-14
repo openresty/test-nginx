@@ -2919,7 +2919,7 @@ sub use_http3 ($) {
         return $cached;
     }
 
-    if (defined $block->no_http2) {
+    if (defined $block->no_http3) {
         return undef;
     }
 
