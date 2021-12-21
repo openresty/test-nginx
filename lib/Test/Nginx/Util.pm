@@ -1088,16 +1088,16 @@ _EOC_
 
     my $keepalive_timeout = 68000;
     if (use_http3($block)) {
-        $keepalive_timeout = $QuicIdleTimeout;
+        my $keepalive_timeout_sec = $QuicIdleTimeout;
         if ($block->quic_max_idle_timeout) {
-            $keepalive_timeout = $block->quic_max_idle_timeout;
+            $keepalive_timeout_sec = $block->quic_max_idle_timeout;
         }
 
         if ($UseValgrind) {
-            $keepalive_timeout += $ValgrindExtraTimeout;
+            $keepalive_timeout_sec += $ValgrindExtraTimeout;
         }
 
-        $keepalive_timeout = int($keepalive_timeout * 1000);
+        $keepalive_timeout = int($keepalive_timeout_sec * 1000);
     }
 
     print $out <<_EOC_;
