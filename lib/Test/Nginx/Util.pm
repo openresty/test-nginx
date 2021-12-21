@@ -1086,6 +1086,20 @@ _EOC_
         $listen_opts .= " reuseport";
     }
 
+    my $keepalive_timeout = 68000;
+    if (use_http3($block)) {
+        my $keepalive_timeout_sec = $QuicIdleTimeout;
+        if ($block->quic_max_idle_timeout) {
+            $keepalive_timeout_sec = $block->quic_max_idle_timeout;
+        }
+
+        if ($UseValgrind) {
+            $keepalive_timeout_sec += $ValgrindExtraTimeout;
+        }
+
+        $keepalive_timeout = int($keepalive_timeout_sec * 1000);
+    }
+
     print $out <<_EOC_;
 #env LUA_PATH;
 #env LUA_CPATH;
@@ -1097,7 +1111,7 @@ http {
     #access_log off;
 
     default_type text/plain;
-    keepalive_timeout  68;
+    keepalive_timeout  ${keepalive_timeout}ms;
 
 $http_config
     server {
@@ -1106,24 +1120,13 @@ _EOC_
 
     # when using http3, wo both listen on tcp for http and udp for http3
     if (use_http3($block)) {
-        my $quic_max_idle_timeout = ${QuicIdleTimeout};
-        if ($block->quic_max_idle_timeout) {
-            $quic_max_idle_timeout = $block->quic_max_idle_timeout;
-        }
-
-        if ($UseValgrind) {
-            $quic_max_idle_timeout += $ValgrindExtraTimeout;
-        }
-
-        $quic_max_idle_timeout = int($quic_max_idle_timeout * 1000);
-
         my $h3_listen_opts = $listen_opts;
         if ($h3_listen_opts !~ /\breuseport\b/) {
             $h3_listen_opts .= " reuseport";
         }
 
         print $out <<_EOC_;
-        listen          $ServerPort$h3_listen_opts http3; quic_max_idle_timeout ${quic_max_idle_timeout}ms;
+        listen          $ServerPort$h3_listen_opts http3;
 _EOC_
     } else {
         print $out <<_EOC_;
@@ -2914,7 +2917,7 @@ sub use_http3 ($) {
         return $cached;
     }
 
-    if (defined $block->no_http2) {
+    if (defined $block->no_http3) {
         return undef;
     }
 
