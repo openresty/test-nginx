@@ -1086,20 +1086,18 @@ _EOC_
         $listen_opts .= " reuseport";
     }
 
-    my $keepalive_timeout=68000;
+    my $keepalive_timeout = 68000;
     if (use_http3($block)) {
-        $keepalive_timeout = ${QuicIdleTimeout};
+        $keepalive_timeout = $QuicIdleTimeout;
         if ($block->quic_max_idle_timeout) {
             $keepalive_timeout = $block->quic_max_idle_timeout;
         }
- 
+
         if ($UseValgrind) {
             $keepalive_timeout += $ValgrindExtraTimeout;
         }
- 
+
         $keepalive_timeout = int($keepalive_timeout * 1000);
-    } else {
-        $keepalive_timeout = 68000;
     }
 
     print $out <<_EOC_;
