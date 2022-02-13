@@ -352,8 +352,8 @@ our $WorkerConnections      = $ENV{TEST_NGINX_USE_HTTP3} ? 1024 : 64;
 our $LogLevel               = $ENV{TEST_NGINX_LOG_LEVEL} || 'debug';
 our $MasterProcessEnabled   = $ENV{TEST_NGINX_MASTER_PROCESS} || 'off';
 our $DaemonEnabled          = 'on';
-our $ServerPort             = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
-our $ServerPortForClient    = $ENV{TEST_NGINX_CLIENT_PORT} || $ServerPort || 1984;
+our $ServerPort;
+our $ServerPortForClient;
 our $NoRootLocation         = 0;
 our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.015;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
@@ -361,17 +361,6 @@ our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
 srand $$;
 
-if ($Randomize) {
-    my $tries = 1000;
-
-    $ServerPort = gen_rand_port $tries;
-
-    if (!defined $ServerPort) {
-        bail_out "Cannot find an available listening port number after $tries attempts.\n";
-    }
-
-    $ServerPortForClient = $ServerPort;
-}
 
 our $ChildPid;
 our $UdpServerPid;
@@ -801,6 +790,20 @@ sub check_prev_block_shutdown_error_log () {
 
 sub run_tests () {
     $NginxVersion = get_nginx_version();
+    $ServerPort = $ENV{TEST_NGINX_SERVER_PORT} || $ENV{TEST_NGINX_PORT} || 1984;
+    $ServerPortForClient = $ENV{TEST_NGINX_CLIENT_PORT} || $ServerPort || 1984;
+
+    if ($Randomize) {
+        my $tries = 1000;
+
+        $ServerPort = gen_rand_port $tries;
+
+        if (!defined $ServerPort) {
+            bail_out "Cannot find an available listening port number after $tries attempts.\n";
+        }
+
+        $ServerPortForClient = $ServerPort;
+    }
 
     if (defined $NginxVersion) {
         #warn "[INFO] Using nginx version $NginxVersion ($NginxRawVersion)\n";
