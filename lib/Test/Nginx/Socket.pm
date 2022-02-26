@@ -4572,6 +4572,10 @@ Defaults to 0. If set to 1, Test::Nginx module will not manage
 (configure/start/stop) the C<nginx> process. Can be useful to run tests
 against an already configured (and running) nginx server.
 
+=head2 TEST_NGINX_FAST_SHUTDOWN
+
+Defaults to 0. If set to 1, Test::Nginx module will stop C<nginx> process with SIGTERM.
+
 =head2 TEST_NGINX_NO_SHUFFLE
 
 Defaults to 0. If set to 1, will make sure the tests are run in the order

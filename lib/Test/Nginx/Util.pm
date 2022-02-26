@@ -635,11 +635,20 @@ sub kill_process ($$$) {
 
     if ($wait) {
         if (defined $pid) {
-            if ($Verbose) {
-                warn "sending QUIT signal to $pid";
-            }
+            if ($ENV{TEST_NGINX_FAST_SHUTDOWN}) {
+                if ($Verbose) {
+                    warn "sending TERM signal to $pid";
+                }
 
-            kill(SIGQUIT, $pid);
+                kill(SIGTERM, $pid);
+
+            } else {
+                if ($Verbose) {
+                    warn "sending QUIT signal to $pid";
+                }
+
+                kill(SIGQUIT, $pid);
+            }
         }
 
         if ($Verbose) {
