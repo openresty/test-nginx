@@ -2337,7 +2337,9 @@ sub gen_curl_cmd_from_req ($$) {
     if ($req =~ m{^\s*(\w+)\s+(\S+)\s+HTTP/(\S+)\r?\n}smig) {
         ($meth, $uri, $http_ver) = ($1, $2, $3);
 
-    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r?\n}smig) {
+    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\s*\r?\n}smig) {
+        # NB: there can be trailing spaces in the HTTP 0.9,
+        # but it will be ignored by the server
         ($meth, $uri) = ($1, $2);
         $http_ver = '0.9';
 
@@ -2480,7 +2482,9 @@ sub gen_ab_cmd_from_req ($$@) {
     if ($req =~ m{^\s*(\w+)\s+(\S+)\s+HTTP/(\S+)\r?\n}smig) {
         ($meth, $uri, $http_ver) = ($1, $2, $3);
 
-    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\r?\n}smig) {
+    } elsif ($req =~ m{^\s*(\w+)\s+(.*\S)\s*\r?\n}smig) {
+        # NB: there can be trailing spaces in the HTTP 0.9,
+        # but it will be ignored by the server
         ($meth, $uri) = ($1, $2);
         $http_ver = '0.9';
 
