@@ -108,7 +108,7 @@ _EOC_
 our $ServerConfigHttp3 = '';
 
 our $WorkerUser = $ENV{TEST_NGINX_WORKER_USER};
-if (defined $WorkerUser && $WorkerUser !~ /^\w+(?:\s+\w+)?$/) {
+if (defined $WorkerUser && $WorkerUser !~ /^\w[-\w]+(?:\s+\w[-\w]+)?$/) {
     die "Bad value in the env TEST_NGINX_WORKER_USER: $WorkerUser\n";
 }
 
