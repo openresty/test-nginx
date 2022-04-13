@@ -213,7 +213,8 @@ sub gen_rand_port (;$$) {
 
     for (my $i = 0; $i < $tries; $i++) {
         # NB: reserved for stream_server_config* (1..3)
-        my $port = int(rand 63550) + 1984 + 3 + 1;
+        # 1988 means 1984 + 3 + 1
+        my $port = int(rand 63550) + 1988;
 
         next if $used_ports->{$port};
 
