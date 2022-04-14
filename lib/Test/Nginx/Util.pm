@@ -2213,6 +2213,8 @@ request:
 
             my $target = $block->tcp_listen;
 
+            $target = expand_env_in_text($target, $name, $rand_ports);
+
             my $reply = $block->tcp_reply;
             if (!defined $reply && !defined $block->tcp_shutdown) {
                 bail_out("$name - no --- tcp_reply specified but --- tcp_listen is specified");
