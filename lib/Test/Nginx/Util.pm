@@ -346,6 +346,7 @@ sub use_hup() {
 
 our @CleanupHandlers;
 our @BlockPreprocessors;
+our @GlobalInitProcessors;
 
 our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
 our $NginxBinary            = $ENV{TEST_NGINX_BINARY} || 'nginx';
@@ -531,6 +532,7 @@ our @EXPORT = qw(
     $Benchmark
     $BenchmarkWarmup
     add_block_preprocessor
+    add_global_init_processor
     timeout
     worker_connections
     workers
@@ -576,6 +578,10 @@ our $OpenSSLVersion;
 
 sub add_block_preprocessor(&) {
     unshift @BlockPreprocessors, shift;
+}
+
+sub add_global_init_processor(&) {
+    unshift @GlobalInitProcessors, shift;
 }
 
 #our ($PrevRequest)
@@ -819,6 +825,10 @@ sub run_tests () {
 
     if (!defined $ENV{TEST_NGINX_SERVER_PORT}) {
         $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
+    }
+
+    for my $gi (@GlobalInitProcessors) {
+        $gi->();
     }
 
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
@@ -2766,8 +2776,6 @@ retry:
 
 END {
     return if $InSubprocess;
-
-    cleanup();
 
     if ($UseStap || $UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         local $?; # to avoid confusing Test::Builder::_ending
