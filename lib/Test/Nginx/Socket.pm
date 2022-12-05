@@ -2984,6 +2984,16 @@ For example,
 
     bail_out("something bad happened!");
 
+=head2 add_test_cleanup_handler
+
+Register custom cleanup handler for the current perl/prove process by specifying a Perl subroutine object as the argument.
+
+For example,
+
+    add_test_cleanup_handler(sub ($block) {
+        print $block->name, " finish";
+    });
+
 =head2 add_cleanup_handler
 
 Register custom cleanup handler for the current perl/prove process by specifying a Perl subroutine object as the argument.
