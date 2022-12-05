@@ -730,7 +730,8 @@ sub kill_process ($$$) {
     }
 }
 
-sub cleanup_test ($block) {
+sub cleanup_test ($) {
+    my $block = shift;
     if ($Verbose) {
         warn "cleaning up test ", $block->name;
     }
