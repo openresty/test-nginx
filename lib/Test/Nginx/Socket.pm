@@ -38,7 +38,7 @@ our @EXPORT = qw( env_to_nginx is_str plan run_tests run_test
   server_name
   server_addr server_root html_dir server_port server_port_for_client
   timeout no_nginx_manager check_accum_error_log
-  add_block_preprocessor bail_out add_cleanup_handler
+  add_block_preprocessor bail_out add_test_cleanup_handler add_cleanup_handler
   add_response_body_check
 );
 
@@ -2983,6 +2983,16 @@ This function will also do all the necessary cleanup work. So always use this fu
 For example,
 
     bail_out("something bad happened!");
+
+=head2 add_test_cleanup_handler
+
+Register custom cleanup handler for the current perl/prove process by specifying a Perl subroutine object as the argument.
+
+For example,
+
+    add_test_cleanup_handler(sub ($block) {
+        print $block->name, " finish";
+    });
 
 =head2 add_cleanup_handler
 

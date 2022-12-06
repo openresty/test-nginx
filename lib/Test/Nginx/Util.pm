@@ -345,6 +345,7 @@ sub use_hup() {
 }
 
 our @CleanupHandlers;
+our @TestCleanupHandlers;
 our @BlockPreprocessors;
 
 our $Randomize              = $ENV{TEST_NGINX_RANDOMIZE};
@@ -504,6 +505,7 @@ our @EXPORT = qw(
     stap_out_fname
     bail_out
     add_cleanup_handler
+    add_test_cleanup_handler
     access_log_data
     error_log_data
     setup_server_root
@@ -627,6 +629,10 @@ sub add_cleanup_handler ($) {
    unshift @CleanupHandlers, shift;
 }
 
+sub add_test_cleanup_handler ($) {
+   unshift @TestCleanupHandlers, shift;
+}
+
 sub bail_out (@) {
     cleanup();
     Test::More::BAIL_OUT(@_);
@@ -721,6 +727,17 @@ sub kill_process ($$$) {
         alarm timeout();
         waitpid($pid, 0);
         alarm 0;
+    }
+}
+
+sub cleanup_test ($) {
+    my $block = shift;
+    if ($Verbose) {
+        warn "cleaning up test ", $block->name;
+    }
+
+    for my $hdl (@TestCleanupHandlers) {
+       $hdl->($block);
     }
 }
 
@@ -828,6 +845,7 @@ sub run_tests () {
 
         $block->set_value("name", $0 . " " . $block->name);
         run_test($block);
+        cleanup_test($block);
 
         $PrevBlock = $block;
     }
