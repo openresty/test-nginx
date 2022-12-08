@@ -1953,7 +1953,7 @@ start_nginx:
                 my $opts;
 
                 if ($UseValgrind =~ /^\d+$/) {
-                    $opts = "--tool=memcheck --leak-check=full --show-possibly-lost=no";
+                    $opts = "--tool=memcheck --leak-check=full --keep-debuginfo=yes --show-possibly-lost=no";
 
                     if (-f 'valgrind.suppress') {
                         $cmd = "valgrind --num-callers=100 -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
