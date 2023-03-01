@@ -22,6 +22,7 @@ use Digest::SHA ();
 use POSIX ":sys_wait_h";
 
 use Test::Nginx::Util;
+use JSON::PP;
 
 #use Smart::Comments::JSON '###';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
@@ -1619,6 +1620,16 @@ sub check_response_body ($$$$$$) {
         if ( defined $content ) {
             $content =~ s/^TE: deflate,gzip;q=0\.3\r\n//gms;
             $content =~ s/^Connection: TE, close\r\n//gms;
+        }
+
+        if ( defined $block->response_body_json_sort ) {
+            my $js = JSON::PP->new;
+            $js->canonical(1);
+            my $obj;
+            my $rc = eval { $obj = $js->loose(1)->decode($content); 1; };
+            if ($rc) {
+                $content = $js->encode($obj) . "\n";
+            }
         }
 
         my $expected;
@@ -3535,6 +3546,15 @@ If the response_body_filters value can also be an two-dimensional array referenc
     [[\&CORE::uc, \&CORE::lc], [\&CORE::uc]]
     --- response_body eval
     ['hello', 'HELLO']
+
+=head2 response_body_json_sort
+
+Because the order of the json string output by the lua-cjson is uncertain.
+In order to compare the output result, we need to sort the response body.
+
+    --- response_body_json_sort
+    --- response_body
+    {"a": 1, "b": 2}
 
 =head2 response_body
 
