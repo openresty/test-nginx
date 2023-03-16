@@ -1657,6 +1657,7 @@ sub check_response_body ($$$$$$) {
         unless (!defined $expected || ref $expected) {
             $expected =~ s/\$ServerPort\b/$ServerPort/g;
             $expected =~ s/\$ServerPortForClient\b/$ServerPortForClient/g;
+            $expected = expand_env_in_text $expected, $name, $Test::Nginx::Util::RandPorts;
         }
 
         #warn show_all_chars($content);

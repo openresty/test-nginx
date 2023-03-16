@@ -25,6 +25,7 @@ use Carp qw( croak );
 
 our $ConfigVersion;
 our $FilterHttpConfig;
+our $RandPorts;
 my $LoadedIPCRun;
 
 our $NoLongString = undef;
@@ -47,6 +48,7 @@ our $LatestNginxVersion = 0.008039;
 our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
 our $Profiling = 0;
 
+sub expand_env_in_text ($$$);
 sub use_http2 ($);
 sub use_http3 ($);
 
@@ -485,6 +487,7 @@ sub master_process_enabled (@) {
 }
 
 our @EXPORT = qw(
+    expand_env_in_text
     use_http2
     use_http3
     env_to_nginx
@@ -967,7 +970,7 @@ sub write_user_files ($$) {
                 }
             }
 
-            $body = expand_env_in_text($body, $name, $rand_ports);
+            $body = expand_env_in_text $body, $name, $rand_ports;
 
             open my $out, ">$path" or
                 bail_out "$name - Cannot open $path for writing: $!\n";
@@ -1005,7 +1008,7 @@ sub write_config_file ($$$) {
         master_off();
     }
 
-    $http_config = expand_env_in_text($http_config, $name, $rand_ports);
+    $http_config = expand_env_in_text $http_config, $name, $rand_ports;
 
     if (!defined $config) {
         $config = '';
@@ -1043,13 +1046,13 @@ sub write_config_file ($$$) {
         }
     }
 
-    $main_config = expand_env_in_text($main_config, $name, $rand_ports);
+    $main_config = expand_env_in_text $main_config, $name, $rand_ports ;
 
     if (!defined $post_main_config) {
         $post_main_config = '';
     }
 
-    $post_main_config = expand_env_in_text($post_main_config, $name, $rand_ports);
+    $post_main_config = expand_env_in_text $post_main_config, $name, $rand_ports;
 
     if ($CheckLeak || $Benchmark) {
         $LogLevel = 'warn';
@@ -1520,10 +1523,11 @@ sub run_test ($) {
     }
 
     my $rand_ports = {};
+    $RandPorts = $rand_ports;
 
     my $config = $block->config;
 
-    $config = expand_env_in_text($config, $name, $rand_ports);
+    $config = expand_env_in_text $config, $name, $rand_ports;
 
     my $dry_run = 0;
     my $should_restart = 1;
@@ -2233,7 +2237,7 @@ request:
 
             my $target = $block->tcp_listen;
 
-            $target = expand_env_in_text($target, $name, $rand_ports);
+            $target = expand_env_in_text $target, $name, $rand_ports;
 
             my $reply = $block->tcp_reply;
             if (!defined $reply && !defined $block->tcp_shutdown) {
