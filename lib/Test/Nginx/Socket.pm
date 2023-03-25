@@ -1192,6 +1192,8 @@ sub check_error_log ($$$$) {
             bail_out("$name - No --- grep_error_log_out defined but --- grep_error_log is defined");
         }
 
+        $expected = expand_env_in_text $expected, $name, $Test::Nginx::Util::RandPorts;
+
         #warn "ref grep error log: ", ref $expected;
 
         if (ref $expected && ref $expected eq 'ARRAY') {
