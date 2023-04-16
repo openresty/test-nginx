@@ -603,6 +603,7 @@ our $HtmlDir    = File::Spec->catfile($ServRoot, 'html');
 our $ConfDir    = File::Spec->catfile($ServRoot, 'conf');
 our $ConfFile   = File::Spec->catfile($ConfDir, 'nginx.conf');
 our $PidFile    = File::Spec->catfile($LogDir, 'nginx.pid');
+our $CacheDir   = File::Spec->catfile($ServRoot, 'cache');
 
 sub parse_time ($) {
     my $tm = shift;
@@ -879,7 +880,7 @@ sub setup_server_root ($) {
             }}, $ServRoot);
 
         } else {
-            remove_tree($HtmlDir, $LogDir);
+            remove_tree($CacheDir, $HtmlDir, $LogDir);
             rmdir $ServRoot or
                 bail_out "Can't remove $ServRoot (not empty?): $!";
         }
