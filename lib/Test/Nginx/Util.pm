@@ -1269,7 +1269,7 @@ sub get_nginx_version () {
         $OpenSSLVersion = get_canon_version_for_OpenSSL($1, $2, $3, $4);
     }
 
-    if ($out =~ m{(?:nginx|openresty)[^/]*/(\d+)\.(\d+)\.(\d+)}s) {
+    if ($out =~ m{(?:nginx|openresty+?)[^/]*/(\d+)\.(\d+)\.(\d+)}s) {
         $NginxRawVersion = "$1.$2.$3";
         return get_canon_version($1, $2, $3);
     }
