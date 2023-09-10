@@ -523,6 +523,7 @@ our @EXPORT = qw(
     $ServerPortForClient
     $ServerPort
     $NginxVersion
+    $PcreVersion
     $PidFile
     $ServRoot
     $ConfFile
@@ -576,6 +577,7 @@ our $CheckErrorLog;
 our $CheckShutdownErrorLog;
 
 our $NginxVersion;
+our $PcreVersion;
 our $NginxRawVersion;
 our $OpenSSLVersion;
 
@@ -837,6 +839,8 @@ sub run_tests () {
     if (defined $NginxVersion) {
         #warn "[INFO] Using nginx version $NginxVersion ($NginxRawVersion)\n";
     }
+
+    $PcreVersion = get_pcre_version();
 
     if (!defined $ENV{TEST_NGINX_SERVER_PORT}) {
         $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
@@ -1280,6 +1284,24 @@ sub get_nginx_version () {
     }
 
     bail_out("Failed to parse the output of \"nginx -V\": $out\n");
+}
+
+sub get_pcre_version () {
+    my $out = `$NginxBinary -V 2>&1`;
+    if (!defined ($out) || $? != 0) {
+        $out //= "";
+        bail_out("Failed to get the pcre version of the Nginx in PATH: $out");
+    }
+
+    if (index($out, "--without-pcre2") == -1 && index($out, "pcre2") != -1) {
+        return 2;
+
+    } elsif ($out =~ /pcre/) {
+        return 1;
+
+    } else {
+        return 0;
+    }
 }
 
 sub get_pid_from_pidfile ($) {
