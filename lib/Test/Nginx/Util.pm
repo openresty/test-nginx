@@ -1992,6 +1992,10 @@ start_nginx:
                 $cmd = "$NginxBinary -c $ConfFile > /dev/null";
             }
 
+            if (defined $block->suppress_stderr) {
+                $cmd .= " 2> /dev/null";
+            }
+
             if ($UseRr) {
                 $cmd = "rr record $cmd";
             }

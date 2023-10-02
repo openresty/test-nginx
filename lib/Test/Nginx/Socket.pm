@@ -4355,7 +4355,8 @@ Normal request and response cycle is not done. But you can still use the
 C<error_log> section to check if there is an error message to be seen.
 
 This is meant to test bogus configuration is noticed and given proper
-error message. It is normal to see stderr error message when running these tests.
+error message. It is normal to see stderr error message when running these tests
+(you can use L<suppress_stderr> to suppress these messages).
 
 Below is an example:
 
@@ -4376,6 +4377,10 @@ This configuration ignores C<TEST_NGINX_USE_VALGRIND>
 C<TEST_NGINX_USE_STAP> or C<TEST_NGINX_CHECK_LEAK> since there is no point to check other things when the nginx is expected to die right away.
 
 This directive is handled before checking C<TEST_NGINX_IGNORE_MISSING_DIRECTIVES>.
+
+=head2 suppress_stderr
+
+Send stderr of the nginx to the /dev/null. Useful with L<must_die>.
 
 =head2 server_addr_for_client
 
