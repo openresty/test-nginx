@@ -2379,7 +2379,8 @@ sub gen_curl_cmd_from_req ($$) {
     }
 
     if (use_http3($block)) {
-        push @args, '--http3';
+        push @args, '--http3-only';
+        push @args, '-k';
         $curl_protocol = "https";
 
     } elsif (use_http2($block)) {

@@ -1163,7 +1163,7 @@ _EOC_
         }
 
         print $out <<_EOC_;
-        listen          $ServerPort$h3_listen_opts http3;
+        listen          $ServerPort$h3_listen_opts quic;
 _EOC_
     } else {
         print $out <<_EOC_;
