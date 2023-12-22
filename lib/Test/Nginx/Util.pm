@@ -1068,6 +1068,8 @@ sub write_config_file ($$$) {
         $err_log_file = $ErrLogFile;
     }
 
+    $err_log_file = expand_env_in_text $err_log_file, $name, $rand_ports;
+
     if (!defined $server_name) {
         $server_name = $ServerName;
     }
@@ -2528,6 +2530,9 @@ request:
             }
 
             my $target = $block->udp_listen;
+
+            $target = expand_env_in_text $target, $name, $rand_ports;
+
             if ($target =~ /^\d+$/) {
                 my $port = $target;
 
