@@ -380,6 +380,8 @@ sub get_req_from_block ($) {
             my $i = 0;
             my $prq = "";
             for my $request (@$reqs) {
+                $request = expand_env_in_text $request, $name, $Test::Nginx::Util::RandPorts;
+
                 my $conn_type;
                 if ($i == @$reqs - 1) {
                     $conn_type = 'close';
