@@ -2007,6 +2007,10 @@ start_nginx:
 
                 if ($UseValgrind =~ /^\d+$/) {
                     $opts = "--tool=memcheck --leak-check=full --keep-debuginfo=yes --show-possibly-lost=no";
+                    my $help_out = `valgrind --help`;
+                    if ($help_out =~ /exit-on-first-error/) {
+                        $opts .= " --exit-on-first-error=yes --error-exitcode=1";
+                    }
 
                     if (-f 'valgrind.suppress') {
                         $cmd = "valgrind --num-callers=100 -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
