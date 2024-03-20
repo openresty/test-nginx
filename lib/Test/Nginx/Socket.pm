@@ -4639,6 +4639,21 @@ If this environment is set to the number C<1> or any other
 non-zero numbers, then it is equivalent to taking the value
 C<--tool=memcheck --leak-check=full>.
 
+=head2 TEST_NGINX_VALGRIND_EXIT_ON_FIRST_ERR
+
+If set, Test::Nginx will add C<--exit-on-first-error=yes --error-exitcode=1> options for the valgrind.
+
+Nginx is actually started with
+C<valgrind -q $TEST_NGINX_USE_VALGRIND --gen-suppressions=all --suppressions=valgrind.suppress --exit-on-first-error=yes --error-exitcode=1>,
+the suppressions option being used only if there is actually
+a valgrind.suppress file.
+
+If this environment is set to the number C<1> or any other
+non-zero numbers, then it is equivalent to taking the value
+C<--exit-on-first-error=yes --error-exitcode=1>.
+
+You would prefer to turn on this option when multiple invalid memory accesses exist.
+
 =head2 TEST_NGINX_USE_RR
 
 Uses Mozilla rr to record the execution of the nginx server run by the test
