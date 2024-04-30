@@ -1617,6 +1617,14 @@ sub transform_response_body ($$$) {
 sub check_response_body ($$$$$$) {
     my ($block, $res, $dry_run, $req_idx, $repeated_req_idx, $need_array) = @_;
     my $name = $block->name;
+    my $write_resp_body_file = $block->write_resp_body_file;
+    if (defined $write_resp_body_file) {
+        my $got_body = $res->content // '';
+        open my $out, ">$write_resp_body_file"
+            or bail_out "$name - failed to write to file '$write_resp_body_file': $!";
+        print $out $got_body;
+        close $out;
+    }
     if (   defined $block->response_body
         || defined $block->response_body_eval )
     {
