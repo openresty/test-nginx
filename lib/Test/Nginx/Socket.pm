@@ -3283,6 +3283,20 @@ current test block. Default to "localhost".
 
 Run a piece of Perl code specified as the content of this C<--- init> section before running the tests for the blocks. Note that it is only run once before *all* the repeated requests for this test block.
 
+=head2 post_init
+
+Run a piece of Perl code specified as the content of this C<--- post_init> section to customization the test nginx instance for testing.
+Unlike C<--- init> section, C<--- post_init> will preserve the changes in C<servroot/conf>.
+
+In its most basic form, this section looks like that:
+
+    --- post_init
+    use Cwd qw(cwd);
+    my $root_dir = cwd();
+    `ln -sf ${root_dir}/t/data/mime.types ${root_dir}/t/servroot/conf/mime.types`;
+
+This will create a symbolic link for file C<mime.types>, allow nginx to loading it by C<include mime.types;>
+
 =head2 request
 
 This is probably the most important section. It defines the request(s) you
