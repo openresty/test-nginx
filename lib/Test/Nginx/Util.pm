@@ -512,6 +512,7 @@ our @EXPORT = qw(
     access_log_data
     error_log_data
     setup_server_root
+    run_customer_init_script
     write_config_file
     get_canon_version
     get_nginx_version
@@ -913,6 +914,18 @@ sub setup_server_root ($) {
 
     mkdir $ConfDir or
         bail_out "Failed to do mkdir $ConfDir\n";
+}
+
+sub run_customer_init_script ($) {
+    my $block = shift;
+    my $name = $block->name;
+
+    if ($block->post_setup_server_root) {
+        eval $block->post_setup_server_root;
+        if ($@) {
+            bail_out("$name - post_setup_server_root failed: $@");
+        }
+    }
 }
 
 sub write_user_files ($$) {
@@ -1865,6 +1878,7 @@ sub run_test ($) {
                     }
 
                     setup_server_root($first_time);
+                    run_customer_init_script($block);
                     write_user_files($block, $rand_ports);
                     write_config_file($block, $config, $rand_ports);
 
@@ -1971,6 +1985,7 @@ start_nginx:
 
             #warn "*** Restarting the nginx server...\n";
             setup_server_root($first_time);
+            run_customer_init_script($block);
             write_user_files($block, $rand_ports);
             write_config_file($block, $config, $rand_ports);
             #warn "nginx binary: $NginxBinary";
