@@ -1170,7 +1170,7 @@ $http_config
         listen          $ServerPort$listen_opts;
 _EOC_
 
-    # when using http3, wo both listen on tcp for http and udp for http3
+    # when using http3, we both listen on tcp for http and udp for http3
     if (use_http3($block)) {
         my $h3_listen_opts = $listen_opts;
         if ($h3_listen_opts !~ /\breuseport\b/) {
