@@ -2013,6 +2013,10 @@ start_nginx:
                         my $help_out = `valgrind --help`;
                         if ($help_out =~ /exit-on-first-error/) {
                             $opts .= " --exit-on-first-error=yes --error-exitcode=1";
+
+                        } else {
+                            warn "WARNING: valgrind does not support "
+                               . "--exit-on-first-error option\n";
                         }
                     }
 
