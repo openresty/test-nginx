@@ -61,6 +61,7 @@ our $LoadModules = $ENV{TEST_NGINX_LOAD_MODULES};
 our $NoShuffle = $ENV{TEST_NGINX_NO_SHUFFLE} || 0;
 
 our $UseValgrind = $ENV{TEST_NGINX_USE_VALGRIND};
+our $ValgrindExitOnFirstError = $ENV{TEST_NGINX_VALGRIND_EXIT_ON_FIRST_ERR};
 
 our $UseStap = $ENV{TEST_NGINX_USE_STAP};
 
@@ -87,7 +88,7 @@ our $ServerAddr = '127.0.0.1';
 our $ServerName = 'localhost';
 
 our $Http3SSLCrt = $ENV{TEST_NGINX_HTTP3_CRT};
-our $Http3SSLCrtKey = $ENV{TEST_NGINX_HTTP3_KEY};;
+our $Http3SSLCrtKey = $ENV{TEST_NGINX_HTTP3_KEY};
 
 our $ValgrindExtraTimeout = 0.3;
 
@@ -2022,9 +2023,15 @@ start_nginx:
 
                 if ($UseValgrind =~ /^\d+$/) {
                     $opts = "--tool=memcheck --leak-check=full --keep-debuginfo=yes --show-possibly-lost=no";
-                    my $help_out = `valgrind --help`;
-                    if ($help_out =~ /exit-on-first-error/) {
-                        $opts .= " --exit-on-first-error=yes --error-exitcode=1";
+                    if ($ValgrindExitOnFirstError) {
+                        my $help_out = `valgrind --help`;
+                        if ($help_out =~ /exit-on-first-error/) {
+                            $opts .= " --exit-on-first-error=yes --error-exitcode=1";
+
+                        } else {
+                            warn "WARNING: valgrind does not support "
+                               . "--exit-on-first-error option\n";
+                        }
                     }
 
                     if (-f 'valgrind.suppress') {
