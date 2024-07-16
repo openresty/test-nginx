@@ -43,6 +43,8 @@ our $UseRr = $ENV{TEST_NGINX_USE_RR};
 
 our $Verbose = $ENV{TEST_NGINX_VERBOSE};
 
+our $ValgrindExitOnFirstErr = $ENV{TEST_NGINX_VALGRIND_EXIT_ON_FIRST_ERR};
+
 our $LatestNginxVersion = 0.008039;
 
 our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
@@ -2022,9 +2024,15 @@ start_nginx:
 
                 if ($UseValgrind =~ /^\d+$/) {
                     $opts = "--tool=memcheck --leak-check=full --keep-debuginfo=yes --show-possibly-lost=no";
-                    my $help_out = `valgrind --help`;
-                    if ($help_out =~ /exit-on-first-error/) {
-                        $opts .= " --exit-on-first-error=yes --error-exitcode=1";
+                    if ($ValgrindExitOnFirstErr) {
+                        my $help_out = `valgrind --help`;
+                        if ($help_out =~ /exit-on-first-error/) {
+                            $opts .= " --exit-on-first-error=yes --error-exitcode=1";
+
+                        } else {
+                            warn "WARNING: valgrind does not support "
+                               . "--exit-on-first-error option\n";
+                        }
                     }
 
                     if (-f 'valgrind.suppress') {
