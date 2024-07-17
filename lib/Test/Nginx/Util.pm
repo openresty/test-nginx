@@ -1569,7 +1569,7 @@ sub run_test ($) {
         }
         my $asan_opts = $ENV{ORI_ASAN_OPTIONS};
         my $tag = $name;
-        if ($tag =~ /t\/([-a-z0-9A-Z\/]+)\.t TEST (\d+):/) {
+        if ($tag =~ /t\/([-_a-z0-9A-Z\/]+)\.t TEST (\d+):/) {
             $tag = "$1-t$2";
             $tag =~ s#/#-#g;
             if ($asan_opts =~ /log_path=([^,]+)/) {
