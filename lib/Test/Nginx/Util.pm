@@ -1562,6 +1562,27 @@ sub run_test ($) {
         undef $FirstTime;
     }
 
+    # add test case name to the asan log name.
+    if (defined($ENV{ASAN_OPTIONS})) {
+        if (!defined $ENV{ORI_ASAN_OPTIONS}) {
+            $ENV{ORI_ASAN_OPTIONS} = $ENV{ASAN_OPTIONS};
+        }
+        my $asan_opts = $ENV{ORI_ASAN_OPTIONS};
+        my $tag = $name;
+        if ($tag =~ /t\/([-a-z0-9A-Z\/]+)\.t TEST (\d+):/) {
+            $tag = "$1-t$2";
+            $tag =~ s#/#-#g;
+            if ($asan_opts =~ /log_path=([^,]+)/) {
+                my $log_path = $1;
+                $asan_opts =~ s/log_path=[^,]+,?//;
+                $asan_opts .= ",log_path=$log_path-$tag";
+                $ENV{ASAN_OPTIONS} = $asan_opts;
+            }
+
+        } else {
+            warn "unknown log name: $tag";
+        }
+    }
     my $rand_ports = {};
     $RandPorts = $rand_ports;
 
