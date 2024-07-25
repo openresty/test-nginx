@@ -823,7 +823,9 @@ sub check_prev_block_shutdown_error_log () {
     my $name = $block->name;
     my $dry_run;
 
-    if (defined $block->shutdown_error_log) {
+    if (defined($block->shutdown_error_log)
+        || defined($block->no_shutdown_error_log))
+    {
         if ($UseHup) {
             $dry_run = 1;
         }
