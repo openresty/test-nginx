@@ -1437,18 +1437,56 @@ sub check_shutdown_error_log ($$) {
     my $lines;
 
     my $pats = $block->shutdown_error_log;
+    if (defined $pats) {
+        if (!ref $pats) {
+            chomp $pats;
+            my @lines = split /\n+/, $pats;
+            $pats = \@lines;
 
-    if (!ref $pats) {
-        chomp $pats;
-        my @lines = split /\n+/, $pats;
-        $pats = \@lines;
+        } elsif (ref $pats eq 'Regexp') {
+            $pats = [$pats];
 
-    } elsif (ref $pats eq 'Regexp') {
-        $pats = [$pats];
+        } else {
+            my @clone = @$pats;
+            $pats = \@clone;
+        }
 
-    } else {
-        my @clone = @$pats;
-        $pats = \@clone;
+        $lines ||= error_log_data();
+        #warn "error log data: ", join "\n", @$lines;
+        for my $line (@$lines) {
+            for my $pat (@$pats) {
+                next if !defined $pat;
+
+                if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
+                    SKIP: {
+                        skip "$name - shutdown_error_log - tests skipped due to dry_run", 1 if $dry_run;
+                        pass("$name - pattern \"$pat\" matches a line in error.log");
+                    }
+                    undef $pat;
+                }
+            }
+        }
+
+        for my $pat (@$pats) {
+            if (defined $pat) {
+                SKIP: {
+                    skip "$name - shutdown_error_log - tests skipped due to dry_run", 1 if $dry_run;
+                    fail("$name - pattern \"$pat\" should match a line in error.log");
+                    #die join("", @$lines);
+                }
+            }
+        }
+
+        for my $line (@$lines) {
+            #warn "test $line\n";
+            if ($line =~ /\bAssertion .*? failed\.$/) {
+                my $tb = Test::More->builder;
+                $tb->no_ending(1);
+
+                chomp $line;
+                fail("$name - $line");
+            }
+        }
     }
 
     if (defined $block->no_shutdown_error_log) {
@@ -1503,43 +1541,6 @@ sub check_shutdown_error_log ($$) {
                     pass("$name - pattern \"$p\" does not match a line in error.log");
                 }
             }
-        }
-    }
-
-    $lines ||= error_log_data();
-    #warn "error log data: ", join "\n", @$lines;
-    for my $line (@$lines) {
-        for my $pat (@$pats) {
-            next if !defined $pat;
-
-            if (ref $pat && $line =~ /$pat/ || $line =~ /\Q$pat\E/) {
-                SKIP: {
-                    skip "$name - shutdown_error_log - tests skipped due to dry_run", 1 if $dry_run;
-                    pass("$name - pattern \"$pat\" matches a line in error.log");
-                }
-                undef $pat;
-            }
-        }
-    }
-
-    for my $pat (@$pats) {
-        if (defined $pat) {
-            SKIP: {
-                skip "$name - shutdown_error_log - tests skipped due to dry_run", 1 if $dry_run;
-                fail("$name - pattern \"$pat\" should match a line in error.log");
-                #die join("", @$lines);
-            }
-        }
-    }
-
-    for my $line (@$lines) {
-        #warn "test $line\n";
-        if ($line =~ /\bAssertion .*? failed\.$/) {
-            my $tb = Test::More->builder;
-            $tb->no_ending(1);
-
-            chomp $line;
-            fail("$name - $line");
         }
     }
 }
