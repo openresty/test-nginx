@@ -2471,15 +2471,19 @@ request:
                         # flush read data to the file as soon as possible:
 
                         if ($tcp_query_file) {
-                            open my $out, ">$tcp_query_file"
-                                or die "cannot open $tcp_query_file for writing: $!\n";
+                            my $tmpfile = "$tcp_query_file.tmp";
+                            open my $out, ">$tmpfile"
+                                or die "cannot open $tmpfile for writing: $!\n";
 
                             if ($Verbose) {
-                                warn "writing received data [$buf] to file $tcp_query_file\n";
+                                warn "writing received data [$buf] to file $tmpfile\n";
                             }
 
                             print $out $buf;
                             close $out;
+                            # rename is atomic on Unix
+                            rename $tmpfile, $tcp_query_file
+                                or die "cannot rename $tmpfile to $tcp_query_file: $!\n";
                         }
 
                         if (!$req_len || length($buf) >= $req_len) {
@@ -2654,15 +2658,19 @@ request:
                 }
 
                 if ($udp_query_file) {
-                    open my $out, ">$udp_query_file"
-                        or die "cannot open $udp_query_file for writing: $!\n";
+                    my $tmpfile = "$udp_query_file.tmp";
+                    open my $out, ">$tmpfile"
+                        or die "cannot open $tmpfile for writing: $!\n";
 
                     if ($Verbose) {
-                        warn "writing received data [$buf] to file $udp_query_file\n";
+                        warn "writing received data [$buf] to file $tmpfile\n";
                     }
 
                     print $out $buf;
                     close $out;
+                    # rename is atomic on UNIX
+                    rename $tmpfile, $udp_query_file
+                        or die "cannot rename $tmpfile to $udp_query_file: $!\n";
                 }
 
                 my $delay = parse_time($block->udp_reply_delay);
