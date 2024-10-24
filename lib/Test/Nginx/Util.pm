@@ -2992,7 +2992,6 @@ sub use_http2 ($) {
         my $pat = qr{(proxy_pass .*:\$(server_port|TEST_NGINX_SERVER_PORT)
                     | ngx.req.raw_header
                     | lua_check_client_abort
-                    | ngx.location.capture
                     | ngx.req.socket
                     | ngx.req.read_body)}x;
         if (defined $block->config) {
