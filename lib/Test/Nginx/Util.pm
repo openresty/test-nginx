@@ -1306,13 +1306,18 @@ sub get_nginx_version () {
 }
 
 sub get_pcre_version () {
-    my $out = `$NginxBinary -V 2>&1`;
+    if ($NginxBinary !~ /^\//) {
+        $NginxBinary = `which $NginxBinary`;
+        chomp $NginxBinary;
+    }
+
+    my $out = `ldd $NginxBinary`;
     if (!defined ($out) || $? != 0) {
         $out //= "";
         bail_out("Failed to get the pcre version of the Nginx in PATH: $out");
     }
 
-    if (index($out, "--without-pcre2") == -1 && index($out, "pcre2") != -1) {
+    if ($out =~ /libpcre2/) {
         return 2;
 
     } elsif ($out =~ /pcre/) {
