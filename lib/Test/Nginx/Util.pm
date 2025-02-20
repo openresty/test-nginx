@@ -1168,7 +1168,7 @@ _EOC_
 $main_config
 
 http {
-    access_log $AccLogFile;
+    access_log $AccLogFile; client_body_temp_path $ServRoot/client_body_temp; proxy_temp_path $ServRoot/proxy_temp; fastcgi_temp_path $ServRoot/fastcgi_temp; scgi_temp_path $ServRoot/scgi_temp; uwsgi_temp_path $ServRoot/uwsgi_temp;
     #access_log off;
 
     default_type text/plain;
@@ -2044,7 +2044,7 @@ start_nginx:
             my $cmd;
 
             if ($NginxVersion >= 0.007053) {
-                $cmd = "$NginxBinary -p $ServRoot/ -c $ConfFile > /dev/null";
+                $cmd = "$NginxBinary -e $ServRoot/logs/error.log -p $ServRoot/ -c $ConfFile > /dev/null";
             } else {
                 $cmd = "$NginxBinary -c $ConfFile > /dev/null";
             }
