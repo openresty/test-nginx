@@ -4,7 +4,7 @@ use v5.10.1;
 use Test::Nginx::Socket::Lua -Base;
 use Test::Nginx::Util qw( $ServerPort $ServerAddr );
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 sub get_best_long_bracket_level ($);
 sub quote_as_lua_str ($);

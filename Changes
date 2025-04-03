@@ -1,6 +1,68 @@
 Changes for Test::Nginx
 
-0.30 - 2022-05-13
+0.31 - 2025-04-03
+
+ *   bugfix: check the rand port with bind(). thanks lijunlong for the patch.
+
+ *   bugfix: Add the default config base on the nginx -V. This is a commit after 3f15aea4. thanks lijunlong for the patch.
+
+ *   bugfix: should not include cgi related configs by default. The cgi related features may not build into the nginx binary. thanks lijunlong for the patch.
+
+ *   feature: allow to perform unprivileged tests. thanks BalkanMadman for the patch.
+
+ *   optimize: use 'http2 on for nginx>1.25.3.' thanks lijunlong for the patch.
+
+ *   change: get pcre version from 'Nginx -V'. thanks lijunlong for the patch.
+
+ *   change: get pcre version from the linking library of nginx. thanks lijunlong for the patch.
+
+ *   fix: enable ngx.location.capture API test in http2. thanks Jun Ouyang for the patch.
+
+ *   bugfix: use rename to ensure atomicity of write operations in TCP/UDP server. thanks Johnny Wang for the patch.
+
+ *   bugfix: failed to validate no_shutdown_error_log. thanks lijunlong for the patch.
+
+ *   bugfix: should allow the underscore in the test filename. thanks lijunlong for the patch.
+
+ *   feature: add test case name to asan log_path. thanks lijunlong for the patch.
+
+ *   feature: add new enviroment variable TEST_NGINX_VALGRIND_EXIT_ON_FIRST_ERR. thanks lijunlong for the patch.
+
+ *   doc: typo wo -> we. thanks Johnny Wang for the patch.
+
+ *   feature: added new section --- post_setup_server_root. thanks leslie for the patch.
+
+ *   fixed a use of undef value introduced in the previous commit. thanks Yichun Zhang (agentzh) for the patch.
+
+ *   feature: added new section --- write_resp_body_file. thanks Yichun Zhang (agentzh) for the patch.
+
+ *   feature: make the valgrind exit on the first error. thanks lijunlong for the patch.
+
+ *   feature: expand env vars in udp_listen, error_log_file, pipelined_requests. thanks Johnny Wang for the patch.
+
+ *   feature: add --- suppress_stderr to silent error messages on nginx startup. Useful with must_die block. thanks Jiří Setnička for the patch.
+
+ *   change: adjust http3 test for the latest change in nginx 1.25. thanks lijunlong for the patch.
+
+ *   feature: support pcre2. thanks swananan for the patch.
+
+ *   bugfix: handle openresty+ server name as well. thanks Yichun Zhang (agentzh) for the patch.
+
+ *   bugfix: ensure cache dir is removed before cleanup. thanks leslie for the patch.
+
+ *   feature: now we expand env vars in --- grep_error_log_out texts as well. thanks lijunlong for the patch.
+
+ *   feature: now we expand env vars in --- response_body texts as well. thanks Yichun Zhang (agentzh) for the patch.
+
+ *   feature: add a builtin filter for json response. thanks lijunlong for the patch.
+
+ *   feat(Valgrind): show full backtrace for lib loaded by Lua C API. thanks 罗泽轩 for the patch.
+
+ *   feature: export new API add_test_cleanup_handler. thanks lijunlong for the patch.
+
+ *   CPAN: fixed the forgotten version number update in Socket/Lua/Stream.pm. thanks Johnny Wang for the patch.
+
+ - 2022-05-13
 
  *   bugfix: reserved ports for stream_server_config.
 
