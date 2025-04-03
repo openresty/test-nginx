@@ -226,7 +226,9 @@ sub gen_rand_port (;$$) {
             LocalAddr => $ServerAddr,
             LocalPort => $port,
             Proto => 'tcp',
+            Listen => 5,
             Timeout => 0.1,
+            Reuse => 1,
         );
 
         if (defined $sock) {
