@@ -1167,6 +1167,8 @@ _EOC_
     my $fastcgi_temp_path = "fastcgi_temp_path $ServRoot/fastcgi_temp;";
     my $scgi_temp_path = "scgi_temp_path $ServRoot/scgi_temp;";
     my $uwsgi_temp_path = "uwsgi_temp_path $ServRoot/uwsgi_temp;";
+    my $proxy_temp_path = "proxy_temp_path $ServRoot/proxy_temp;";
+    my $client_body_temp_path = "client_body_temp_path $ServRoot/client_body_temp;";
 
     if ($nginx_V =~ /--without-http_fastcgi_module/) {
         $fastcgi_temp_path = '';
@@ -1180,6 +1182,14 @@ _EOC_
         $uwsgi_temp_path = '';
     }
 
+    if ($http_config =~ /\bproxy_temp_path\b/) {
+        $proxy_temp_path ='';
+    }
+
+    if ($http_config =~ /\bclient_body_temp_path\b/) {
+        $client_body_temp_path ='';
+    }
+
     print $out <<_EOC_;
 #env LUA_PATH;
 #env LUA_CPATH;
@@ -1187,7 +1197,7 @@ _EOC_
 $main_config
 
 http {
-    access_log $AccLogFile; client_body_temp_path $ServRoot/client_body_temp; proxy_temp_path $ServRoot/proxy_temp; $fastcgi_temp_path $scgi_temp_path $uwsgi_temp_path
+    access_log $AccLogFile; $client_body_temp_path $proxy_temp_path $fastcgi_temp_path $scgi_temp_path $uwsgi_temp_path
     #access_log off;
 
     default_type text/plain;
