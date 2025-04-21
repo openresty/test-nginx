@@ -4359,6 +4359,12 @@ Specifies the expected TCP query received by the embedded TCP server.
 
 If C<tcp_query> is specified, C<tcp_query_len> defaults to the length of the value of C<tcp_query>.
 
+=head2 tcp_query_auto_timeout
+
+If you don't know the query data length in advance, you can specify this option with an timeout argument.
+
+The default timeout for reading from peer is 0.1 sec.
+
 =head2 tcp_shutdown
 
 Shuts down the reading part, writing part, or both in the embedded TCP server as soon as a new connection is established. Its value specifies which part to shut down: 0 for read part only, 1 for write part only, and 2 for both directions.

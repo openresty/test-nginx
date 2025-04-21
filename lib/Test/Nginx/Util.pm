@@ -2498,8 +2498,26 @@ request:
                         warn "TCP server reading request...\n";
                     }
 
+                    my $timeout = 0.1;
+                    my $select = IO::Select->new($client);
+                    if (defined($block->tcp_query_auto_timeout)) {
+                        $client->blocking(0);
+                        if ($block->tcp_query_auto_timeout ne "") {
+                            $timeout = $block->tcp_query_auto_timeout + 0;
+                        }
+                    }
+
                     while (1) {
                         my $b;
+                        if (defined($block->tcp_query_auto_timeout)) {
+                            if (!$select->can_read($timeout)) {
+                                if ($Verbose) {
+                                    warn "tcp_query read timeout\n";
+                                }
+                                last;
+                            }
+                        }
+
                         my $ret = $client->recv($b, 4096);
                         if (!defined $ret) {
                             die "failed to receive: $!\n";
@@ -2530,11 +2548,18 @@ request:
                                 or die "cannot rename $tmpfile to $tcp_query_file: $!\n";
                         }
 
-                        if (!$req_len || length($buf) >= $req_len) {
+                        if (!defined($block->tcp_query_auto_timeout) && (!$req_len || length($buf) >= $req_len)) {
                             if ($Verbose) {
+                                $req_len //= 0;
                                 warn "len: ", length($buf), ", req len: $req_len\n";
                             }
                             last;
+                        }
+                    }
+
+                    if (!$tcp_query_file) {
+                        if ($Verbose) {
+                            warn "received data [$buf]\n";
                         }
                     }
                 }
