@@ -43,6 +43,8 @@ our $UseRr = $ENV{TEST_NGINX_USE_RR};
 
 our $Verbose = $ENV{TEST_NGINX_VERBOSE};
 
+our $ld_preload = $ENV{LD_PRELOAD};
+
 our $ValgrindExitOnFirstErr = $ENV{TEST_NGINX_VALGRIND_EXIT_ON_FIRST_ERR};
 
 our $LatestNginxVersion = 0.008039;
@@ -1278,6 +1280,16 @@ events {
 
     worker_connections  $WorkerConnections;
 _EOC_
+
+    if (defined $block->no_mockeagain) {
+        if (defined $ld_preload) {
+            my $new_ld_preload = $ld_preload;
+            $new_ld_preload =~ s/[^ ]+mockeagain.so//;
+            $ENV{LD_PRELOAD} = $new_ld_preload;
+        }
+    } else {
+        $ENV{LD_PRELOAD} = $ld_preload;
+    }
 
     if ($EventType) {
         print $out <<_EOC_;
