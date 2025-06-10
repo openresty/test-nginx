@@ -62,7 +62,7 @@ Changes for Test::Nginx
 
  *   CPAN: fixed the forgotten version number update in Socket/Lua/Stream.pm. thanks Johnny Wang for the patch.
 
- - 2022-05-13
+0.30 - 2022-05-13
 
  *   bugfix: reserved ports for stream_server_config.
 
