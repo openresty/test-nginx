@@ -2090,6 +2090,10 @@ start_nginx:
                 $cmd = "$NginxBinary -c $ConfFile > /dev/null";
             }
 
+            if (defined $ENV{TEST_NGINX_LD_PRELOAD}) {
+                $cmd = qq!LD_PRELOAD="$ENV{TEST_NGINX_LD_PRELOAD}" $cmd!;
+            }
+
             if (defined $block->suppress_stderr) {
                 $cmd .= " 2> /dev/null";
             }

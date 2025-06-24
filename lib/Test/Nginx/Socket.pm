@@ -4771,6 +4771,16 @@ For example,
 
     $ TEST_NGINX_EVENT_TYPE=select prove -r t
 
+=head2 TEST_NGINX_LD_PRELOAD
+
+This environment can be used to specify LD_PRELOAD to be used by Nginx.
+Specifying the LD_PRELOAD environment directly in the command line is undesirable
+because it will affect other processes other than nginx.
+
+For example,
+
+    $ TEST_NGINX_LD_PRELOAD=/usr/lib64/libasan.so prove -r t
+
 =head2 TEST_NGINX_ERROR_LOG
 
 Error log files from all tests will be appended to the file specified with
