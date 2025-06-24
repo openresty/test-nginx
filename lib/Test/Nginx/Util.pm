@@ -2090,8 +2090,28 @@ start_nginx:
                 $cmd = "$NginxBinary -c $ConfFile > /dev/null";
             }
 
+            my $LD_PRELOAD = $ENV{LD_PRELOAD};
             if (defined $ENV{TEST_NGINX_LD_PRELOAD}) {
-                $cmd = qq!LD_PRELOAD="$ENV{TEST_NGINX_LD_PRELOAD}" $cmd!;
+                if (defined $LD_PRELOAD) {
+                    $LD_PRELOAD = "$ENV{TEST_NGINX_LD_PRELOAD} $LD_PRELOAD";
+                } else {
+                    $LD_PRELOAD = $ENV{TEST_NGINX_LD_PRELOAD};
+                }
+
+                $cmd = qq!LD_PRELOAD="$LD_PRELOAD" $cmd!;
+            }
+
+            if (defined($LD_PRELOAD) && $LD_PRELOAD =~ /mockeagain.so/) {
+                my $t = $ENV{TEST_NGINX_EVENT_TYPE};
+                my $pp = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
+
+                if (!defined($t) || $t ne "poll") {
+                    warn "Warning: TEST_NGINX_EVENT_TYPE should be poll\n";
+                }
+
+                if (!defined($pp) || $pp ne "1") {
+                    warn "Warning: TEST_NGINX_POSTPONE_OUTPUT should be 1\n";
+                }
             }
 
             if (defined $block->suppress_stderr) {
