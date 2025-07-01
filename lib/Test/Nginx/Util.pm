@@ -1142,9 +1142,8 @@ _EOC_
     } elsif (use_http2($block)) {
         if ($NginxVersion >= "1.019009") {
             $http2_directive = "http2 on;";
-        } else {
-            $listen_opts .= " http2";
         }
+        $listen_opts .= " http2";
     }
 
     if ($ReusePort) {
@@ -1207,7 +1206,8 @@ http {
 
 $http_config
     server {
-        listen          $ServerPort$listen_opts;$http2_directive
+        listen          $ServerPort$listen_opts;
+        $http2_directive
 _EOC_
 
     # when using http3, we both listen on tcp for http and udp for http3
