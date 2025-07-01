@@ -2101,16 +2101,15 @@ start_nginx:
                 $cmd = qq!LD_PRELOAD="$LD_PRELOAD" $cmd!;
             }
 
-            if (defined($LD_PRELOAD) && $LD_PRELOAD =~ /mockeagain.so/) {
+            my $mockeagain = $ENV{MOCKEAGAIN};
+            if (defined($mockeagain) && $mockeagain ne ""
+                && defined($LD_PRELOAD) && $LD_PRELOAD =~ /mockeagain.so/)
+            {
                 my $t = $ENV{TEST_NGINX_EVENT_TYPE};
                 my $pp = $ENV{TEST_NGINX_POSTPONE_OUTPUT};
 
                 if (!defined($t) || $t ne "poll") {
-                    warn "Warning: TEST_NGINX_EVENT_TYPE should be poll\n";
-                }
-
-                if (!defined($pp) || $pp ne "1") {
-                    warn "Warning: TEST_NGINX_POSTPONE_OUTPUT should be 1\n";
+                    warn "Warning: $name TEST_NGINX_EVENT_TYPE should be poll\n";
                 }
             }
 
