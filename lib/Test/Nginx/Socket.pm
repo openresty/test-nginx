@@ -2395,7 +2395,7 @@ sub gen_curl_cmd_from_req ($$) {
         $curl_protocol = "https";
 
     } elsif (use_http2($block)) {
-        push @args, '--http2', '--http2-prior-knowledge';
+        push @args, '--http2-prior-knowledge';
     }
 
     if ($meth eq 'HEAD') {
@@ -3189,8 +3189,7 @@ The following sections are supported:
 Enforces the test scaffold to use the HTTP/2 wire protocol to send the test request.
 
 Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
-with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
-and C<--http2-prior-knowledge> command-line options.
+with the NGINX server. The `curl` utility must be recent enough to support C<--http2-prior-knowledge> command-line options.
 
 B<WARNING:> not all the sections and features are supported when this C<--- http2> section is
 specified. For example, this section cannot be used with C<--- pipelined_requests> or
@@ -4435,8 +4434,7 @@ Enables the "http2" test mode by enforcing using the (plain text) HTTP/2 protoco
 test request.
 
 Under the hood, the test scaffold uses the `curl` command-line utility to do the wire communication
-with the NGINX server. The `curl` utility must be recent enough to support both the C<--http2>
-and C<--http2-prior-knowledge> command-line options.
+with the NGINX server. The `curl` utility must be recent enough to support C<--http2-prior-knowledge> command-line options.
 
 B<WARNING:> not all the sections and features are supported in the "http2" test mode. For example, the L<pipelined_requests> and
 L<raw_request> will still use the HTTP/1 protocols even in the "http2" test mode. Similarly, test blocks explicitly require
