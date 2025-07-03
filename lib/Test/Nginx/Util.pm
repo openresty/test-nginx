@@ -1123,6 +1123,8 @@ _EOC_
     }
 
     my $listen_opts = '';
+    # To maintain compatibility with old test cases, the $http2_directive
+    # and listen directive need to be placed on the same line.
     my $http2_directive = '';
 
     $ServerConfigHttp3 = '';
@@ -1256,7 +1258,7 @@ _EOC_
     if ($UseHup) {
         print $out <<_EOC_;
     server {
-        listen          $ServerPort$listen_opts;
+        listen          $ServerPort$listen_opts; $http2_directive
         server_name     'Test-Nginx';
 
         location = /ver {
@@ -1422,7 +1424,7 @@ sub test_config_version ($$) {
         my $http_protocol = "http";
 
         if (use_http2($block)) {
-            $extra_curl_opts .= ' --http2 --http2-prior-knowledge';
+            $extra_curl_opts .= ' --http2-prior-knowledge';
         }
 
         #server Test-Nginx only listen on http(tcp port) when http3 is enabled
