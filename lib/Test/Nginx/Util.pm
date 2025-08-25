@@ -2985,8 +2985,6 @@ retry:
 END {
     return if $InSubprocess;
 
-    cleanup();
-
     if ($UseStap || $UseValgrind || !$ENV{TEST_NGINX_NO_CLEAN}) {
         local $?; # to avoid confusing Test::Builder::_ending
         if (defined $PidFile && -f $PidFile) {
