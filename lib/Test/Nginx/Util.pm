@@ -1271,6 +1271,12 @@ _EOC_
     }
 
     print $out <<_EOC_;
+
+    client_body_temp_path "$ServRoot/client_body_temp";
+    proxy_temp_path "$ServRoot/proxy_temp";
+    fastcgi_temp_path "$ServRoot/fastcgi_temp";
+    scgi_temp_path "$ServRoot/scgi_temp";
+    uwsgi_temp_path "$ServRoot/uwsgi_temp";
 }
 
 $post_main_config
