@@ -198,7 +198,7 @@ Antoine BONAVITA `<antoine.bonavita@gmail.com>`
 
 # COPYRIGHT & LICENSE
 
-Copyright (c) 2009-2017, Yichun Zhang (agentzh) `<agentzh@gmail.com>`, OpenResty Inc.
+Copyright (c) 2009-2025, Yichun Zhang (agentzh) `<agentzh@gmail.com>`, OpenResty Inc.
 
 Copyright (c) 2011-2012, Antoine Bonavita `<antoine.bonavita@gmail.com>`.
 

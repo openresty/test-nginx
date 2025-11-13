@@ -444,7 +444,7 @@ Yichun "agentzh" Zhang (章亦春) C<< <agentzh@gmail.com> >>, OpenResty Inc.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2016, Yichun Zhang C<< <agentzh@gmail.com> >>, OpenResty Inc.
+Copyright (c) 2016 ~ 2025, Yichun Zhang C<< <agentzh@gmail.com> >>, OpenResty Inc.
 
 This module is licensed under the terms of the BSD license.
 
