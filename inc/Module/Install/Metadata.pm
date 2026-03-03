@@ -6,7 +6,7 @@ use Module::Install::Base ();
 
 use vars qw{$VERSION @ISA $ISCORE};
 BEGIN {
-	$VERSION = '1.18';
+	$VERSION = '1.21';
 	@ISA     = 'Module::Install::Base';
 	$ISCORE  = 1;
 }
@@ -455,12 +455,8 @@ sub author_from {
 my %license_urls = (
     perl         => 'http://dev.perl.org/licenses/',
     apache       => 'http://apache.org/licenses/LICENSE-2.0',
-    apache_1_1   => 'http://apache.org/licenses/LICENSE-1.1',
     artistic     => 'http://opensource.org/licenses/artistic-license.php',
-    artistic_2   => 'http://opensource.org/licenses/artistic-license-2.0.php',
     lgpl         => 'http://opensource.org/licenses/lgpl-license.php',
-    lgpl2        => 'http://opensource.org/licenses/lgpl-2.1.php',
-    lgpl3        => 'http://opensource.org/licenses/lgpl-3.0.html',
     bsd          => 'http://opensource.org/licenses/bsd-license.php',
     gpl          => 'http://opensource.org/licenses/gpl-license.php',
     gpl2         => 'http://opensource.org/licenses/gpl-2.0.php',
@@ -471,6 +467,12 @@ my %license_urls = (
     unrestricted => undef,
     restrictive  => undef,
     unknown      => undef,
+
+    # these are not actually allowed in meta-spec v1.4 but are left here for compatibility:
+    apache_1_1   => 'http://apache.org/licenses/LICENSE-1.1',
+    artistic_2   => 'http://opensource.org/licenses/artistic-license-2.0.php',
+    lgpl2        => 'http://opensource.org/licenses/lgpl-2.1.php',
+    lgpl3        => 'http://opensource.org/licenses/lgpl-3.0.html',
 );
 
 sub license {
