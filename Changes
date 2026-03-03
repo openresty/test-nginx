@@ -1,5 +1,29 @@
 Changes for Test::Nginx
 
+0.32 - 2026-03-03
+
+*    bugfix: address incorrect HTTP/2 configuration.
+
+*    bugfix: dynamically set the proxy_temp_path.
+
+*    bugfix: fixed warning introduced by commit c3e96f.
+
+*    bugfix: put load_module directives before the stream block.
+
+*    doc: update copyright.
+
+*    docs: Add the missing version number.
+
+*    feature: add --- no_mockeagain.
+
+*    feature: add --- tcp_query_auto_timeout for unknow input length.
+
+*    feature: add TEST_NGINX_LD_PRELOAD.
+
+*    feature: add stream listen option like reuseport or proxy_protocol.
+
+*    optimize: throw warning message if enable the mockeagain without poll event type.
+
 0.31 - 2025-04-03
 
  *   bugfix: check the rand port with bind(). thanks lijunlong for the patch.

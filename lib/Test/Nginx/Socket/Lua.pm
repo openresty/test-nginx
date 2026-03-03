@@ -2,7 +2,7 @@ package Test::Nginx::Socket::Lua;
 
 use Test::Nginx::Socket -Base;
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 my $code = $ENV{TEST_NGINX_INIT_BY_LUA};
 
