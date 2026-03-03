@@ -2,8 +2,7 @@
 
 Test::Nginx - Data-driven test scaffold for Nginx C module and Nginx/OpenResty-based libraries and applications
 
-Table of Contents
-=================
+# Table of Contents
 
 * [NAME](#name)
 * [DESCRIPTION](#description)
