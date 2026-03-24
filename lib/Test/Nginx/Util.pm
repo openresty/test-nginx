@@ -843,6 +843,7 @@ sub check_prev_block_shutdown_error_log () {
 }
 
 sub run_tests () {
+    srand($$ + Time::HiRes::time() * 1000000);
     $NginxVersion = get_nginx_version();
 
     if (defined $NginxVersion) {
