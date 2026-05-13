@@ -743,6 +743,115 @@ sub kill_process ($$$) {
     }
 }
 
+sub parse_listen_ports_from_conf () {
+    return ([], []) unless defined $ConfFile && -f $ConfFile;
+
+    my (%tcp, %udp);
+    open my $fh, '<', $ConfFile or return ([], []);
+    while (my $line = <$fh>) {
+        $line =~ s/#.*//;
+        next unless $line =~ /^\s*listen\s+(\S+)([^;]*);/;
+        my ($addr, $rest) = ($1, $2);
+
+        next if $addr =~ m{^unix:}i;
+
+        my $port;
+        if ($addr =~ /^\[[^\]]+\]:(\d+)$/) {
+            $port = $1;
+        } elsif ($addr =~ /:(\d+)$/) {
+            $port = $1;
+        } elsif ($addr =~ /^(\d+)$/) {
+            $port = $1;
+        } else {
+            next;
+        }
+
+        if ($rest =~ /\b(?:quic|udp|reuseport_quic)\b/) {
+            $udp{$port} = 1;
+        } else {
+            $tcp{$port} = 1;
+        }
+    }
+    close $fh;
+
+    return ([sort { $a <=> $b } keys %tcp],
+            [sort { $a <=> $b } keys %udp]);
+}
+
+sub is_tcp_port_listening ($) {
+    my ($port) = @_;
+
+    # /proc/net/tcp{,6} columns: sl local rem st ...
+    # State 0A == LISTEN. We deliberately ignore TIME_WAIT etc. since
+    # they do not prevent a new bind()+listen() on the same port.
+    for my $filename ('/proc/net/tcp', '/proc/net/tcp6') {
+        open my $fh, '<', $filename or next;
+        while (my $line = <$fh>) {
+            if ($line =~ /^\s*\d+:\s+[0-9A-Fa-f]+:([0-9A-Fa-f]+)\s+[0-9A-Fa-f]+:[0-9A-Fa-f]+\s+([0-9A-Fa-f]+)\s/) {
+                if (hex($1) == $port && hex($2) == 0x0A) {
+                    close $fh;
+                    return 1;
+                }
+            }
+        }
+        close $fh;
+    }
+    return 0;
+}
+
+sub is_udp_port_bound ($) {
+    my ($port) = @_;
+
+    # UDP has no state machine; any entry means a socket has the port
+    # bound (and presumably a process holds it).
+    for my $filename ('/proc/net/udp', '/proc/net/udp6') {
+        open my $fh, '<', $filename or next;
+        while (my $line = <$fh>) {
+            if ($line =~ /^\s*\d+:\s+[0-9A-Fa-f]+:([0-9A-Fa-f]+)\s/) {
+                if (hex($1) == $port) {
+                    close $fh;
+                    return 1;
+                }
+            }
+        }
+        close $fh;
+    }
+    return 0;
+}
+
+sub check_listen_ports ($) {
+    my ($name) = @_;
+
+    my ($tcp_ports, $udp_ports) = parse_listen_ports_from_conf();
+
+    for my $port (@$tcp_ports) {
+        next unless is_tcp_port_listening($port);
+        _kill_port_holders('tcp', $port, $name);
+    }
+
+    for my $port (@$udp_ports) {
+        next unless is_udp_port_bound($port);
+        _kill_port_holders('udp', $port, $name);
+    }
+}
+
+sub _kill_port_holders ($$$) {
+    my ($proto, $port, $name) = @_;
+
+    my $out = `fuser -n $proto $port 2>/dev/null`;
+    return unless defined $out;
+    $out =~ s/^\s+|\s+$//g;
+    return unless length $out;
+
+    for my $pid (split /\s+/, $out) {
+        next unless $pid =~ /^\d+$/;
+        next if $pid == $$;
+
+        warn "WARNING: $name - $proto port $port still held by pid $pid, killing it.\n";
+        kill_process($pid, 1, $name);
+    }
+}
+
 sub cleanup_test ($) {
     my $block = shift;
     if ($Verbose) {
@@ -751,6 +860,34 @@ sub cleanup_test ($) {
 
     for my $hdl (@TestCleanupHandlers) {
        $hdl->($block);
+    }
+
+    # Per-block backstop for processes started by run_test().
+    # In non-HUP profiling/valgrind/stap mode the in-line PidFile-based
+    # shutdown in run_test() should already have reaped nginx; this
+    # branch only fires if $ChildPid (the forked valgrind/stap/profiling
+    # wrapper, or its lingering process group) is still alive, e.g. when
+    # PidFile was missing or valgrind has not finished its leak-check
+    # exit yet. Skipped in HUP mode so the long-lived nginx survives
+    # until the END block.
+    if (!$UseHup
+        && ($UseValgrind || $Profiling || $UseStap))
+    {
+        if (defined $ChildPid) {
+            waitpid($ChildPid, WNOHANG);
+            if (is_running($ChildPid)) {
+                if ($Verbose) {
+                    warn "cleanup_test: reaping leftover child $ChildPid";
+                }
+                kill_process($ChildPid, 1, "cleanup_test");
+            }
+            undef $ChildPid;
+        }
+
+        # Final safety: any process still bound to a listen port from the
+        # current nginx.conf is an orphan (the kills above missed it).
+        # Identify it via fuser and kill it so the next block can bind.
+        check_listen_ports("cleanup_test");
     }
 }
 
@@ -2950,6 +3087,7 @@ retry:
                     # kill process group, including children
                     kill(SIGKILL, -$pid);
                     waitpid($pid, 0);
+                    undef $ChildPid if defined $ChildPid && $ChildPid == $pid;
 
                     if (!unlink($PidFile) && -f $PidFile) {
                         bail_out "Failed to remove pid file $PidFile: $!\n";
@@ -2970,6 +3108,8 @@ retry:
                         kill(SIGKILL, $pid);
                         sleep 0.05;
                     }
+
+                    undef $ChildPid if defined $ChildPid && $ChildPid == $pid;
                 }
 
             } else {
