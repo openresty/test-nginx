@@ -693,7 +693,11 @@ sub run_test_helper ($$) {
                 warn "LeakTest: k=N/A\n";
 
             } else {
-                my $k = get_linear_regression_slope(\@rss_list);
+                # drop the first 10% of samples: they cover nginx warmup /
+                # memory-pool lazy allocation and would bias the slope upward.
+                my $skip = int(@rss_list * 0.1);
+                my @stable = @rss_list[$skip .. $#rss_list];
+                my $k = get_linear_regression_slope(\@stable);
                 warn "LeakTest: k=$k\n";
                 #$k = get_linear_regression_slope([1 .. 100]);
                 #warn "K = $k (1 expected)\n";
