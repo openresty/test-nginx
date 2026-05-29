@@ -370,6 +370,13 @@ our $TestNginxSleep         = $ENV{TEST_NGINX_SLEEP} || 0.015;
 our $BuildSlaveName         = $ENV{TEST_NGINX_BUILDSLAVE};
 our $ForceRestartOnTest     = (defined $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST})
                                ? $ENV{TEST_NGINX_FORCE_RESTART_ON_TEST} : 1;
+
+my $nginx_version = eval { `$NginxBinary -v 2>&1` };
+if ($nginx_version =~ /\/(\d+)\.(\d+)\.(\d+)/) {
+    my $nginx_version_num = ($1 *1000 +  $2) * 1000 + $3;
+    $ENV{TEST_NGINX_VERSION_NUM} = $nginx_version_num;
+}
+
 srand $$;
 
 if ($Randomize) {
