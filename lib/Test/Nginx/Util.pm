@@ -1000,6 +1000,10 @@ sub run_tests () {
         $ENV{TEST_NGINX_SERVER_PORT} = $ServerPort;
     }
 
+    if (!defined $ENV{TEST_NGINX_STREAM_PORT}) {
+        $ENV{TEST_NGINX_STREAM_PORT} = $ServerPort + 1;
+    }
+
     for my $block ($NoShuffle ? Test::Base::blocks() : shuffle Test::Base::blocks()) {
         for my $hdl (@BlockPreprocessors) {
             $hdl->($block);
