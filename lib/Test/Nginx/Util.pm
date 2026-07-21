@@ -1214,10 +1214,11 @@ sub write_config_file ($$$) {
         $main_config = '';
     }
 
+    my $load_modules_main_config = '';
     if ($LoadModules) {
         my @modules = map { "load_module $_;" } grep { $_ } split /\s+/, $LoadModules;
         if (@modules) {
-            $main_config = join " ", @modules, $main_config;
+            $load_modules_main_config = join " ", @modules;
         }
     }
 
@@ -1346,7 +1347,7 @@ _EOC_
     print $out <<_EOC_;
 #env LUA_PATH;
 #env LUA_CPATH;
-
+$load_modules_main_config
 $main_config
 
 http {
