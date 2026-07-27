@@ -28,10 +28,10 @@ requires        ('Encode');
 requires        ('File::Find');
 requires        ('IO::Socket::INET');
 
-use_test_base();
+# Do not use use_test_base() here. It bundles Test::Builder without Test2,
+# which can mix modules from different Test-Simple releases at runtime.
 auto_install();
 
 #tests('t/*.t t/*/*.t');
 
 WriteAll();
-

@@ -8,6 +8,7 @@ our $VERSION = '0.33';
 use base 'Exporter';
 
 use POSIX qw( SIGQUIT SIGKILL SIGTERM SIGHUP );
+use Fcntl qw( O_CREAT O_RDWR LOCK_EX LOCK_NB );
 use File::Spec ();
 use HTTP::Response;
 use Cwd qw( cwd );
@@ -209,35 +210,100 @@ sub gen_rand_str {
     return $s;
 }
 
-sub gen_rand_port (;$$) {
-    my ($tries, $used_ports) = @_;
+our %PortLockHandles;
+my $PortLockDir;
+
+sub release_port_locks (@) {
+    for my $port (@_) {
+        my $locks = delete $PortLockHandles{$port};
+        next if !defined $locks;
+
+        close $_ for @$locks;
+    }
+}
+
+sub gen_rand_port (;$$$) {
+    my ($tries, $used_ports, $port_count) = @_;
 
     $tries //= 1000;
     $used_ports //= {};
+    $port_count //= 4;
+
+    if (!defined $PortLockDir) {
+        $PortLockDir = File::Spec->catdir(
+            File::Spec->tmpdir(), "test-nginx-port-locks-$<");
+        make_path($PortLockDir) if !-d $PortLockDir;
+    }
 
     my $rand_port;
+    my $total_blocks = 15887;
+    my $blocks_needed = int(($port_count + 3) / 4);
+    my $last_block = $total_blocks - $blocks_needed;
 
     for (my $i = 0; $i < $tries; $i++) {
-        # NB: reserved ports for stream_server_config* (1..3)
-        # 1984 + 3 + 1 = 1988
-        my $port = int(rand 63547) + 1988;
+        # Allocate whole four-port blocks because stream_server_config*
+        # uses the three ports immediately after the HTTP server port.
+        my $port = int(rand($last_block + 1)) * 4 + 1988;
 
-        next if $used_ports->{$port};
+        my @locks;
+        my @socks;
+        my $ok = 1;
 
-        my $sock = IO::Socket::INET->new(
-            LocalAddr => $ServerAddr,
-            LocalPort => $port,
-            Proto => 'tcp',
-            Listen => 5,
-            Timeout => 0.1,
-            Reuse => 1,
-        );
+        for (my $j = 0; $j < $blocks_needed; $j++) {
+            my $block_port = $port + $j * 4;
+            my $lock_path = File::Spec->catfile(
+                $PortLockDir, "port-$block_port.lock");
+            my $lock;
 
-        if (defined $sock) {
+            if (!sysopen($lock, $lock_path, O_CREAT | O_RDWR, 0600)
+                || !flock($lock, LOCK_EX | LOCK_NB))
+            {
+                $ok = 0;
+                last;
+            }
+
+            push @locks, $lock;
+        }
+
+        if (!$ok) {
+            close $_ for @locks;
+            next;
+        }
+
+        for my $candidate ($port .. $port + $port_count - 1) {
+            if ($used_ports->{$candidate}) {
+                $ok = 0;
+                last;
+            }
+
+            my $sock = IO::Socket::INET->new(
+                LocalAddr => '0.0.0.0',
+                LocalPort => $candidate,
+                Proto => 'tcp',
+                Listen => 5,
+                Timeout => 0.1,
+                Reuse => 1,
+            );
+
+            if (!defined $sock) {
+                $ok = 0;
+                last;
+            }
+
+            push @socks, $sock;
+        }
+
+        for my $sock (@socks) {
             $sock->close();
+        }
+
+        if ($ok) {
+            $PortLockHandles{$port} = \@locks;
             $rand_port = $port;
             last;
         }
+
+        close $_ for @locks;
 
         if ($Verbose) {
             warn "Try again, port $port is already in use: $@\n";
@@ -895,6 +961,11 @@ sub cleanup_test ($) {
         # current nginx.conf is an orphan (the kills above missed it).
         # Identify it via fuser and kill it so the next block can bind.
         check_listen_ports("cleanup_test");
+    }
+
+    if (defined $RandPorts) {
+        release_port_locks(values %$RandPorts);
+        undef $RandPorts;
     }
 }
 

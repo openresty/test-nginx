@@ -20,12 +20,6 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install/TestBase.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
-inc/Spiffy.pm
-inc/Test/Base.pm
-inc/Test/Base/Filter.pm
-inc/Test/Builder.pm
-inc/Test/Builder/Module.pm
-inc/Test/More.pm
 META.yml
 t/pod-coverage.t
 t/pod.t
@@ -34,6 +28,7 @@ t/get_req_from_block.t
 t/parse_request.t
 t/check_response_body.t
 t/resp_body_filters.t
+t/port_locks.t
 lib/Test/Nginx/Socket/Lua.pm
 lib/Test/Nginx/Socket/Lua/Stream.pm
 lib/Test/Nginx/Socket/Lua/Dgram.pm
