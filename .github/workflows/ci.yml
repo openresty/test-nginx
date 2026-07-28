@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: perl ${{ matrix.perl }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-26.04
+          - ubuntu-24.04
+        perl:
+          - "5.42"
+          - "5.38"
+          - "5.32"
+          - "5.26"
+          - "5.16"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up perl ${{ matrix.perl }}
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ matrix.perl }}
+
+      - name: Install dependencies
+        run: cpanm --notest --installdeps .
+
+      - name: Build
+        run: |
+          perl Makefile.PL
+          make -j$(nproc)
+
+      - name: Test
+        run: make test
