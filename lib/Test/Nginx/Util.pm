@@ -48,6 +48,8 @@ our $ld_preload = $ENV{LD_PRELOAD};
 
 our $ValgrindExitOnFirstErr = $ENV{TEST_NGINX_VALGRIND_EXIT_ON_FIRST_ERR};
 
+our $ValgrindQuick = $ENV{TEST_NGINX_VALGRIND_QUICK};
+
 our $LatestNginxVersion = 0.008039;
 
 our $NoNginxManager = $ENV{TEST_NGINX_NO_NGINX_MANAGER} || 0;
@@ -1830,6 +1832,78 @@ sub run_udp_server_tests ($$$) {
     }
 }
 
+my $ValgrindSupportsExitOnFirstErr;
+
+sub _valgrind_supports_exit_on_first_err {
+    if (!defined $ValgrindSupportsExitOnFirstErr) {
+        my $help_out = `valgrind --help`;
+        $ValgrindSupportsExitOnFirstErr =
+            $help_out =~ /exit-on-first-error/ ? 1 : 0;
+    }
+
+    return $ValgrindSupportsExitOnFirstErr;
+}
+
+sub _build_valgrind_command {
+    my ($cmd, $supports_exit_on_first_err) = @_;
+    my $opts;
+
+    if ($ValgrindQuick) {
+        $opts = "--tool=memcheck --leak-check=no --track-origins=no "
+              . "--read-inline-info=no --num-callers=30 "
+              . "--error-exitcode=1";
+
+        if (!defined $supports_exit_on_first_err) {
+            $supports_exit_on_first_err =
+                _valgrind_supports_exit_on_first_err();
+        }
+
+        if ($supports_exit_on_first_err) {
+            $opts .= " --exit-on-first-error=yes";
+
+        } else {
+            warn "WARNING: valgrind does not support "
+                 . "--exit-on-first-error option\n";
+        }
+
+        if (-f 'valgrind.suppress') {
+            return "valgrind -q $opts --suppressions=valgrind.suppress $cmd";
+        }
+
+        return "valgrind -q $opts $cmd";
+    }
+
+    if ($UseValgrind =~ /^\d+$/) {
+        $opts = "--tool=memcheck --leak-check=full --keep-debuginfo=yes --show-possibly-lost=no";
+        if ($ValgrindExitOnFirstErr) {
+            if (!defined $supports_exit_on_first_err) {
+                $supports_exit_on_first_err =
+                    _valgrind_supports_exit_on_first_err();
+            }
+
+            if ($supports_exit_on_first_err) {
+                $opts .= " --exit-on-first-error=yes --error-exitcode=1";
+
+            } else {
+                warn "WARNING: valgrind does not support "
+                     . "--exit-on-first-error option\n";
+            }
+        }
+
+        if (-f 'valgrind.suppress') {
+            return "valgrind --num-callers=100 -q $opts "
+                   . "--gen-suppressions=all "
+                   . "--suppressions=valgrind.suppress $cmd";
+        }
+
+        return "valgrind --num-callers=100 -q $opts "
+               . "--gen-suppressions=all $cmd";
+    }
+
+    $opts = $UseValgrind;
+    return "valgrind -q $opts $cmd";
+}
+
 sub run_test ($) {
     my $block = shift;
 
@@ -2345,31 +2419,7 @@ start_nginx:
             }
 
             if ($UseValgrind) {
-                my $opts;
-
-                if ($UseValgrind =~ /^\d+$/) {
-                    $opts = "--tool=memcheck --leak-check=full --keep-debuginfo=yes --show-possibly-lost=no";
-                    if ($ValgrindExitOnFirstErr) {
-                        my $help_out = `valgrind --help`;
-                        if ($help_out =~ /exit-on-first-error/) {
-                            $opts .= " --exit-on-first-error=yes --error-exitcode=1";
-
-                        } else {
-                            warn "WARNING: valgrind does not support "
-                               . "--exit-on-first-error option\n";
-                        }
-                    }
-
-                    if (-f 'valgrind.suppress') {
-                        $cmd = "valgrind --num-callers=100 -q $opts --gen-suppressions=all --suppressions=valgrind.suppress $cmd";
-                    } else {
-                        $cmd = "valgrind --num-callers=100 -q $opts --gen-suppressions=all $cmd";
-                    }
-
-                } else {
-                    $opts = $UseValgrind;
-                    $cmd = "valgrind -q $opts $cmd";
-                }
+                $cmd = _build_valgrind_command($cmd);
 
                 warn "$name\n";
                 #warn "$cmd\n";

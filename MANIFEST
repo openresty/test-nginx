@@ -29,6 +29,7 @@ t/parse_request.t
 t/check_response_body.t
 t/resp_body_filters.t
 t/port_locks.t
+t/valgrind_command.t
 lib/Test/Nginx/Socket/Lua.pm
 lib/Test/Nginx/Socket/Lua/Stream.pm
 lib/Test/Nginx/Socket/Lua/Dgram.pm

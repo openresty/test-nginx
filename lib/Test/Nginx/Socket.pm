@@ -4670,6 +4670,25 @@ If this environment is set to the number C<1> or any other
 non-zero numbers, then it is equivalent to taking the value
 C<--tool=memcheck --leak-check=full>.
 
+=head2 TEST_NGINX_VALGRIND_QUICK
+
+When both this environment and C<TEST_NGINX_USE_VALGRIND> are set,
+Test::Nginx uses a faster Memcheck configuration. It disables the leak scan
+at process exit and origin tracking, limits backtraces to 30 callers, and
+exits on the first error with a non-zero status. The effective options are:
+
+    --tool=memcheck --leak-check=no --track-origins=no
+    --read-inline-info=no --num-callers=30 --error-exitcode=1
+    --exit-on-first-error=yes
+
+The C<--exit-on-first-error> option is omitted with a warning when it is not
+supported by the installed Valgrind. A F<valgrind.suppress> file in the
+current directory is still used, but suppression generation is disabled.
+
+Quick mode overrides custom options supplied through
+C<TEST_NGINX_USE_VALGRIND>. It does not implicitly enable
+C<TEST_NGINX_USE_HUP> or change test timeouts.
+
 =head2 TEST_NGINX_VALGRIND_EXIT_ON_FIRST_ERR
 
 If set, Test::Nginx will add C<--exit-on-first-error=yes --error-exitcode=1> options for the valgrind.
@@ -5037,4 +5056,3 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 =head1 SEE ALSO
 
 L<Test::Nginx::Lua>, L<Test::Nginx::Lua::Stream>, L<Test::Nginx::LWP>, L<Test::Base>.
-

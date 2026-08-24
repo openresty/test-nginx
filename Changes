@@ -2,6 +2,8 @@ Changes for Test::Nginx
 
 0.32 - 2026-03-03
 
+*    feature: add TEST_NGINX_VALGRIND_QUICK for faster Memcheck runs.
+
 *    bugfix: address incorrect HTTP/2 configuration.
 
 *    bugfix: dynamically set the proxy_temp_path.
@@ -952,4 +954,3 @@ Changes for Test::Nginx
 
 0.01 - Tue 08 Dec 2009 11:07:51 AM CST
 - initial release.
-
