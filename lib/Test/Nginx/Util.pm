@@ -241,11 +241,24 @@ sub gen_rand_port (;$$$) {
     my $total_blocks = 15887;
     my $blocks_needed = int(($port_count + 3) / 4);
     my $last_block = $total_blocks - $blocks_needed;
+    my ($ephemeral_first, $ephemeral_last);
+    if (open my $range, '<', '/proc/sys/net/ipv4/ip_local_port_range') {
+        my $line = <$range>;
+        if (defined $line && $line =~ /^(\d+)\s+(\d+)/) {
+            ($ephemeral_first, $ephemeral_last) = ($1, $2);
+        }
+        close $range;
+    }
 
     for (my $i = 0; $i < $tries; $i++) {
         # Allocate whole four-port blocks because stream_server_config*
         # uses the three ports immediately after the HTTP server port.
         my $port = int(rand($last_block + 1)) * 4 + 1988;
+
+        # Outbound connections do not honor our lock files. Avoid their
+        # automatic source ports, including TIME_WAIT sockets without reuse.
+        next if defined $ephemeral_first && $port <= $ephemeral_last
+            && $port + $port_count - 1 >= $ephemeral_first;
 
         my @locks;
         my @socks;
@@ -731,7 +744,12 @@ sub kill_process ($$$) {
 
     if ($wait) {
         if (defined $pid) {
-            if ($ENV{TEST_NGINX_FAST_SHUTDOWN}) {
+            # Perl TCP/UDP fixtures have no nginx QUIT handler; SIGQUIT
+            # would produce a core dump during otherwise normal cleanup.
+            if ($ENV{TEST_NGINX_FAST_SHUTDOWN}
+                || (defined $TcpServerPid && $pid == $TcpServerPid)
+                || (defined $UdpServerPid && $pid == $UdpServerPid))
+            {
                 if ($Verbose) {
                     warn "sending TERM signal to $pid";
                 }
@@ -922,6 +940,22 @@ sub _kill_port_holders ($$$) {
         next unless $pid =~ /^\d+$/;
         next if $pid == $$;
 
+        # A parallel test may have acquired this port after our nginx exited.
+        # Verify the exact server-root argument before touching its owner.
+        my $command_line;
+        if (open my $proc, '<', "/proc/$pid/cmdline") {
+            local $/;
+            $command_line = <$proc>;
+            close $proc;
+        }
+
+        if (!defined $command_line
+            || $command_line !~ /(?:^|[\0\s])\Q$ServRoot\E(?:[\/\0\s]|$)/)
+        {
+            warn "WARNING: $name - $proto port $port held by foreign or unverified pid $pid, leaving it running.\n";
+            next;
+        }
+
         warn "WARNING: $name - $proto port $port still held by pid $pid, killing it.\n";
         kill_process($pid, 1, $name);
     }
@@ -959,9 +993,8 @@ sub cleanup_test ($) {
             undef $ChildPid;
         }
 
-        # Final safety: any process still bound to a listen port from the
-        # current nginx.conf is an orphan (the kills above missed it).
-        # Identify it via fuser and kill it so the next block can bind.
+        # Reap verified orphans from this server root. A port can already
+        # belong to another parallel test, so ownership must be checked.
         check_listen_ports("cleanup_test");
     }
 
@@ -1092,8 +1125,29 @@ sub run_tests () {
     cleanup();
 }
 
+# Nginx helper processes redirect sanitizer diagnostics to error.log. Keep
+# them before a server-root reset, including diagnostics from final shutdown.
+sub check_sanitizer_log () {
+    my $report = $ENV{TEST_NGINX_SANITIZER_LOG};
+    return unless defined $report && defined $ErrLogFile && -f $ErrLogFile;
+
+    open my $in, '<', $ErrLogFile or die "Cannot read $ErrLogFile: $!";
+    local $/;
+    my $data = <$in>;
+    close $in;
+    return unless defined $data && $data =~
+        /ERROR: (?:AddressSanitizer|LeakSanitizer)|SUMMARY: AddressSanitizer|==\d+== Invalid (?:read|write)/;
+
+    open my $out, '>>', $report or die "Cannot write $report: $!";
+    print $out "Memory checker report from $ErrLogFile:\n", $data, "\n";
+    close $out or die "Cannot close $report: $!";
+}
+
+
 sub setup_server_root ($) {
     my $first_time = shift;
+
+    check_sanitizer_log() unless $first_time;
 
     if (-d $ServRoot) {
         # Take special care, so we won't accidentally remove
@@ -3189,23 +3243,25 @@ request:
         if (-f $PidFile) {
             #warn "found pid file...";
             my $pid = get_pid_from_pidfile($name);
-            my $i = 0;
+            my $quit_sent = 0;
+            my $quit_deadline = Time::HiRes::time() + timeout();
 retry:
             if (is_running($pid)) {
-                write_config_file($block, $config, $rand_ports);
-
-                if ($Verbose) {
-                    warn "sending QUIT signal to $pid";
+                if (!$quit_sent) {
+                    write_config_file($block, $config, $rand_ports);
+                    if ($Verbose) {
+                        warn "sending QUIT signal to $pid";
+                    }
+                    if (kill(SIGQUIT, $pid) == 0) {
+                        warn("$name - Failed to send quit signal to the nginx process with PID $pid");
+                    }
+                    $quit_sent = 1;
                 }
 
-                if (kill(SIGQUIT, $pid) == 0) { # send quit signal
-                    warn("$name - Failed to send quit signal to the nginx process with PID $pid");
-                }
-
-                sleep $TestNginxSleep;
+                sleep 0.05;
 
                 if (-f $PidFile) {
-                    if ($i++ < 20) {
+                    if (Time::HiRes::time() < $quit_deadline) {
                         if ($Verbose) {
                             warn "nginx not quitted, retrying...\n";
                         }
@@ -3229,7 +3285,7 @@ retry:
                 } else {
                     #warn "nginx killed";
                     waitpid($pid, WNOHANG);
-                    my $timeout_val = 1.0;
+                    my $timeout_val = timeout();
                     while ($timeout_val > 0 && is_running($pid)) {
                         waitpid($pid, WNOHANG);
                         sleep 0.05;
@@ -3278,6 +3334,7 @@ END {
     }
 
     check_prev_block_shutdown_error_log();
+    check_sanitizer_log();
 
     if ($Randomize) {
         if (defined $ServRoot && -d $ServRoot && $ServRoot =~ m{/t/servroot_\d+}) {

@@ -1935,8 +1935,10 @@ sub send_http_req_by_curl ($$$) {
         }
     }
 
+    # curl enforces --max-time itself. Give it time to start, report that
+    # timeout, and drain stderr before the outer watchdog can terminate it.
     my $ok = IPC::Run::run($cmd, \(my $in), \(my $out), \(my $err),
-                           IPC::Run::timeout($timeout));
+                           IPC::Run::timeout($timeout + 2));
 
     #my @cmd_copy = @$cmd;
     #warn "running cmd ", quote_sh_args(\@cmd_copy);

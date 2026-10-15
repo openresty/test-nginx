@@ -45,4 +45,20 @@ ok(defined fileno($server_locks->[0]),
 
 Test::Nginx::Util::release_port_locks($server_port);
 
+SKIP: {
+    open my $range, '<', '/proc/sys/net/ipv4/ip_local_port_range'
+        or skip 'no Linux ephemeral port range', 1;
+    my ($first, $last) = split /\s+/, <$range>;
+    close $range;
+    my @ports;
+    for (1 .. 20) {
+        push @ports, Test::Nginx::Util::gen_rand_port(1000, {}, 8);
+    }
+    my $overlap = grep {
+        !defined $_ || ($_ <= $last && $_ + 7 >= $first)
+    } @ports;
+    is($overlap, 0, 'whole port blocks avoid the effective ephemeral range');
+    Test::Nginx::Util::release_port_locks(grep { defined $_ } @ports);
+}
+
 done_testing();
