@@ -171,6 +171,8 @@ If you want a commit bit, feel free to drop me a line.
 António P. P. Almeida is maintaining a Debian package for this module
 in his Debian repository: [http://debian.perusio.net](http://debian.perusio.net)
 
+As of 2026-07-13, the libtest-nginx-perl package is [available in Debian](https://tracker.debian.org/pkg/libtest-nginx-perl).
+
 [Back to TOC](#table-of-contents)
 
 # Community
