@@ -998,7 +998,7 @@ sub check_response_headers($$$$$) {
                 #warn "HIT";
                 SKIP: {
                     skip "$name - response_headers - tests skipped due to $dry_run", 1 if $dry_run;
-                    unlike $raw_headers, qr/^\s*\Q$key\E\s*:/ms,
+                    unlike $raw_headers, qr/^(?i)\s*\Q$key\E\s*:/ms,
                       "$name - header $key not present in the raw headers";
                 }
                 next;
