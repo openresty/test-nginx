@@ -66,6 +66,7 @@ sub gen_ab_cmd_from_req ($$@);
 sub gen_curl_cmd_from_req ($$);
 sub get_linear_regression_slope ($);
 sub value_contains ($$);
+sub expand_env_in_patterns ($$);
 
 $RunTestHelper = \&run_test_helper;
 $CheckErrorLog = \&check_error_log;
@@ -1054,6 +1055,19 @@ sub value_contains ($$) {
     return undef;
 }
 
+sub expand_env_in_patterns ($$) {
+    my ($pats, $name) = @_;
+
+    # Expand the plain string patterns like the other sections, so that a
+    # pattern can name the port of a $TEST_NGINX_RAND_PORT_N variable.
+    # Regexes are left alone.
+    return [map {
+        defined $_ && !ref $_
+            ? expand_env_in_text($_, $name, $Test::Nginx::Util::RandPorts)
+            : $_
+    } @$pats];
+}
+
 sub check_access_log ($$$) {
     my ($block, $dry_run, $repeated_req_idx) = @_;
     my $name = $block->name;
@@ -1265,11 +1279,10 @@ sub check_error_log ($$$$) {
 
         } elsif (ref $pats eq 'Regexp') {
             $pats = [$pats];
-
-        } else {
-            my @clone = @$pats;
-            $pats = \@clone;
         }
+
+        # copies the array, as the loop below undefines the matched patterns
+        $pats = expand_env_in_patterns $pats, $name;
 
         $lines ||= error_log_data();
         #warn "error log data: ", join "\n", @$lines;
@@ -1326,11 +1339,9 @@ sub check_error_log ($$$$) {
 
         } elsif (ref $pats eq 'Regexp') {
             $pats = [$pats];
-
-        } else {
-            my @clone = @$pats;
-            $pats = \@clone;
         }
+
+        $pats = expand_env_in_patterns $pats, $name;
 
         my %found;
         $lines ||= error_log_data();
@@ -3790,6 +3801,13 @@ Multiple patterns are also supported, for example:
 then the substring "abc" must appear literally in a line of F<error.log>, and the regex C<qr/blah>
 must also match a line in F<error.log>.
 
+Environment variables starting with C<TEST_NGINX_>, including the special
+variables like C<TEST_NGINX_RAND_PORT_1>, are expanded in the string patterns,
+but not in the regexes:
+
+    --- error_log
+    Host: 127.0.0.1:$TEST_NGINX_RAND_PORT_1
+
 By default, only the part of the error logs corresponding to the current request is checked. You can make it check accumulated error logs by calling the C<check_accum_error_log> Perl function before calling C<run_tests> in the boilerplate Perl code above the C<__DATA__> line.
 
 =head2 access_log
@@ -3866,6 +3884,8 @@ Just like the C<--- error_log> section, one can also specify multiple patterns:
     ["abc", qr/blah/]
 
 Then if any line in F<error.log> contains the string C<"abc"> or match the Perl regex C<qr/blah/>, then the test will fail.
+
+Environment variables are expanded in the string patterns as in the C<--- error_log> section.
 
 =head2 grep_error_log
 
